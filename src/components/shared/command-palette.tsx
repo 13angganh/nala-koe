@@ -145,7 +145,7 @@ export function CommandPalette() {
                       onClick={() => execute(item)}
                       onMouseEnter={() => setSelected(globalIndex)}
                       className={cn(
-                        'flex w-full items-center gap-3 px-4 py-2 text-sm transition-colors duration-[var(--duration-fast)]',
+                        'flex w-full items-center gap-3 px-4 py-2 text-sm transition-colors duration-100',
                         globalIndex === selected
                           ? 'bg-[var(--surface-muted)] text-[var(--text-primary)]'
                           : 'text-[var(--text-secondary)]'

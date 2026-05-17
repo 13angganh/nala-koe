@@ -67,7 +67,7 @@ export function NoteMoodPicker({
                 aria-label={mood.label}
                 className={cn(
                   'flex items-center justify-center rounded-lg w-8 h-8',
-                  'border transition-all duration-[var(--duration-fast)]',
+                  'border transition-all duration-100',
                   'outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-1',
                   'disabled:opacity-40 disabled:cursor-not-allowed',
                   isSelected

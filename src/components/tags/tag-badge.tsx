@@ -40,7 +40,7 @@ export function TagBadge({
       }
       className={cn(
         'inline-flex items-center gap-1 rounded-md font-medium',
-        'border transition-colors duration-[var(--duration-fast)]',
+        'border transition-colors duration-100',
         size === 'sm' && 'text-[10px] px-1.5 py-0.5',
         size === 'md' && 'text-xs px-2 py-1',
         isActive

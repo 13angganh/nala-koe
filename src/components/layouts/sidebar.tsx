@@ -14,7 +14,7 @@ export function Sidebar() {
     <aside
       className={cn(
         'fixed inset-y-0 left-0 z-[var(--z-sidebar)] flex flex-col border-r border-[var(--border)] bg-[var(--surface-subtle)]',
-        'transition-[width] duration-[var(--duration-slow)] ease-[var(--ease-out)]',
+        'transition-[width] duration-300 ease-out',
         'hidden lg:flex',
         sidebarOpen ? 'w-56' : 'w-0 overflow-hidden'
       )}

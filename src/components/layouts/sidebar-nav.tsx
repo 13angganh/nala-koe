@@ -71,7 +71,7 @@ function NavGroup({
                 href={href}
                 onClick={onNavigate}
                 className={cn(
-                  'flex h-9 items-center gap-3 rounded-lg px-3 text-sm transition-colors duration-[var(--duration-fast)]',
+                  'flex h-9 items-center gap-3 rounded-lg px-3 text-sm transition-colors duration-100',
                   isActive
                     ? 'bg-[var(--accent-subtle)] text-[var(--accent)] font-medium'
                     : 'text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]'

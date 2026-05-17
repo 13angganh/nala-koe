@@ -65,7 +65,7 @@ export function NoteFilters({
             aria-selected={status === f.value}
             onClick={() => onStatusChange(f.value)}
             className={cn(
-              'rounded-md px-3 py-1 text-xs font-medium transition-all duration-[var(--duration-fast)]',
+              'rounded-md px-3 py-1 text-xs font-medium transition-all duration-100',
               'outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]',
               status === f.value
                 ? 'bg-[var(--surface-base)] text-[var(--text-primary)] shadow-[var(--shadow-sm)]'
@@ -98,7 +98,7 @@ export function NoteFilters({
                     aria-label={`Filter mood: ${mood.label}`}
                     className={cn(
                       'flex items-center justify-center w-7 h-7 rounded-lg border',
-                      'transition-all duration-[var(--duration-fast)]',
+                      'transition-all duration-100',
                       'outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-1',
                       isActive
                         ? 'border-transparent scale-110 shadow-sm'
@@ -132,7 +132,7 @@ export function NoteFilters({
                 'flex items-center gap-1 rounded-lg px-2 h-7 text-[10px]',
                 'border border-[var(--border)] bg-[var(--surface-base)]',
                 'text-[var(--text-tertiary)] hover:text-[var(--error)] hover:border-[var(--error)]/30',
-                'transition-colors duration-[var(--duration-fast)]',
+                'transition-colors duration-100',
                 'outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]'
               )}
               aria-label="Hapus semua filter"

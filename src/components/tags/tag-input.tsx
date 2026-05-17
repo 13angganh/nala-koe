@@ -105,7 +105,7 @@ export function TagInput({
           'flex flex-wrap items-center gap-1.5 min-h-[36px]',
           'rounded-lg border border-[var(--border)] bg-[var(--surface-base)]',
           'px-2.5 py-1.5 cursor-text',
-          'transition-colors duration-[var(--duration-fast)]',
+          'transition-colors duration-100',
           'focus-within:border-[var(--accent)] focus-within:ring-1 focus-within:ring-[var(--accent)]/30',
           disabled && 'opacity-50 cursor-not-allowed'
         )}

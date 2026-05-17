@@ -108,7 +108,7 @@ export function NoteReactionBar({
                 aria-label={label}
                 className={cn(
                   'inline-flex h-7 items-center gap-1.5 rounded-md border px-2 text-xs font-medium',
-                  'transition-all duration-[var(--duration-fast)]',
+                  'transition-all duration-100',
                   'disabled:opacity-50 disabled:cursor-not-allowed',
                   isActive
                     ? activeClass

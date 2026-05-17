@@ -135,7 +135,7 @@ export default function DashboardPage() {
               href={href}
               className={cn(
                 'group flex items-center gap-4 rounded-xl border border-[var(--border)] bg-[var(--surface-base)]',
-                'p-4 transition-all duration-[var(--duration-fast)]',
+                'p-4 transition-all duration-100',
                 'hover:border-[var(--border-emphasis)] hover:shadow-[var(--shadow-sm)]'
               )}
             >
@@ -143,7 +143,7 @@ export default function DashboardPage() {
                 <Icon className="h-4 w-4" aria-hidden="true" />
               </div>
               <div>
-                <p className="text-sm font-medium text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors duration-[var(--duration-fast)]">
+                <p className="text-sm font-medium text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors duration-100">
                   {label}
                 </p>
                 <p className="text-xs text-[var(--text-tertiary)]">{description}</p>

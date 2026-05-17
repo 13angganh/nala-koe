@@ -182,7 +182,7 @@ export function NoteHighlightMarker({
                   'h-4 w-4 items-center justify-center rounded-full',
                   'bg-[var(--surface-base)] border border-[var(--border)]',
                   'text-[var(--text-tertiary)] hover:text-[var(--error)]',
-                  'transition-colors duration-[var(--duration-fast)]'
+                  'transition-colors duration-100'
                 )}
               >
                 <Trash2 className="h-2.5 w-2.5" />

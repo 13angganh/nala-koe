@@ -30,7 +30,7 @@ export function NoteSearch({ value, onChange, className }: NoteSearchProps) {
         className={cn(
           'h-9 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-subtle)]',
           'pl-9 pr-9 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)]',
-          'outline-none transition-colors duration-[var(--duration-fast)]',
+          'outline-none transition-colors duration-100',
           'focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/20',
           'hover:border-[var(--border-emphasis)]'
         )}

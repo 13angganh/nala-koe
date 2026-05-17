@@ -32,7 +32,7 @@ function ProtectedLayoutInner({ children }: { children: React.ReactNode }) {
       <Sidebar />
       <main
         className={cn(
-          'pt-14 transition-[padding-left] duration-[var(--duration-slow)] ease-[var(--ease-out)]',
+          'pt-14 transition-[padding-left] duration-300 ease-out',
           sidebarOpen ? 'lg:pl-56' : 'lg:pl-0'
         )}
       >

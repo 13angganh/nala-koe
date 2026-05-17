@@ -48,7 +48,7 @@ export function SmartFolderPanel({
         <button
           type="button"
           onClick={() => onSelect(null)}
-          className="w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-[var(--text-tertiary)] hover:bg-[var(--surface-subtle)] transition-colors duration-[var(--duration-fast)]"
+          className="w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-[var(--text-tertiary)] hover:bg-[var(--surface-subtle)] transition-colors duration-100"
         >
           Semua catatan
         </button>
@@ -63,7 +63,7 @@ export function SmartFolderPanel({
             type="button"
             onClick={() => onSelect(isActive ? null : folder.key)}
             className={cn(
-              'group w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors duration-[var(--duration-fast)]',
+              'group w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors duration-100',
               isActive
                 ? 'bg-[var(--accent-subtle)] text-[var(--accent)]'
                 : 'text-[var(--text-secondary)] hover:bg-[var(--surface-subtle)] hover:text-[var(--text-primary)]'

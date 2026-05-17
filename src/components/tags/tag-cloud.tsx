@@ -73,7 +73,7 @@ export function TagCloud({ onTagClick, activeTag, className }: TagCloudProps) {
           title={`${item.count} catatan`}
           className={cn(
             WEIGHT_STYLES[item.weight] ?? WEIGHT_STYLES[3],
-            'transition-transform duration-[var(--duration-fast)]',
+            'transition-transform duration-100',
             'hover:scale-105',
             onTagClick && 'cursor-pointer'
           )}

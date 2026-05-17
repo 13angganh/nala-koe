@@ -88,7 +88,7 @@ export function NoteChecklist({ items, onChange, readOnly = false }: NoteCheckli
             onClick={() => handleToggle(item.id)}
             className={cn(
               'flex h-4 w-4 shrink-0 items-center justify-center rounded border',
-              'transition-colors duration-[var(--duration-fast)] outline-none',
+              'transition-colors duration-100 outline-none',
               'focus-visible:ring-2 focus-visible:ring-[var(--accent)]',
               item.isChecked
                 ? 'border-[var(--accent)] bg-[var(--accent)]'
@@ -136,7 +136,7 @@ export function NoteChecklist({ items, onChange, readOnly = false }: NoteCheckli
               size="icon-sm"
               onClick={() => handleRemove(item.id)}
               aria-label="Hapus item"
-              className="opacity-0 group-hover:opacity-100 transition-opacity duration-[var(--duration-fast)]"
+              className="opacity-0 group-hover:opacity-100 transition-opacity duration-100"
               tabIndex={-1}
             >
               <Trash2 className="h-3 w-3 text-[var(--text-tertiary)]" />
@@ -151,7 +151,7 @@ export function NoteChecklist({ items, onChange, readOnly = false }: NoteCheckli
           onClick={handleAddItem}
           className={cn(
             'flex items-center gap-2 text-xs text-[var(--text-tertiary)]',
-            'hover:text-[var(--text-secondary)] transition-colors duration-[var(--duration-fast)]',
+            'hover:text-[var(--text-secondary)] transition-colors duration-100',
             'outline-none focus-visible:text-[var(--accent)]'
           )}
         >

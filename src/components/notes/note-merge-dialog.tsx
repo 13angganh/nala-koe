@@ -118,7 +118,7 @@ export function NoteMergeDialog({
                     onClick={() => toggleNote(note.id)}
                     className={cn(
                       'w-full flex items-center gap-3 rounded-md px-3 py-2 text-left text-sm',
-                      'transition-colors duration-[var(--duration-fast)]',
+                      'transition-colors duration-100',
                       'hover:bg-[var(--surface-subtle)]',
                       isSelected && 'bg-[var(--accent-subtle)] text-[var(--accent)]'
                     )}

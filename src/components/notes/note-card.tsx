@@ -77,7 +77,7 @@ export function NoteCard({ note, onTrash, onRestore, onDelete, onArchive, onDupl
       className={cn(
         'group relative flex flex-col gap-2.5 rounded-xl border bg-[var(--surface-base)]',
         'p-4 cursor-pointer outline-none overflow-hidden',
-        'transition-all duration-[var(--duration-fast)]',
+        'transition-all duration-100',
         'hover:shadow-[var(--shadow-sm)]',
         'focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2',
         note.isPinned && 'bg-[var(--accent-subtle)]/20'
@@ -119,7 +119,7 @@ export function NoteCard({ note, onTrash, onRestore, onDelete, onArchive, onDupl
         )}
 
         <div
-          className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-[var(--duration-fast)]"
+          className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-100"
           onClick={(e) => e.stopPropagation()}
         >
           <DropdownMenu>

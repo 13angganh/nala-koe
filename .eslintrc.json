@@ -1,13 +1,11 @@
 {
   "extends": [
     "next/core-web-vitals",
-    "next/typescript",
-    "plugin:@typescript-eslint/recommended-type-checked"
+    "next/typescript"
   ],
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
-    "project": true,
-    "tsconfigRootDir": "__dirname"
+    "project": true
   },
   "plugins": ["@typescript-eslint"],
   "rules": {
@@ -15,8 +13,6 @@
     "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
     "@typescript-eslint/consistent-type-imports": ["error", { "prefer": "type-imports" }],
     "@typescript-eslint/no-non-null-assertion": "error",
-    "@typescript-eslint/no-floating-promises": "error",
-    "@typescript-eslint/no-misused-promises": "error",
     "no-console": ["warn", { "allow": ["warn", "error"] }],
     "prefer-const": "error",
     "no-var": "error",

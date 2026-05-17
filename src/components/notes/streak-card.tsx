@@ -139,7 +139,7 @@ function LastSevenDays({ activeDates }: { activeDates: string[] }) {
         <div key={iso} className="flex flex-1 flex-col items-center gap-1" role="listitem">
           <div
             className={cn(
-              'h-6 w-full rounded-md transition-colors duration-[var(--duration-fast)]',
+              'h-6 w-full rounded-md transition-colors duration-100',
               active
                 ? 'bg-orange-400/80 dark:bg-orange-500/70'
                 : 'bg-[var(--surface-muted)]'

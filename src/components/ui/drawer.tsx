@@ -43,7 +43,7 @@ const DrawerContent = React.forwardRef<
       ref={ref}
       className={cn(
         'fixed z-[var(--z-modal)] bg-[var(--surface-base)] shadow-[var(--shadow-lg)]',
-        'transition ease-[var(--ease-out)] duration-[var(--duration-slow)]',
+        'transition ease-out duration-300',
         'data-[state=open]:animate-in data-[state=closed]:animate-out',
         side === 'left' && [
           'inset-y-0 left-0 h-full w-72 border-r border-[var(--border)]',
@@ -67,7 +67,7 @@ const DrawerContent = React.forwardRef<
             'absolute z-10 rounded-md p-1.5 text-[var(--text-tertiary)]',
             'hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]',
-            'transition-colors duration-[var(--duration-fast)]',
+            'transition-colors duration-100',
             side === 'bottom' ? 'right-4 top-4' : 'right-3 top-3'
           )}
           aria-label="Tutup"

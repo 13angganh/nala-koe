@@ -127,7 +127,7 @@ export default function HighlightsPage() {
                   {items.map(({ highlight }) => (
                     <li
                       key={highlight.id}
-                      className="group flex items-start gap-3 px-4 py-3 hover:bg-[var(--surface-subtle)] transition-colors duration-[var(--duration-fast)]"
+                      className="group flex items-start gap-3 px-4 py-3 hover:bg-[var(--surface-subtle)] transition-colors duration-100"
                     >
                       <div
                         className="mt-1 w-[3px] shrink-0 self-stretch rounded-full bg-amber-400"
