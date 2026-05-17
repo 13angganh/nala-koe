@@ -1,0 +1,350 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Design Tokens as CSS Custom Properties ─────────────────────────────── */
+
+:root {
+  /* Brand */
+  --brand-50: #f0f9ff;
+  --brand-100: #e0f2fe;
+  --brand-200: #bae6fd;
+  --brand-300: #7dd3fc;
+  --brand-400: #38bdf8;
+  --brand-500: #0ea5e9;
+  --brand-600: #0284c7;
+  --brand-700: #0369a1;
+  --brand-800: #075985;
+  --brand-900: #0c4a6e;
+  --brand-950: #082f49;
+
+  /* Accent — overridable per user preference */
+  --accent: var(--brand-500);
+  --accent-hover: var(--brand-600);
+  --accent-subtle: var(--brand-100);
+  --accent-foreground: #ffffff;
+
+  /* Surfaces */
+  --surface-base: #ffffff;
+  --surface-subtle: #f8fafc;
+  --surface-muted: #f1f5f9;
+  --surface-emphasis: #e2e8f0;
+  --surface-invert: #0f172a; /* dark bg untuk share card "Gelap" */
+  --surface-card: #ffffff; /* alias → --surface-base, dipakai canvas/graph */
+
+  /* Text */
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-tertiary: #94a3b8;
+  --text-disabled: #cbd5e1;
+  --text-inverse: #ffffff;
+  --text-muted: #94a3b8; /* alias → --text-tertiary, dipakai canvas/timeline/graph */
+
+  /* Border */
+  --border-subtle:   #f1f5f9;
+  --border-default:  #e2e8f0;
+  --border:          #e2e8f0; /* shadcn/ui alias → --border-default */
+  --border-emphasis: #cbd5e1;
+  --border-focus:    var(--accent);
+
+  /* Semantic */
+  --color-success: #16a34a;
+  --success: #16a34a;
+  --success-subtle: #dcfce7;
+  --color-warning: #d97706;
+  --warning: #d97706;
+  --warning-subtle: #fef3c7;
+  --color-error: #dc2626;
+  --error: #dc2626;
+  --error-subtle: #fee2e2;
+  --color-info: #2563eb;
+  --info: #2563eb;
+  --info-subtle: #dbeafe;
+
+  /* Radius */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-full: 9999px;
+
+  /* Elevation */
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+  /* Z-index */
+  --z-hide: -1;
+  --z-base: 0;
+  --z-raised: 1;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-sidebar: 250;
+  --z-header: 300;
+  --z-overlay: 350;
+  --z-modal-backdrop: 400;
+  --z-modal: 450;
+  --z-popover: 500;
+  --z-toast: 600;
+  --z-tooltip: 700;
+
+  /* Layout */
+  --sidebar-width: 224px;
+
+  /* Transition */
+  --duration-fast: 100ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+  /* ── shadcn/ui compatibility aliases ───────────────────────────────────── */
+  /* Tailwind config references these via var() — NOT hsl() — so hex values  */
+  /* resolve correctly. These point to the existing design token variables.   */
+  --background:         var(--surface-base);
+  --foreground:         var(--text-primary);
+  --primary:            var(--accent);
+  --primary-foreground: var(--accent-foreground);
+  --muted:              var(--surface-muted);
+  --muted-foreground:   var(--text-secondary);
+  --input:              var(--border-default);
+  --ring:               var(--accent);
+  /* --border already defined above as hex alias */
+}
+
+/* ─── Dark Mode ──────────────────────────────────────────────────────────── */
+
+.dark {
+  --surface-base: #0f172a;
+  --surface-subtle: #1e293b;
+  --surface-muted: #334155;
+  --surface-emphasis: #475569;
+  --surface-card: #1e293b; /* alias → --surface-subtle dark, dipakai canvas/graph */
+
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-tertiary: #64748b;
+  --text-disabled: #475569;
+  --text-inverse: #0f172a;
+  --text-muted: #64748b; /* alias → --text-tertiary dark */
+
+  --border-subtle:   #1e293b;
+  --border-default:  #334155;
+  --border:          #334155; /* shadcn/ui alias */
+  --border-emphasis: #475569;
+
+  --success-subtle: #052e16;
+  --warning-subtle: #1c1003;
+  --error-subtle: #1c0202;
+  --info-subtle: #0c1a3d;
+
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+}
+
+/* ─── Base Styles ────────────────────────────────────────────────────────── */
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    border-color: var(--border);
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
+    overflow-x: hidden; /* prevent horizontal scroll on all viewports */
+  }
+
+  body {
+    background-color: var(--surface-base);
+    color: var(--text-primary);
+    font-family: var(--font-sans), system-ui, sans-serif;
+    line-height: 1.5;
+    min-height: 100dvh;
+    overflow-x: hidden; /* belt-and-suspenders: prevent child overflow leak */
+    max-width: 100vw;
+  }
+
+  /* Focus visible ring — keyboard only, not mouse clicks */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  /* Remove default list styles used with role="list" */
+  ul[role='list'],
+  ol[role='list'] {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  /* Better image defaults */
+  img,
+  picture,
+  video,
+  canvas,
+  svg {
+    display: block;
+    max-width: 100%;
+  }
+
+  /* Inherit fonts for inputs */
+  input,
+  button,
+  textarea,
+  select {
+    font: inherit;
+  }
+
+  /* Prevent text overflow in headings */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    overflow-wrap: break-word;
+    color: var(--text-primary);
+  }
+
+  p {
+    overflow-wrap: break-word;
+  }
+}
+
+/* ─── Utility Classes ────────────────────────────────────────────────────── */
+
+@layer utilities {
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Thin scrollbar */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-emphasis) transparent;
+  }
+
+  /* Surface utilities */
+  .surface-base { background-color: var(--surface-base); }
+  .surface-subtle { background-color: var(--surface-subtle); }
+  .surface-muted { background-color: var(--surface-muted); }
+
+  /* Text utilities */
+  .text-primary { color: var(--text-primary); }
+  .text-secondary { color: var(--text-secondary); }
+  .text-tertiary { color: var(--text-tertiary); }
+
+  /* Truncate multi-line */
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* PWA safe area padding */
+  .safe-top { padding-top: env(safe-area-inset-top); }
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+  .safe-left { padding-left: env(safe-area-inset-left); }
+  .safe-right { padding-right: env(safe-area-inset-right); }
+
+  /* Full viewport height accounting for mobile nav bar */
+  .h-dvh { height: 100dvh; }
+  .min-h-dvh { min-height: 100dvh; }
+}
+
+/* ─── Note Texture Backgrounds ───────────────────────────────────────────── */
+
+.texture-lined {
+  background-image: repeating-linear-gradient(
+    transparent,
+    transparent 27px,
+    var(--border) 28px
+  );
+}
+
+.texture-dotgrid {
+  background-image: radial-gradient(circle, var(--border-emphasis) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.texture-grid {
+  background-image: linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* ─── Loading Skeleton Animation ─────────────────────────────────────────── */
+
+@keyframes skeleton-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface-muted) 25%,
+    var(--surface-emphasis) 50%,
+    var(--surface-muted) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--radius-md);
+}
+
+/* ─── Print Styles ───────────────────────────────────────────────────────── */
+
+@media print {
+  body {
+    background: white;
+    color: black;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* ─── Accessibility: Reduced Motion ─────────────────────────────────────── */
+/* Disable all animations and transitions for users who prefer reduced motion */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .skeleton {
+    animation: none;
+    background: var(--surface-muted);
+  }
+}

@@ -1,0 +1,139 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── UID WHITELIST ────────────────────────────────────────────────────────
+    // Hanya UID yang terdaftar di sini yang bisa mengakses data.
+    // Tambah atau hapus UID sesuai kebutuhan.
+    // UID owner: EQdcW6nR3XdI0SLEPRrE7iXApgz1 (nala-koe project)
+
+    function isWhitelisted() {
+      return request.auth != null
+        && request.auth.uid in [
+          'EQdcW6nR3XdI0SLEPRrE7iXApgz1'
+          // Jika ada lebih dari satu akun:
+          // 'SECOND_UID_HERE',
+          // 'THIRD_UID_HERE'
+        ];
+    }
+
+    // User adalah owner dokumen berdasarkan userId field
+    function isOwner(uid) {
+      return isWhitelisted() && request.auth.uid == uid;
+    }
+
+    // Validasi field tidak boleh berubah setelah dibuat
+    function fieldUnchanged(field) {
+      return !(field in request.resource.data)
+        || request.resource.data[field] == resource.data[field];
+    }
+
+    // ─── Users ────────────────────────────────────────────────────────────────
+
+    match /users/{userId} {
+      allow read:   if isOwner(userId);
+      allow create: if isOwner(userId)
+        && request.resource.data.keys().hasAll(['uid', 'email', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid;
+      allow update: if isOwner(userId)
+        && fieldUnchanged('uid')
+        && fieldUnchanged('email');
+      allow delete: if false;
+    }
+
+    // ─── Notes ────────────────────────────────────────────────────────────────
+
+    match /notes/{noteId} {
+      allow read: if isWhitelisted()
+        && resource.data.userId == request.auth.uid;
+
+      allow create: if isWhitelisted()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.keys().hasAll([
+             'userId', 'title', 'content', 'createdAt', 'updatedAt'
+           ]);
+
+      allow update: if isWhitelisted()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == request.auth.uid
+        && fieldUnchanged('userId')
+        && fieldUnchanged('createdAt');
+
+      allow delete: if isWhitelisted()
+        && resource.data.userId == request.auth.uid;
+
+      // Note versions — immutable setelah dibuat
+      match /versions/{versionId} {
+        allow read: if isWhitelisted()
+          && get(/databases/$(database)/documents/notes/$(noteId)).data.userId
+             == request.auth.uid;
+        allow create: if isWhitelisted()
+          && get(/databases/$(database)/documents/notes/$(noteId)).data.userId
+             == request.auth.uid;
+        allow update, delete: if false;
+      }
+    }
+
+    // ─── Folders ─────────────────────────────────────────────────────────────
+
+    match /folders/{folderId} {
+      allow read: if isWhitelisted()
+        && resource.data.userId == request.auth.uid;
+      allow create: if isWhitelisted()
+        && request.resource.data.userId == request.auth.uid;
+      allow update: if isWhitelisted()
+        && resource.data.userId == request.auth.uid
+        && fieldUnchanged('userId');
+      allow delete: if isWhitelisted()
+        && resource.data.userId == request.auth.uid;
+    }
+
+    // ─── Tags ─────────────────────────────────────────────────────────────────
+
+    match /tags/{tagId} {
+      allow read: if isWhitelisted()
+        && resource.data.userId == request.auth.uid;
+      allow create: if isWhitelisted()
+        && request.resource.data.userId == request.auth.uid;
+      allow update: if isWhitelisted()
+        && resource.data.userId == request.auth.uid
+        && fieldUnchanged('userId');
+      allow delete: if isWhitelisted()
+        && resource.data.userId == request.auth.uid;
+    }
+
+    // ─── User Settings ────────────────────────────────────────────────────────
+
+    match /user_settings/{userId} {
+      allow read:   if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if false;
+    }
+
+    // ─── Streaks ─────────────────────────────────────────────────────────────
+
+    match /streaks/{userId} {
+      allow read:   if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if false;
+    }
+
+    // ─── Error Logs — write-only dari whitelisted client ─────────────────────
+    // Tidak bisa dibaca dari client — hanya Firebase Console / Admin SDK
+
+    match /error_logs/{logId} {
+      allow read:           if false;
+      allow create:         if isWhitelisted();
+      allow update, delete: if false;
+    }
+
+    // ─── Catch-all: tolak semua akses yang tidak cocok ────────────────────────
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

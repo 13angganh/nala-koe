@@ -1,0 +1,107 @@
+/**
+ * useExport — Phase 10
+ * Fetches all notes for the current user and triggers export.
+ */
+
+'use client';
+
+import { useState, useCallback } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { useAuthStore } from '@/stores/auth.store';
+import { getNotes } from '@/services/notes.service';
+import type { ExportFormat, ExportOptions } from '@/types/import-export.types';
+import type { Note } from '@/types/note.types';
+import {
+  exportNoteAsTxt,
+  exportNoteAsMarkdown,
+  exportNoteAsJson,
+  exportNotesAsJson,
+  exportNotesAsMarkdown,
+  exportNotesAsTxt,
+  exportNotesAsXlsx,
+  exportNotesAsPdf,
+  exportNotesAsDocx,
+  downloadBlob,
+  buildExportFilename,
+} from '@/services/export.service';
+
+interface ExportState {
+  isExporting: boolean;
+  progress: number; // 0–100
+}
+
+export function useExport() {
+  const user = useAuthStore((s) => s.user);
+  const [state, setState] = useState<ExportState>({ isExporting: false, progress: 0 });
+
+  const exportNotes = useCallback(
+    async (opts: ExportOptions) => {
+      if (!user) return;
+
+      setState({ isExporting: true, progress: 10 });
+
+      try {
+        // Fetch notes
+        const result = await getNotes(user.uid, {});
+        const allNotes = result.ok ? result.data : [];
+
+        const filtered: Note[] = opts.noteIds?.length
+          ? allNotes.filter((n) => opts.noteIds!.includes(n.id))
+          : allNotes;
+
+        if (filtered.length === 0) {
+          toast.error('Tidak ada catatan untuk diekspor');
+          setState({ isExporting: false, progress: 0 });
+          return;
+        }
+
+        setState({ isExporting: true, progress: 40 });
+
+        // Need full Note objects — getNotes returns NoteListItem
+        // For TXT/MD/JSON we can use NoteListItem content field
+        // For XLSX/PDF/DOCX we cast (content is available)
+        const notes = filtered as unknown as Note[];
+
+        setState({ isExporting: true, progress: 70 });
+
+        let blob: Blob;
+        const filename = buildExportFilename(opts.format, notes.length);
+
+        switch (opts.format) {
+          case 'txt':
+            blob = exportNotesAsTxt(notes, opts);
+            break;
+          case 'markdown':
+            blob = exportNotesAsMarkdown(notes, opts);
+            break;
+          case 'json':
+            blob = exportNotesAsJson(notes);
+            break;
+          case 'xlsx':
+            blob = await exportNotesAsXlsx(notes, opts);
+            break;
+          case 'pdf':
+            blob = await exportNotesAsPdf(notes, opts);
+            break;
+          case 'docx':
+            blob = await exportNotesAsDocx(notes, opts);
+            break;
+          default:
+            throw new Error(`Format tidak dikenal: ${opts.format}`);
+        }
+
+        setState({ isExporting: true, progress: 95 });
+        downloadBlob(blob, filename);
+        toast.success(`${notes.length} catatan diekspor sebagai ${opts.format.toUpperCase()}`);
+      } catch (e) {
+        toast.error('Export gagal. Coba lagi.');
+      } finally {
+        setState({ isExporting: false, progress: 0 });
+      }
+    },
+    [user]
+  );
+
+  return { exportNotes, ...state };
+}
