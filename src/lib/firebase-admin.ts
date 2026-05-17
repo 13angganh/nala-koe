@@ -2,7 +2,7 @@
  * Firebase Admin SDK — SERVER SIDE ONLY.
  * Never import this file in client-side components or hooks.
  * This file is safe to import in:
- *   - app/api/**/route.ts
+ *   - app/api/[route]/route.ts
  *   - Server Components (if needed)
  *
  * Firebase Storage tidak diinisialisasi — tidak dipakai di app ini
