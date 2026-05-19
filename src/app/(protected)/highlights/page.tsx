@@ -97,6 +97,7 @@ export default function HighlightsPage() {
       {!isLoading && noteEntries.length > 0 && (
         <div className="space-y-5">
           {noteEntries.map(([noteId, items]) => {
+            if (!items[0]) return null;
             const noteTitle = items[0].noteTitle;
             const noteCreatedAt = items[0].noteCreatedAt;
             return (
