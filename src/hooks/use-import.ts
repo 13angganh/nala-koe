@@ -68,7 +68,7 @@ export function useImport() {
         }
 
         return finalResult;
-      } catch (e) {
+      } catch {
         toast.error('Import gagal. Coba lagi.');
         setState({ isImporting: false, result: null });
         return null;

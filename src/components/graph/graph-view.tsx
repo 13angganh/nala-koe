@@ -84,8 +84,9 @@ function buildGraph(notes: GraphViewProps['notes'], width: number, height: numbe
     // Repulsion between all node pairs
     for (let i = 0; i < nodes.length; i++) {
       for (let j = i + 1; j < nodes.length; j++) {
-        const a = nodes[i]!;
-        const b = nodes[j]!;
+        const a = nodes[i];
+        const b = nodes[j];
+        if (!a || !b) continue;
         const dx = b.x - a.x;
         const dy = b.y - a.y;
         const dist = Math.sqrt(dx * dx + dy * dy) || 1;
@@ -101,8 +102,8 @@ function buildGraph(notes: GraphViewProps['notes'], width: number, height: numbe
 
     // Attraction along edges
     for (const edge of edges) {
-      const a = nodeMap.get(edge.source)!;
-      const b = nodeMap.get(edge.target)!;
+      const a = nodeMap.get(edge.source);
+      const b = nodeMap.get(edge.target);
       if (!a || !b) continue;
       const dx = b.x - a.x;
       const dy = b.y - a.y;
@@ -238,6 +239,7 @@ export function GraphView({ notes }: GraphViewProps) {
       }
       draw();
     });
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: canvas is mounted in DOM at this point in useEffect
     observer.observe(canvas.parentElement!);
     return () => observer.disconnect();
   }, [notes, draw]);
@@ -257,6 +259,7 @@ export function GraphView({ notes }: GraphViewProps) {
   }
 
   function handleMouseMove(e: React.MouseEvent<HTMLCanvasElement>) {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: callback only fires when canvas is mounted
     const rect = canvasRef.current!.getBoundingClientRect();
     const cx = e.clientX - rect.left;
     const cy = e.clientY - rect.top;
@@ -277,15 +280,18 @@ export function GraphView({ notes }: GraphViewProps) {
     if (node) {
       setHoveredId(node.id);
       setTooltip({ x: e.clientX - rect.left + 10, y: e.clientY - rect.top - 10, title: node.title });
-      canvasRef.current!.style.cursor = 'pointer';
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: callback only fires when canvas is mounted
+    canvasRef.current!.style.cursor = 'pointer';
     } else {
       setHoveredId(null);
       setTooltip(null);
-      canvasRef.current!.style.cursor = 'grab';
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: callback only fires when canvas is mounted
+    canvasRef.current!.style.cursor = 'grab';
     }
   }
 
   function handleMouseDown(e: React.MouseEvent<HTMLCanvasElement>) {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: callback only fires when canvas is mounted
     const rect = canvasRef.current!.getBoundingClientRect();
     const cx = e.clientX - rect.left;
     const cy = e.clientY - rect.top;
@@ -297,16 +303,19 @@ export function GraphView({ notes }: GraphViewProps) {
       origX: viewportRef.current.x,
       origY: viewportRef.current.y,
     };
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: callback only fires when canvas is mounted
     canvasRef.current!.style.cursor = 'grabbing';
   }
 
   function handleMouseUp(e: React.MouseEvent<HTMLCanvasElement>) {
     const wasPanning = panState.current !== null;
     panState.current = null;
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: callback only fires when canvas is mounted
     canvasRef.current!.style.cursor = 'grab';
 
     if (!wasPanning) {
-      const rect = canvasRef.current!.getBoundingClientRect();
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: callback only fires when canvas is mounted
+    const rect = canvasRef.current!.getBoundingClientRect();
       const node = getNodeAtPoint(e.clientX - rect.left, e.clientY - rect.top);
       if (node) router.push(ROUTES.NOTE(node.id));
     }

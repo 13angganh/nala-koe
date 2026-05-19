@@ -4,8 +4,6 @@ import { useState, useRef, useCallback } from 'react';
 import { Highlighter, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { addHighlight, removeHighlight } from '@/services/highlights.service';
 import { useAuthStore } from '@/stores/auth.store';
 import type { NoteHighlight } from '@/types/note.types';

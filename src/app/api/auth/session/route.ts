@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 import { adminAuth } from '@/lib/firebase-admin';
 import { logger }    from '@/lib/logger';
 import {

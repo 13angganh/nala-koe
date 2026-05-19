@@ -25,7 +25,8 @@ export default function HighlightsPage() {
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['highlights', user?.uid],
     queryFn: async () => {
-      const result = await getAllHighlights(user!.uid);
+      if (!user) throw new Error('unauthenticated');
+      const result = await getAllHighlights(user.uid);
       if (isOk(result)) return result.data;
       throw new Error(result.error.message);
     },

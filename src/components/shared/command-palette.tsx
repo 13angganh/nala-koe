@@ -82,7 +82,7 @@ export function CommandPalette() {
   // Group filtered results
   const groups = filtered.reduce<Record<string, CommandItem[]>>((acc, item) => {
     if (!acc[item.group]) acc[item.group] = [];
-    acc[item.group]!.push(item);
+    acc[item.group].push(item);
     return acc;
   }, {});
 

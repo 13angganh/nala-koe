@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { TagBadge } from './tag-badge';
 
@@ -65,7 +65,7 @@ export function TagInput({
     if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault();
       if (highlightedIdx >= 0 && filteredSuggestions[highlightedIdx]) {
-        addTag(filteredSuggestions[highlightedIdx]!);
+        addTag(filteredSuggestions[highlightedIdx]);
       } else if (inputValue.trim()) {
         addTag(inputValue);
       }
@@ -135,7 +135,6 @@ export function TagInput({
             )}
             aria-label="Ketik tag baru"
             aria-autocomplete="list"
-            aria-expanded={showSuggestions && filteredSuggestions.length > 0}
           />
         )}
         {!canAddMore && value.length >= maxTags && (

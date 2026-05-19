@@ -6,16 +6,13 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useMutation } from '@tanstack/react-query';
+
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/auth.store';
 import { getNotes } from '@/services/notes.service';
-import type { ExportFormat, ExportOptions } from '@/types/import-export.types';
+import type { ExportOptions } from '@/types/import-export.types';
 import type { Note } from '@/types/note.types';
 import {
-  exportNoteAsTxt,
-  exportNoteAsMarkdown,
-  exportNoteAsJson,
   exportNotesAsJson,
   exportNotesAsMarkdown,
   exportNotesAsTxt,
@@ -47,7 +44,7 @@ export function useExport() {
         const allNotes = result.ok ? result.data : [];
 
         const filtered: Note[] = opts.noteIds?.length
-          ? allNotes.filter((n) => opts.noteIds!.includes(n.id))
+          ? allNotes.filter((n) => opts.noteIds?.includes(n.id))
           : allNotes;
 
         if (filtered.length === 0) {
@@ -94,7 +91,7 @@ export function useExport() {
         setState({ isExporting: true, progress: 95 });
         downloadBlob(blob, filename);
         toast.success(`${notes.length} catatan diekspor sebagai ${opts.format.toUpperCase()}`);
-      } catch (e) {
+      } catch {
         toast.error('Export gagal. Coba lagi.');
       } finally {
         setState({ isExporting: false, progress: 0 });

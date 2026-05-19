@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/constants/routes';

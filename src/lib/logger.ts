@@ -98,7 +98,7 @@ export const logger = {
    */
   info(context: string, data?: unknown): void {
     if (process.env.NODE_ENV !== 'production') {
-      console.info(formatPrefix('info', context), data ?? '');
+      console.warn(formatPrefix('info', context), data ?? '');
     }
   },
 

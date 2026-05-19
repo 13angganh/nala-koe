@@ -7,8 +7,6 @@ import {
   Play,
   Pause,
   Square,
-  ChevronDown,
-  ChevronUp,
   Settings2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';

@@ -12,7 +12,6 @@ import { Plus, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import { CanvasSticky } from './canvas-sticky';
 import { Button } from '@/components/ui/button';
 import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
-import { logger } from '@/lib/logger';
 import type { CanvasBoard as CanvasBoardType, CanvasSticky as CanvasStickyType } from '@/types/canvas.types';
 
 const ZOOM_MIN = 0.25;
@@ -76,7 +75,9 @@ export function CanvasBoard({
     const dy = e.clientY - panState.current.startY;
     setViewport((v) => ({
       ...v,
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: this callback only runs inside pointermove which is active only when panState is set in pointerdown
       x: panState.current!.origX + dx,
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: same as above
       y: panState.current!.origY + dy,
     }));
   }, []);

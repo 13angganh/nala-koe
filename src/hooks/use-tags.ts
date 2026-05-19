@@ -57,7 +57,8 @@ export function useTags(): UseTagsReturn {
       }
 
       debounceRef.current = setTimeout(async () => {
-        const result = await getTagSuggestions(user.uid!, query);
+        if (!user?.uid) return;
+        const result = await getTagSuggestions(user.uid, query);
         if (result.data) setSuggestions(result.data);
       }, 200);
     },

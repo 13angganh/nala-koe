@@ -141,7 +141,7 @@ export function parseColorNoteJson(
         return;
       }
       notes.push(colorNoteToNote(cn, userId));
-    } catch (e) {
+    } catch {
       errors.push({ index: idx, reason: `Parse error: ${String(e)}` });
     }
   });

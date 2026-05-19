@@ -8,7 +8,6 @@ import {
   collection,
   writeBatch,
   doc,
-  serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { logger } from '@/lib/logger';
@@ -48,7 +47,7 @@ export async function importNotesToFirestore(
     try {
       await batch.commit();
       imported += chunk.length;
-    } catch (e) {
+    } catch {
       logger.error('[import] Batch commit failed', e);
       const startIdx = notes.indexOf(chunk[0]);
       chunk.forEach((_, i) => {

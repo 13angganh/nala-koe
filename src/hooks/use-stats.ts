@@ -24,7 +24,9 @@ export function useWritingStats() {
   const { user } = useAuthStore();
   return useQuery<WritingStats | null>({
     queryKey: ['stats', 'writing', user?.uid],
-    queryFn: async () => {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: enabled: !!user?.uid
+      queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: enabled: !!user?.uid
       const res = await getWritingStats(user!.uid);
       return isOk(res) ? res.data : null;
     },
@@ -37,7 +39,9 @@ export function useMoodInsights() {
   const { user } = useAuthStore();
   return useQuery<MoodInsight[]>({
     queryKey: ['stats', 'mood', user?.uid],
-    queryFn: async () => {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: enabled: !!user?.uid
+      queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: enabled: !!user?.uid
       const res = await getMoodInsights(user!.uid);
       return isOk(res) ? res.data : [];
     },
@@ -50,7 +54,9 @@ export function useMonthlyStats(months = 6) {
   const { user } = useAuthStore();
   return useQuery<MonthlyStats[]>({
     queryKey: ['stats', 'monthly', user?.uid, months],
-    queryFn: async () => {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: enabled: !!user?.uid
+      queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: enabled: !!user?.uid
       const res = await getMonthlyStats(user!.uid, months);
       return isOk(res) ? res.data : [];
     },
@@ -63,7 +69,9 @@ export function useWeeklyActivity(days = 30) {
   const { user } = useAuthStore();
   return useQuery<WeeklyActivity[]>({
     queryKey: ['stats', 'weekly', user?.uid, days],
-    queryFn: async () => {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: enabled: !!user?.uid
+      queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: enabled: !!user?.uid
       const res = await getWeeklyActivity(user!.uid, days);
       return isOk(res) ? res.data : [];
     },
@@ -76,7 +84,9 @@ export function useTagFrequency() {
   const { user } = useAuthStore();
   return useQuery<{ tag: string; count: number }[]>({
     queryKey: ['stats', 'tags', user?.uid],
-    queryFn: async () => {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: enabled: !!user?.uid
+      queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: enabled: !!user?.uid
       const res = await getTagFrequency(user!.uid);
       return isOk(res) ? res.data : [];
     },
@@ -97,7 +107,9 @@ export function useScheduledNotes() {
     }[]
   >({
     queryKey: ['stats', 'scheduled', user?.uid],
-    queryFn: async () => {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: enabled: !!user?.uid
+      queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: enabled: !!user?.uid
       const res = await getScheduledNotes(user!.uid);
       return isOk(res) ? res.data : [];
     },

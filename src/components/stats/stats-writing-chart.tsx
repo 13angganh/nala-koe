@@ -148,7 +148,6 @@ export function StatsActivityHeatmap({ data, isLoading }: StatsActivityHeatmapPr
     return 'bg-[var(--accent)]';
   }
 
-  const DAY_LABELS = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 
   return (
     <div className="space-y-2">

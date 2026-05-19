@@ -7,7 +7,6 @@ import { NoteEditor } from '@/components/notes/note-editor';
 import { useNoteEditor } from '@/hooks/use-note-editor';
 import { useArchiveNote, useDuplicateNote } from '@/hooks/use-notes';
 import { getNoteSizeInfo } from '@/services/notes.service';
-import { PageLoader } from '@/components/shared/loading-spinner';
 import { ROUTES } from '@/constants/routes';
 import { cn } from '@/lib/utils';
 
@@ -18,7 +17,7 @@ export default function NotePage() {
 
   const {
     note,
-    isLoading,
+    
     isError,
     isSaving,
     isDirty,

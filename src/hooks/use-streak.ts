@@ -75,6 +75,7 @@ export function useStreak() {
     queryFn: async () => {
       const q = query(
         collection(db, 'notes'),
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: enabled: !!user?.uid
         where('userId', '==', user!.uid),
         where('status', '==', 'active'),
         orderBy('createdAt', 'asc')

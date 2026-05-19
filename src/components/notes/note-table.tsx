@@ -3,7 +3,6 @@
 import { useCallback, useId } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { generateId } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -62,7 +61,7 @@ export function NoteTable({ data, onChange, readOnly = false, className }: NoteT
   const updateCell = useCallback(
     (rowIndex: number, colIndex: number, value: string) => {
       const rows = data.rows.map((r) => [...r]);
-      if (rows[rowIndex]) rows[rowIndex]![colIndex] = value;
+      if (rows[rowIndex]) rows[rowIndex][colIndex] = value;
       onChange({ ...data, rows });
     },
     [data, onChange]

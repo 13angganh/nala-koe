@@ -101,8 +101,8 @@ export function parseMath(input: string): MathParseOutcome {
   // Indonesian percentage shorthand
   const idPct = ID_PERCENTAGE_PATTERN.exec(withoutEquals);
   if (idPct) {
-    const pct = parseFloat(idPct[1]!.replace(',', '.'));
-    const base = parseFloat(idPct[2]!.replace(/,/g, ''));
+    const pct = parseFloat((idPct[1] ?? "0").replace(',', '.'));
+    const base = parseFloat((idPct[2] ?? "0").replace(/,/g, ''));
     const result = (pct / 100) * base;
     return {
       ok: true,

@@ -13,7 +13,7 @@ import { db } from '@/lib/firebase';
 import { logger } from '@/lib/logger';
 import { ok, err, normalizeDocument } from '@/lib/normalizer';
 import type { ApiResult } from '@/types/api.types';
-import type { NoteHighlight, NoteListItem } from '@/types/note.types';
+import type { NoteHighlight } from '@/types/note.types';
 
 const COLLECTION = 'notes';
 

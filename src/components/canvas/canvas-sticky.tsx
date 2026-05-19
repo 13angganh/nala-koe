@@ -7,7 +7,6 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import { X, GripVertical, ExternalLink } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/constants/routes';
 import {
   CANVAS_STICKY_COLORS,

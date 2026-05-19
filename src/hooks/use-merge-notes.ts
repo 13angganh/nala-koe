@@ -23,6 +23,7 @@ export function useMergeNotes() {
       targetId: string;
       sourceIds: string[];
     }) => {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: mutationFn only reachable when user is authenticated (ProtectedLayout)
       const result = await mergeNotes(targetId, sourceIds, user!.uid);
       if (!isOk(result)) throw new Error(result.error.message);
       return { targetId, sourceIds };

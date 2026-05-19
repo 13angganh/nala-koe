@@ -2,10 +2,8 @@
 
 import { useMemo, useRef } from 'react';
 import { FileText, ChevronLeft, ChevronRight } from 'lucide-react';
-import { TimelineItem } from './timeline-item';
 import { EmptyState } from '@/components/shared/empty-state';
 import { Button } from '@/components/ui/button';
-import { formatDate } from '@/lib/format';
 import type { NoteListItem } from '@/types/note.types';
 
 interface TimelineGroup {
@@ -25,7 +23,7 @@ function groupByMonth(notes: NoteListItem[]): TimelineGroup[] {
     const d = new Date(note.createdAt);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     if (!map.has(key)) map.set(key, []);
-    map.get(key)!.push(note);
+    map.get(key)?.push(note);
   }
 
   const groups: TimelineGroup[] = [];

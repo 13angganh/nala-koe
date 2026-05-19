@@ -5,7 +5,6 @@ import { SettingsShell } from '@/components/settings/settings-shell';
 import { useAuthStore } from '@/stores/auth.store';
 import { ROUTES } from '@/constants/routes';
 import { Button } from '@/components/ui/button';
-import { useUiStore } from '@/stores/ui.store';
 import { logout } from '@/services/auth.service';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';

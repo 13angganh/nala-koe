@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useId, useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import {
   Eye,
   EyeOff,

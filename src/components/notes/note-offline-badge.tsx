@@ -1,6 +1,6 @@
 'use client';
 
-import { WifiOff, CloudOff, Cloud, Loader2 } from 'lucide-react';
+import { WifiOff, Cloud, Loader2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useNetworkStatus } from '@/hooks/use-network-status';

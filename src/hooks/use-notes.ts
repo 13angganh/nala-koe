@@ -28,6 +28,7 @@ export function useNotes(filters: NoteFilters = {}) {
     queryFn: async () => {
       setListLoading(true);
       try {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: enabled: !!user?.uid
         const result = await getNotes(user!.uid, filters); // reason: safe — enabled: !!user?.uid prevents execution when user is null
         if (isOk(result)) {
           setNotes(result.data);
@@ -49,6 +50,7 @@ export function useRecentNotes(count = 5) {
   return useQuery({
     queryKey: [NOTES_QUERY_KEY, 'recent', user?.uid, count],
     queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: enabled: !!user?.uid
       const result = await getRecentNotes(user!.uid, count); // reason: safe — enabled: !!user?.uid prevents execution when user is null
       if (isOk(result)) return result.data;
       throw new Error(result.error.message);
@@ -65,6 +67,7 @@ export function useCreateNote() {
 
   return useMutation({
     mutationFn: async (input: Partial<CreateNoteInput>) => {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: mutationFn only reachable when user is authenticated (ProtectedLayout)
       const result = await createNote(user!.uid, input); // reason: safe — mutationFn only reachable when user is authenticated (ProtectedLayout)
       if (!isOk(result)) throw new Error(result.error.message);
       return result.data;
@@ -106,6 +109,7 @@ export function useTrashNote() {
 
   return useMutation({
     mutationFn: async (noteId: string) => {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: mutationFn only reachable when user is authenticated (ProtectedLayout)
       const result = await trashNote(noteId, user!.uid); // reason: safe — mutationFn only reachable when user is authenticated (ProtectedLayout)
       if (!isOk(result)) throw new Error(result.error.message);
       return noteId;
@@ -128,6 +132,7 @@ export function useRestoreNote() {
 
   return useMutation({
     mutationFn: async (noteId: string) => {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: mutationFn only reachable when user is authenticated (ProtectedLayout)
       const result = await restoreNote(noteId, user!.uid); // reason: safe — mutationFn only reachable when user is authenticated (ProtectedLayout)
       if (!isOk(result)) throw new Error(result.error.message);
       return noteId;
@@ -150,6 +155,7 @@ export function useDeleteNote() {
 
   return useMutation({
     mutationFn: async (noteId: string) => {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: mutationFn only reachable when user is authenticated (ProtectedLayout)
       const result = await deleteNote(noteId, user!.uid); // reason: safe — mutationFn only reachable when user is authenticated (ProtectedLayout)
       if (!isOk(result)) throw new Error(result.error.message);
       return noteId;
@@ -172,6 +178,7 @@ export function useArchiveNote() {
 
   return useMutation({
     mutationFn: async (noteId: string) => {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: mutationFn only reachable when user is authenticated (ProtectedLayout)
       const result = await archiveNote(noteId, user!.uid); // reason: safe — mutationFn only reachable when user is authenticated (ProtectedLayout)
       if (!isOk(result)) throw new Error(result.error.message);
       return noteId;
@@ -194,6 +201,7 @@ export function useDuplicateNote() {
 
   return useMutation({
     mutationFn: async (noteId: string) => {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: mutationFn only reachable when user is authenticated (ProtectedLayout)
       const result = await duplicateNote(noteId, user!.uid); // reason: safe — mutationFn only reachable when user is authenticated (ProtectedLayout)
       if (!isOk(result)) throw new Error(result.error.message);
       return result.data;

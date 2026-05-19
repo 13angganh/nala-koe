@@ -31,7 +31,7 @@ const CanvasBoard = dynamic(
 
 export default function CanvasPage() {
   const { user } = useAuthStore();
-  const { confirm, dialogProps } = useConfirmDialog();
+  const { dialogProps } = useConfirmDialog();
   const [board, setBoard] = useState<CanvasBoardType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 

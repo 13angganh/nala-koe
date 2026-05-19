@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { History, RotateCcw, Eye, EyeOff, ChevronRight, Loader2, Clock } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useVersionHistory, formatVersionLabel, diffText } from '@/hooks/use-version-history';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';

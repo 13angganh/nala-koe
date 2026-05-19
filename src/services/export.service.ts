@@ -301,7 +301,7 @@ export async function exportNotesAsPdf(notes: Note[], opts: ExportOptions): Prom
 
 export async function exportNotesAsDocx(notes: Note[], opts: ExportOptions): Promise<Blob> {
   const {
-    Document, Paragraph, TextRun, HeadingLevel, AlignmentType, Packer, BorderStyle,
+    Document, Paragraph, TextRun, HeadingLevel, AlignmentType, Packer,
   } = await import('docx');
 
   const children: InstanceType<typeof Paragraph>[] = [];

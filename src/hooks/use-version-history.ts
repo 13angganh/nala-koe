@@ -7,7 +7,7 @@ import { getNoteVersions, updateNote } from '@/services/notes.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { isOk } from '@/lib/normalizer';
 import { NOTES_QUERY_KEY } from '@/hooks/use-notes';
-import type { NoteVersion, Note } from '@/types/note.types';
+import type { NoteVersion } from '@/types/note.types';
 
 export const VERSIONS_QUERY_KEY = 'note-versions';
 
@@ -29,6 +29,7 @@ export function useVersionHistory(noteId: string) {
 
   const restoreMutation = useMutation({
     mutationFn: async (version: NoteVersion) => {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: mutationFn only reachable when user is authenticated (ProtectedLayout)
       const result = await updateNote(noteId, user!.uid, {
         title: version.snapshot.title,
         content: version.snapshot.content,

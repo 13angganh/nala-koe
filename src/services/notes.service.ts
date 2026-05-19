@@ -213,7 +213,7 @@ export async function getNotes(
 
     if (filters.tags && filters.tags.length > 0) {
       notes = notes.filter((n) =>
-        filters.tags!.some((t) => n.tags.includes(t))
+        filters.tags.some((t) => n.tags.includes(t))
       );
     }
 

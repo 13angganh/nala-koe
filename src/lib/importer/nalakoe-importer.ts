@@ -59,7 +59,7 @@ export function parseNalakoeJson(
         originalCreatedAt: n.originalCreatedAt ?? n.createdAt,
       };
       notes.push(imported);
-    } catch (e) {
+    } catch {
       errors.push({ index: idx, reason: `Parse error: ${String(e)}` });
     }
   });

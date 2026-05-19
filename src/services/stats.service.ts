@@ -4,7 +4,6 @@ import {
   query,
   where,
   orderBy,
-  Timestamp,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { logger } from '@/lib/logger';
@@ -254,7 +253,7 @@ export async function getMonthlyStats(
       // We'll track via a temporary Set on a side channel
       (bucket as { _days?: Set<string> })._days =
         (bucket as { _days?: Set<string> })._days ?? new Set();
-      (bucket as { _days?: Set<string> })._days!.add(dayStr);
+      (bucket as { _days?: Set<string> })._days?.add(dayStr);
     }
 
     // Finalize
@@ -364,7 +363,6 @@ export async function getScheduledNotes(userId: string): Promise<
   >
 > {
   try {
-    const now = new Date().toISOString();
     const q = query(
       collection(db, COLLECTION),
       where('userId', '==', userId),

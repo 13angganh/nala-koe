@@ -9,7 +9,7 @@ import { getNoteById, updateNote } from '@/services/notes.service';
 import { isOk } from '@/lib/normalizer';
 import { analyzeContent } from '@/lib/reading-time';
 import { detectLanguage } from '@/lib/language-detector';
-import type { UpdateNoteInput, NoteLocation, NoteContentBlock } from '@/types/note.types';
+import type { UpdateNoteInput, NoteLocation, NoteContentBlock, NoteReaction, NoteHighlight } from '@/types/note.types';
 import type { MoodId } from '@/types/mood.types';
 import type { WeatherSnapshot } from '@/types/api.types';
 import type { NoteFontWeight, NoteTexture } from '@/types/settings.types';
@@ -31,6 +31,7 @@ export function useNoteEditor(noteId: string) {
   const { isLoading, isError } = useQuery({
     queryKey: [NOTES_QUERY_KEY, noteId, user?.uid],
     queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: enabled: !!user?.uid
       const result = await getNoteById(noteId, user!.uid);
       if (!isOk(result)) throw new Error(result.error.message);
       setActiveNote(result.data);
@@ -43,6 +44,7 @@ export function useNoteEditor(noteId: string) {
   // Save mutation
   const saveMutation = useMutation({
     mutationFn: async (input: UpdateNoteInput) => {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: mutationFn only reachable when user is authenticated (ProtectedLayout)
       const result = await updateNote(noteId, user!.uid, input);
       if (!isOk(result)) throw new Error(result.error.message);
     },
@@ -268,7 +270,7 @@ export function useNoteEditor(noteId: string) {
   const { wordCount, readingTimeMinutes } = analyzeContent(activeNote?.content ?? '');
 
   const handleReactionChange = useCallback(
-    (reaction: import('@/types/note.types').NoteReaction | null) => {
+    (reaction: NoteReaction | null) => {
       updateActiveNote({ reaction });
       setIsDirty(true);
       scheduleAutoSave({ reaction });
@@ -277,7 +279,7 @@ export function useNoteEditor(noteId: string) {
   );
 
   const handleHighlightsChange = useCallback(
-    (highlights: import('@/types/note.types').NoteHighlight[]) => {
+    (highlights: NoteHighlight[]) => {
       updateActiveNote({ highlights });
       // Highlights are saved directly via service, but also sync to activeNote
     },

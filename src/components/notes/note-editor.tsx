@@ -33,7 +33,7 @@ import { TagInput } from '@/components/tags/tag-input';
 import { Button } from '@/components/ui/button';
 import { useTags } from '@/hooks/use-tags';
 import type { ChecklistItem } from './note-checklist';
-import type { NoteContentBlock, NoteLocation } from '@/types/note.types';
+import type { NoteContentBlock, NoteLocation, NoteReaction, NoteHighlight } from '@/types/note.types';
 import type { MoodId } from '@/types/mood.types';
 import type { WeatherSnapshot } from '@/types/api.types';
 import type { NoteFontWeight, NoteTexture } from '@/types/settings.types';
@@ -83,10 +83,10 @@ interface NoteEditorProps {
   // Phase 7
   sizeInfo?: { totalBytes: number; hasImages: boolean; hasAudio: boolean; label: 'small' | 'medium' | 'large' };
   // Phase 8
-  reaction?: import('@/types/note.types').NoteReaction | null;
-  highlights?: import('@/types/note.types').NoteHighlight[];
-  onReactionChange?: (reaction: import('@/types/note.types').NoteReaction | null) => void;
-  onHighlightsChange?: (highlights: import('@/types/note.types').NoteHighlight[]) => void;
+  reaction?: NoteReaction | null;
+  highlights?: NoteHighlight[];
+  onReactionChange?: (reaction: NoteReaction | null) => void;
+  onHighlightsChange?: (highlights: NoteHighlight[]) => void;
   onDuplicate?: () => void;
   onArchive?: () => void;
   // Phase 9
@@ -187,8 +187,8 @@ export function NoteEditor({
   onTimeCapsuleChange,
   onSecretChange,
   sizeInfo,
-  onDuplicate,
-  onArchive,
+  _onDuplicate,
+  _onArchive,
   reaction,
   highlights = [],
   onReactionChange,

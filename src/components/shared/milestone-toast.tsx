@@ -96,7 +96,7 @@ function launchConfetti(canvas: HTMLCanvasElement, color: string) {
   const MAX_FRAMES = 120;
 
   function draw() {
-    ctx!.clearRect(0, 0, W, H);
+    ctx.clearRect(0, 0, W, H);
     angle += 0.01;
     frame++;
 
@@ -106,18 +106,18 @@ function launchConfetti(canvas: HTMLCanvasElement, color: string) {
       p.x += Math.sin(angle) * 1.2;
       p.tilt = Math.sin(p.tiltAngle) * 15;
 
-      ctx!.beginPath();
-      ctx!.lineWidth = p.r / 2;
-      ctx!.strokeStyle = p.color;
-      ctx!.moveTo(p.x + p.tilt + p.r / 4, p.y);
-      ctx!.lineTo(p.x + p.tilt, p.y + p.tilt + p.r / 4);
-      ctx!.stroke();
+      ctx.beginPath();
+      ctx.lineWidth = p.r / 2;
+      ctx.strokeStyle = p.color;
+      ctx.moveTo(p.x + p.tilt + p.r / 4, p.y);
+      ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r / 4);
+      ctx.stroke();
     }
 
     if (frame < MAX_FRAMES) {
       requestAnimationFrame(draw);
     } else {
-      ctx!.clearRect(0, 0, W, H);
+      ctx.clearRect(0, 0, W, H);
     }
   }
 
