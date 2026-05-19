@@ -73,12 +73,12 @@ export function NoteList({
               <NoteCard
                 note={note}
                 onTrash={handleTrash}
-                onRestore={isTrash ? (id) => restoreNote(id) : undefined}
-                onDelete={isTrash ? handleDelete : undefined}
-                onArchive={!isTrash ? onArchive : undefined}
-                onDuplicate={!isTrash ? onDuplicate : undefined}
-                onMerge={!isTrash ? onMerge : undefined}
                 isTrash={isTrash}
+                {...(isTrash ? { onRestore: (id: string) => restoreNote(id) } : {})}
+                {...(isTrash ? { onDelete: handleDelete } : {})}
+                {...(!isTrash && onArchive ? { onArchive } : {})}
+                {...(!isTrash && onDuplicate ? { onDuplicate } : {})}
+                {...(!isTrash && onMerge ? { onMerge } : {})}
               />
             </div>
           </AnimatedNoteCard>

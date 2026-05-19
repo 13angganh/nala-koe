@@ -368,7 +368,7 @@ export function NoteEditor({
         onToggleHighlight={() => setIsHighlightOpen((v) => !v)}
         isHighlightOpen={isHighlightOpen}
         // Phase 9
-        onToggleScheduled={onScheduledChange ? () => setIsScheduledOpen((v) => !v) : undefined}
+        {...(onScheduledChange ? { onToggleScheduled: () => setIsScheduledOpen((v) => !v) } : {})}
         isScheduledOpen={isScheduledOpen}
         isScheduledActive={isScheduled}
         onShare={() => setIsShareOpen(true)}

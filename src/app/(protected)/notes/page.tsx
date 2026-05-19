@@ -28,7 +28,7 @@ export default function NotesPage() {
 
   const activeFilters = {
     ...filters,
-    search: deferredSearch || undefined,
+    ...(deferredSearch ? { search: deferredSearch } : {}),
   };
 
   const { data: allNotes = [], isLoading } = useNotes(activeFilters);
