@@ -401,6 +401,7 @@ export async function exportNotesAsDocx(notes: Note[], opts: ExportOptions): Pro
 export async function exportNotesAsZip(notes: Note[], opts: ExportOptions): Promise<Blob> {
   const JSZip = (await import('jszip')).default;
   const zip = new JSZip();
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: folder name is hardcoded string, JSZip.folder() only returns null for empty string
   const folder = zip.folder('nalakoe-export')!;
 
   for (const note of notes) {

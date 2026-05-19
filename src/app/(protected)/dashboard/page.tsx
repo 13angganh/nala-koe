@@ -38,8 +38,8 @@ export default function DashboardPage() {
       milestoneFiredRef.current !== streakData.milestoneReached
     ) {
       milestoneFiredRef.current = streakData.milestoneReached;
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: milestoneReached is truthy (checked in if-guard above)
       sonnerToast.custom(() => (
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: milestoneReached is truthy (checked in if-guard above)
         <MilestoneToast streak={streakData.milestoneReached!} />
       ), { duration: 6000 });
     }

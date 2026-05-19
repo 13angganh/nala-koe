@@ -5,7 +5,6 @@ import { useQuery } from '@tanstack/react-query';
 import { Highlighter, ExternalLink, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
 import { formatRelativeTime } from '@/lib/format';
 import { EmptyState } from '@/components/shared/empty-state';
 import { Button } from '@/components/ui/button';

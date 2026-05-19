@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { SettingsShell } from '@/components/settings/settings-shell';
 import { Switch } from '@/components/ui/switch';
-import { Button } from '@/components/ui/button';
 import { useSettingsStore } from '@/stores/settings.store';
 import { Shield, Fingerprint, Key } from 'lucide-react';
 
