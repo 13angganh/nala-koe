@@ -65,7 +65,8 @@ export function useConfirmDialog() {
     dialogProps: {
       isOpen: state.isOpen,
       title: state.title,
-      description: state.description,
+      // exactOptionalPropertyTypes: omit key entirely when undefined instead of passing undefined
+      ...(state.description !== undefined ? { description: state.description } : {}),
       confirmLabel: state.confirmLabel ?? 'Konfirmasi',
       cancelLabel: state.cancelLabel ?? 'Batal',
       variant: state.variant ?? 'default',
