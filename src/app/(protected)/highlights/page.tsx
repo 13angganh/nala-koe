@@ -52,7 +52,7 @@ export default function HighlightsPage() {
 
   const grouped = (data ?? []).reduce<Record<string, HighlightWithNote[]>>((acc, item) => {
     if (!acc[item.noteId]) acc[item.noteId] = [];
-    acc[item.noteId].push(item);
+    acc[item.noteId]?.push(item);
     return acc;
   }, {});
 
