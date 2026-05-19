@@ -81,7 +81,7 @@ interface NoteEditorProps {
   onTimeCapsuleChange: (isTimeCapsule: boolean, unlockAt: string | null) => void;
   onSecretChange: (isSecret: boolean) => void;
   // Phase 7
-  sizeInfo?: { totalBytes: number; hasImages: boolean; hasAudio: boolean; label: 'small' | 'medium' | 'large' };
+  sizeInfo?: { totalBytes: number; textBytes: number; hasImages: boolean; hasAudio: boolean; label: 'small' | 'medium' | 'large' };
   // Phase 8
   reaction?: NoteReaction | null;
   highlights?: NoteHighlight[];

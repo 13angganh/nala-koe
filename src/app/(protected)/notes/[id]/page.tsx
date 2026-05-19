@@ -143,6 +143,7 @@ export default function NotePage() {
         location={note.location}
         isSecret={note.isSecret}
         isTimeCapsule={note.isTimeCapsule}
+        timeCapsuleUnlockAt={note.timeCapsuleUnlockAt}
         onTimeCapsuleChange={handleTimeCapsuleChange}
         onSecretChange={handleSecretChange}
         onDuplicate={() => duplicateMutation.mutate(note.id)}
@@ -151,10 +152,9 @@ export default function NotePage() {
         onHighlightsChange={handleHighlightsChange}
         onScheduledChange={handleScheduledChange}
         isScheduled={note.isScheduled}
+        scheduledAt={note.scheduledAt}
+        reaction={note.reaction}
         className="flex-1 min-h-0"
-        {...(note.timeCapsuleUnlockAt != null ? { timeCapsuleUnlockAt: note.timeCapsuleUnlockAt } : {})}
-        {...(note.scheduledAt != null ? { scheduledAt: note.scheduledAt } : {})}
-        {...(note.reaction != null ? { reaction: note.reaction } : {})}
         {...(note.highlights != null ? { highlights: note.highlights } : {})}
         {...(sizeInfo != null ? { sizeInfo } : {})}
       />
