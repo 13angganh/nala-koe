@@ -121,8 +121,6 @@ export default function NotePage() {
         mood={note.mood}
         tags={note.tags}
         language={note.language}
-        weather={note.weather}
-        location={note.location}
         fontWeight={note.fontWeight}
         texture={note.texture}
         linkedNoteIds={note.linkedNoteIds}
@@ -133,30 +131,32 @@ export default function NotePage() {
         onSave={handleManualSave}
         onMoodChange={handleMoodChange}
         onTagsChange={handleTagsChange}
-        onWeatherChange={handleWeatherChange}
-        onLocationChange={handleLocationChange}
         onFontChange={handleFontChange}
         onTextureChange={handleTextureChange}
         onLinkedNotesChange={handleLinkedNotesChange}
         onInsertTable={handleInsertTable}
         onInsertMath={handleInsertMath}
         onInsertUrlPreview={handleInsertUrlPreview}
+        onWeatherChange={handleWeatherChange}
+        onLocationChange={handleLocationChange}
+        weather={note.weather}
+        location={note.location}
         isSecret={note.isSecret}
         isTimeCapsule={note.isTimeCapsule}
-        timeCapsuleUnlockAt={note.timeCapsuleUnlockAt}
         onTimeCapsuleChange={handleTimeCapsuleChange}
         onSecretChange={handleSecretChange}
-        sizeInfo={sizeInfo}
         onDuplicate={() => duplicateMutation.mutate(note.id)}
         onArchive={() => archiveMutation.mutate(note.id)}
-        reaction={note.reaction}
-        highlights={note.highlights}
         onReactionChange={handleReactionChange}
         onHighlightsChange={handleHighlightsChange}
-        isScheduled={note.isScheduled}
-        scheduledAt={note.scheduledAt}
         onScheduledChange={handleScheduledChange}
+        isScheduled={note.isScheduled}
         className="flex-1 min-h-0"
+        {...(note.timeCapsuleUnlockAt != null ? { timeCapsuleUnlockAt: note.timeCapsuleUnlockAt } : {})}
+        {...(note.scheduledAt != null ? { scheduledAt: note.scheduledAt } : {})}
+        {...(note.reaction != null ? { reaction: note.reaction } : {})}
+        {...(note.highlights != null ? { highlights: note.highlights } : {})}
+        {...(sizeInfo != null ? { sizeInfo } : {})}
       />
     </div>
   );
