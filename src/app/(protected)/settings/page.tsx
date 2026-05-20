@@ -5,6 +5,7 @@ import { SettingsShell } from '@/components/settings/settings-shell';
 import { useAuthStore } from '@/stores/auth.store';
 import { ROUTES } from '@/constants/routes';
 import { Button } from '@/components/ui/button';
+import { isOk } from '@/lib/normalizer';
 import { logout } from '@/services/auth.service';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -37,7 +38,7 @@ export default function SettingsPage() {
 
   const handleLogout = async () => {
     const result = await logout();
-    if (result.ok) {
+    if (isOk(result)) {
       router.push(ROUTES.LOGIN);
     } else {
       toast.error(result.error.message);

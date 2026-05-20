@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { setNoteReaction } from '@/services/reactions.service';
 import { useAuthStore } from '@/stores/auth.store';
+import { isOk } from '@/lib/normalizer';
 import type { NoteReaction } from '@/types/note.types';
 
 interface ReactionOption {
@@ -63,7 +64,7 @@ export function NoteReactionBar({
     setIsPending(true);
     try {
       const result = await setNoteReaction(noteId, user.uid, newType);
-      if (result.ok) {
+      if (isOk(result)) {
         const newReaction: NoteReaction | null =
           newType === null
             ? null

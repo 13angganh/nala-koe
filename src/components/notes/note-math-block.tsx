@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { Calculator, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { parseMath, isMathExpression } from '@/lib/math-parser';
+import { isOk } from '@/lib/normalizer';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -37,7 +38,7 @@ export function NoteMathBlock({
 
     if (isMathExpression(trimmed) || trimmed.endsWith('=')) {
       const outcome = parseMath(trimmed);
-      if (outcome.ok) {
+      if (isOk(outcome)) {
         setResult(outcome.value.formatted);
         setErrorMsg(null);
       } else {

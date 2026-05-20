@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { addHighlight, removeHighlight } from '@/services/highlights.service';
 import { useAuthStore } from '@/stores/auth.store';
+import { isOk } from '@/lib/normalizer';
 import type { NoteHighlight } from '@/types/note.types';
 
 interface NoteHighlightMarkerProps {
@@ -104,7 +105,7 @@ export function NoteHighlightMarker({
     setIsPending(true);
     try {
       const result = await addHighlight(noteId, user.uid, selectedText, startOffset, endOffset);
-      if (result.ok) {
+      if (isOk(result)) {
         onHighlightsChange?.([...highlights, result.data]);
         toast.success('Teks di-highlight');
         selection.removeAllRanges();
@@ -124,7 +125,7 @@ export function NoteHighlightMarker({
       setIsPending(true);
       try {
         const result = await removeHighlight(noteId, user.uid, highlightId);
-        if (result.ok) {
+        if (isOk(result)) {
           onHighlightsChange?.(highlights.filter((h) => h.id !== highlightId));
           toast.success('Highlight dihapus');
         } else {

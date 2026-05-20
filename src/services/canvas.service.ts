@@ -13,7 +13,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { logger } from '@/lib/logger';
-import { ok, err, normalizeDocument } from '@/lib/normalizer';
+import { ok, err, isOk, normalizeDocument } from '@/lib/normalizer';
 import type { ApiResult } from '@/types/api.types';
 import type { CanvasBoard, CanvasSticky } from '@/types/canvas.types';
 
@@ -74,7 +74,7 @@ export async function getOrCreateDefaultBoard(
 
       // Load stickies for this board
       const stickiesResult = await getBoardStickies(boardDoc.id, userId);
-      if (stickiesResult.ok) {
+      if (isOk(stickiesResult)) {
         board.stickies = stickiesResult.data;
       }
 

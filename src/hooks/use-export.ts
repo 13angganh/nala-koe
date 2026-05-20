@@ -10,6 +10,7 @@ import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/auth.store';
 import { getNotes } from '@/services/notes.service';
+import { isOk } from '@/lib/normalizer';
 import type { ExportOptions } from '@/types/import-export.types';
 import type { Note } from '@/types/note.types';
 import {
@@ -41,7 +42,7 @@ export function useExport() {
       try {
         // Fetch notes
         const result = await getNotes(user.uid, {});
-        const allNotes = result.ok ? result.data : [];
+        const allNotes = isOk(result) ? result.data : [];
 
         const filtered: Note[] = opts.noteIds?.length
           ? allNotes.filter((n) => opts.noteIds?.includes(n.id))
