@@ -62,7 +62,7 @@ function blocksToMarkdown(blocks: NoteContentBlock[]): string {
       if (b.type === 'table') {
         try {
           const { rows } = JSON.parse(b.content) as { rows: string[][] };
-          if (rows.length === 0) return '';
+          if (rows.length === 0 || !rows[0]) return '';
           const header = `| ${rows[0].join(' | ')} |`;
           const divider = `| ${rows[0].map(() => '---').join(' | ')} |`;
           const body = rows.slice(1).map((r) => `| ${r.join(' | ')} |`).join('\n');

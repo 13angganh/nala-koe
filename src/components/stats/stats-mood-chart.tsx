@@ -30,7 +30,7 @@ export function StatsMoodChart({ insights, isLoading }: StatsMoodChartProps) {
     );
   }
 
-  const max = insights[0].count;
+  const max = insights[0]?.count ?? 1;
 
   return (
     <div className="space-y-2.5">

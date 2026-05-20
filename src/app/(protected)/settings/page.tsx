@@ -53,7 +53,7 @@ export default function SettingsPage() {
           <section className="rounded-xl border border-[var(--border)] bg-[var(--surface-base)] p-4">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-white text-sm font-semibold">
-                {(user.displayName ?? user.email ?? '?')[0].toUpperCase()}
+                {(user.displayName ?? user.email ?? '?').charAt(0).toUpperCase()}
               </div>
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-[var(--text-primary)]">

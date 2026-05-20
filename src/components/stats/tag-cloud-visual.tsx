@@ -48,7 +48,7 @@ export function TagCloudVisual({ tags, isLoading }: TagCloudVisualProps) {
     );
   }
 
-  const max = tags[0].count;
+  const max = tags[0]?.count ?? 1;
 
   // Shuffle tags so the cloud looks natural (not sorted by size)
   const shuffled = [...tags].sort(() => Math.random() - 0.5);

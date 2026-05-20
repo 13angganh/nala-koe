@@ -512,7 +512,8 @@ async function saveVersion(noteId: string, note: Note): Promise<void> {
 
     // Remove oldest if over limit
     if (existing.size >= CONFIG.MAX_VERSION_HISTORY) {
-      await deleteDoc(existing.docs[0].ref);
+      const oldest = existing.docs[0];
+      if (oldest) await deleteDoc(oldest.ref);
     }
 
     await addDoc(versionsRef, {
