@@ -102,7 +102,7 @@ export default function NotesPage() {
         <div className="flex items-center gap-2 flex-wrap">
           <NoteFilters
             status={status}
-            onChange={(s) => setFilters({ status: s })}
+            onStatusChange={(s) => setFilters({ status: s })}
           />
           <NoteSort
             sort={filters.sort ?? 'updatedAt'}
