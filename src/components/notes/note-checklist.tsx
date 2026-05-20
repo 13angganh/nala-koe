@@ -58,7 +58,7 @@ export function NoteChecklist({ items, onChange, readOnly = false }: NoteCheckli
           inputs[index + 1]?.focus();
         }, 0);
       }
-      if (e.key === 'Backspace' && !items[index].text && items.length > 1) {
+      if (e.key === 'Backspace' && !items[index]?.text && items.length > 1) {
         e.preventDefault();
         handleRemove(id);
         setTimeout(() => {
