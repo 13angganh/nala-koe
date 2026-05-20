@@ -342,34 +342,34 @@ export function NoteEditor({
         onInsertMath={onInsertMath}
         onInsertUrlPreview={() => setShowUrlPrompt(true)}
         onToggleMeta={() => setIsMetaOpen((v) => !v)}
-        isMetaOpen={isMetaOpen}
+        isMetaOpen={isMetaOpen ?? false}
         onToggleFont={() => setIsFontOpen((v) => !v)}
-        isFontOpen={isFontOpen}
+        isFontOpen={isFontOpen ?? false}
         onToggleTexture={() => setIsTextureOpen((v) => !v)}
-        isTextureOpen={isTextureOpen}
+        isTextureOpen={isTextureOpen ?? false}
         onToggleLinkedNotes={() => setIsLinkedNotesOpen((v) => !v)}
-        isLinkedNotesOpen={isLinkedNotesOpen}
+        isLinkedNotesOpen={isLinkedNotesOpen ?? false}
         onToggleBarcode={() => setIsBarcodeOpen((v) => !v)}
-        isBarcodeOpen={isBarcodeOpen}
+        isBarcodeOpen={isBarcodeOpen ?? false}
         onToggleReadAloud={() => setIsReadAloudOpen((v) => !v)}
-        isReadAloudOpen={isReadAloudOpen}
+        isReadAloudOpen={isReadAloudOpen ?? false}
         onToggleTimeCapsule={() => setIsTimeCapsuleOpen((v) => !v)}
-        isTimeCapsuleOpen={isTimeCapsuleOpen}
+        isTimeCapsuleOpen={isTimeCapsuleOpen ?? false}
         isTimeCapsuleActive={isTimeCapsule}
         onToggleSecret={() => setIsSecretOpen((v) => !v)}
-        isSecretOpen={isSecretOpen}
+        isSecretOpen={isSecretOpen ?? false}
         isSecretActive={isSecret}
         onToggleVersionHistory={() => setIsVersionHistoryOpen((v) => !v)}
-        isVersionHistoryOpen={isVersionHistoryOpen}
+        isVersionHistoryOpen={isVersionHistoryOpen ?? false}
         // Phase 8
         onToggleReaction={() => setIsReactionOpen((v) => !v)}
-        isReactionOpen={isReactionOpen}
+        isReactionOpen={isReactionOpen ?? false}
         isReactionActive={!!reaction}
         onToggleHighlight={() => setIsHighlightOpen((v) => !v)}
-        isHighlightOpen={isHighlightOpen}
+        isHighlightOpen={isHighlightOpen ?? false}
         // Phase 9
         {...(onScheduledChange ? { onToggleScheduled: () => setIsScheduledOpen((v) => !v) } : {})}
-        isScheduledOpen={isScheduledOpen}
+        isScheduledOpen={isScheduledOpen ?? false}
         isScheduledActive={isScheduled}
         onShare={() => setIsShareOpen(true)}
       />
@@ -496,7 +496,7 @@ export function NoteEditor({
               <NoteTimeCapsuleLock
                 isTimeCapsule={isTimeCapsule}
                 timeCapsuleUnlockAt={timeCapsuleUnlockAt}
-                onTimeCapsuleChange={onTimeCapsuleChange}
+                onTimeCapsuleChange={onTimeCapsuleChange ?? (() => {})}
               />
             </section>
           )}
@@ -508,7 +508,7 @@ export function NoteEditor({
                 noteId={noteId}
                 isSecret={isSecret}
                 isUnlocked={isSecretUnlocked}
-                onSecretChange={onSecretChange}
+                onSecretChange={onSecretChange ?? (() => {})}
                 onUnlock={() => setIsSecretUnlocked(true)}
                 onLock={() => setIsSecretUnlocked(false)}
               />

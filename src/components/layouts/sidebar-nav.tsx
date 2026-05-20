@@ -94,9 +94,9 @@ export function SidebarNav({ onNavigate }: SidebarNavProps) {
 
   return (
     <nav className="flex flex-col gap-5 px-3 py-4" aria-label="Navigasi utama">
-      <NavGroup label="Utama" items={NAV_MAIN} pathname={pathname} onNavigate={onNavigate} />
-      <NavGroup label="Insight" items={NAV_INSIGHTS} pathname={pathname} onNavigate={onNavigate} />
-      <NavGroup label="Kelola" items={NAV_MANAGE} pathname={pathname} onNavigate={onNavigate} />
+      <NavGroup label="Utama" items={NAV_MAIN} pathname={pathname} {...(onNavigate ? { onNavigate } : {})} />
+      <NavGroup label="Insight" items={NAV_INSIGHTS} pathname={pathname} {...(onNavigate ? { onNavigate } : {})} />
+      <NavGroup label="Kelola" items={NAV_MANAGE} pathname={pathname} {...(onNavigate ? { onNavigate } : {})} />
     </nav>
   );
 }
