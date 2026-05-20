@@ -73,6 +73,21 @@ const config: NextConfig = {
         ? { exclude: ['warn', 'error'] }
         : false,
   },
+
+  // Suppress protobufjs "Critical dependency" warning — ini dari firebase-admin (server-side)
+  // dan tidak mempengaruhi fungsi app. Mark firebase-admin sebagai server-only external.
+  serverExternalPackages: ['firebase-admin', '@google-cloud/firestore'],
+
+  webpack(config, { isServer }) {
+    if (isServer) {
+      // Suppress protobufjs dynamic require warning dari firebase-admin chain
+      config.ignoreWarnings = [
+        { module: /node_modules\/@protobufjs\/inquire/ },
+        { module: /node_modules\/protobufjs/ },
+      ];
+    }
+    return config;
+  },
 };
 
 export default config;

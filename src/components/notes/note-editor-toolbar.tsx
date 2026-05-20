@@ -176,7 +176,7 @@ export function NoteEditorToolbar({
             <Button
               variant="ghost"
               size="icon-sm"
-              onClick={onInsertTable}
+              onClick={onInsertTable ?? (() => {})}
               aria-label="Tambah tabel"
             >
               <Table2 className="h-4 w-4" />
@@ -192,7 +192,7 @@ export function NoteEditorToolbar({
             <Button
               variant="ghost"
               size="icon-sm"
-              onClick={onInsertMath}
+              onClick={onInsertMath ?? (() => {})}
               aria-label="Tambah blok kalkulasi"
             >
               <Calculator className="h-4 w-4" />
@@ -208,7 +208,7 @@ export function NoteEditorToolbar({
             <Button
               variant="ghost"
               size="icon-sm"
-              onClick={onInsertUrlPreview}
+              onClick={onInsertUrlPreview ?? (() => {})}
               aria-label="Tambah pratinjau URL"
             >
               <Link2 className="h-4 w-4" />
@@ -227,7 +227,7 @@ export function NoteEditorToolbar({
             <Button
               variant="ghost"
               size="icon-sm"
-              onClick={onToggleFont}
+              onClick={onToggleFont ?? (() => {})}
               aria-label="Gaya font"
               aria-pressed={isFontOpen}
               className={cn(isFontOpen && 'text-[var(--accent)] bg-[var(--accent-subtle)]')}
@@ -245,7 +245,7 @@ export function NoteEditorToolbar({
             <Button
               variant="ghost"
               size="icon-sm"
-              onClick={onToggleTexture}
+              onClick={onToggleTexture ?? (() => {})}
               aria-label="Tekstur catatan"
               aria-pressed={isTextureOpen}
               className={cn(isTextureOpen && 'text-[var(--accent)] bg-[var(--accent-subtle)]')}
@@ -266,7 +266,7 @@ export function NoteEditorToolbar({
             <Button
               variant="ghost"
               size="icon-sm"
-              onClick={onToggleMeta}
+              onClick={onToggleMeta ?? (() => {})}
               aria-label="Mood, tag & metadata"
               aria-pressed={isMetaOpen}
               className={cn(isMetaOpen && 'text-[var(--accent)] bg-[var(--accent-subtle)]')}
@@ -284,7 +284,7 @@ export function NoteEditorToolbar({
             <Button
               variant="ghost"
               size="icon-sm"
-              onClick={onToggleLinkedNotes}
+              onClick={onToggleLinkedNotes ?? (() => {})}
               aria-label="Catatan terhubung"
               aria-pressed={isLinkedNotesOpen}
               className={cn(isLinkedNotesOpen && 'text-[var(--accent)] bg-[var(--accent-subtle)]')}
@@ -302,7 +302,7 @@ export function NoteEditorToolbar({
             <Button
               variant="ghost"
               size="icon-sm"
-              onClick={onToggleBarcode}
+              onClick={onToggleBarcode ?? (() => {})}
               aria-label="Pindai barcode"
               aria-pressed={isBarcodeOpen}
               className={cn(isBarcodeOpen && 'text-[var(--accent)] bg-[var(--accent-subtle)]')}
@@ -320,7 +320,7 @@ export function NoteEditorToolbar({
             <Button
               variant="ghost"
               size="icon-sm"
-              onClick={onToggleReadAloud}
+              onClick={onToggleReadAloud ?? (() => {})}
               aria-label="Baca keras"
               aria-pressed={isReadAloudOpen}
               className={cn(isReadAloudOpen && 'text-[var(--accent)] bg-[var(--accent-subtle)]')}
@@ -343,7 +343,7 @@ export function NoteEditorToolbar({
             <Button
               variant="ghost"
               size="icon-sm"
-              onClick={onToggleTimeCapsule}
+              onClick={onToggleTimeCapsule ?? (() => {})}
               aria-label="Kapsul waktu"
               aria-pressed={isTimeCapsuleOpen}
               className={cn(
@@ -366,7 +366,7 @@ export function NoteEditorToolbar({
             <Button
               variant="ghost"
               size="icon-sm"
-              onClick={onToggleSecret}
+              onClick={onToggleSecret ?? (() => {})}
               aria-label="Catatan rahasia"
               aria-pressed={isSecretOpen}
               className={cn(
@@ -389,7 +389,7 @@ export function NoteEditorToolbar({
             <Button
               variant="ghost"
               size="icon-sm"
-              onClick={onToggleVersionHistory}
+              onClick={onToggleVersionHistory ?? (() => {})}
               aria-label="Riwayat versi"
               aria-pressed={isVersionHistoryOpen}
               className={cn(
@@ -414,7 +414,7 @@ export function NoteEditorToolbar({
             <Button
               variant="ghost"
               size="icon-sm"
-              onClick={onToggleScheduled}
+              onClick={onToggleScheduled ?? (() => {})}
               aria-label="Jadwalkan catatan"
               aria-pressed={isScheduledOpen}
               className={cn(
@@ -440,7 +440,7 @@ export function NoteEditorToolbar({
               <Button
                 variant="ghost"
                 size="icon-sm"
-                onClick={onShare}
+                onClick={onShare ?? (() => {})}
                 aria-label="Bagikan catatan sebagai kartu"
               >
                 <Share2 className="h-4 w-4" />

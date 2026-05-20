@@ -69,14 +69,14 @@ function NavGroup({
             <li key={href}>
               <Link
                 href={href}
-                onClick={onNavigate}
+                {...(onNavigate ? { onClick: onNavigate } : {})}
                 className={cn(
                   'flex h-9 items-center gap-3 rounded-lg px-3 text-sm transition-colors duration-100',
                   isActive
                     ? 'bg-[var(--accent-subtle)] text-[var(--accent)] font-medium'
                     : 'text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]'
                 )}
-                aria-current={isActive ? 'page' : undefined}
+                {...(isActive ? { 'aria-current': 'page' as const } : {})}
               >
                 <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
                 {itemLabel}

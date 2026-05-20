@@ -71,7 +71,7 @@ export default function StatsPage() {
                 ? 'bg-[var(--surface-base)] text-[var(--text-primary)] shadow-sm'
                 : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
             )}
-            aria-current={activeTab === id ? 'page' : undefined}
+            aria-current={activeTab === id ? 'page' as const : undefined}
           >
             <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             {label}
