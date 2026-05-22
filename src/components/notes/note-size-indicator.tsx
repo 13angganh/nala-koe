@@ -1,6 +1,6 @@
 'use client';
 
-import { HardDrive, Image, Mic } from 'lucide-react';
+import { HardDrive, Image as ImageIcon, Mic } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
@@ -71,7 +71,7 @@ export function NoteSizeIndicator({
         >
           <HardDrive className="h-2.5 w-2.5 shrink-0" aria-hidden />
           <span>{config.text}</span>
-          {hasImages && <Image className="h-2.5 w-2.5 shrink-0" aria-hidden />}
+          {hasImages && <ImageIcon className="h-2.5 w-2.5 shrink-0" aria-hidden />}
           {hasAudio && <Mic className="h-2.5 w-2.5 shrink-0" aria-hidden />}
         </div>
       </TooltipTrigger>

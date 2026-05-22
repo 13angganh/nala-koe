@@ -504,7 +504,7 @@ export async function getNotesForExport(
       notes = notes.filter((n) => noteIds.includes(n.id));
     }
     return ok(notes);
-  } catch (error) {
+  } catch (_error) {
     return err('notes/export-failed', 'Gagal mengambil catatan untuk ekspor');
   }
 }
