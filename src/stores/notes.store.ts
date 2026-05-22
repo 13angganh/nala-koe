@@ -40,7 +40,7 @@ const DEFAULT_FILTERS: NoteFilters = {
 export const useNotesStore = create<NotesStore>()((set) => ({
   notes: [],
   setNotes: (notes) =>
-    set({ notes }, false, 'notes/setNotes'),
+    set({ notes }, false),
 
   addNote: (note) =>
     set(
@@ -48,52 +48,37 @@ export const useNotesStore = create<NotesStore>()((set) => ({
         notes: note.isPinned
           ? [note, ...s.notes]
           : [...s.notes.filter((n) => n.isPinned), note, ...s.notes.filter((n) => !n.isPinned)],
-      }),
-      false,
-      'notes/addNote'
-    ),
+      }), false),
 
   updateNoteInList: (id, partial) =>
     set(
-      (s) => ({ notes: s.notes.map((n) => (n.id === id ? { ...n, ...partial } : n)) }),
-      false,
-      'notes/updateNoteInList'
-    ),
+      (s) => ({ notes: s.notes.map((n) => (n.id === id ? { ...n, ...partial } : n)) }), false),
 
   removeNoteFromList: (id) =>
     set(
-      (s) => ({ notes: s.notes.filter((n) => n.id !== id) }),
-      false,
-      'notes/removeNoteFromList'
-    ),
+      (s) => ({ notes: s.notes.filter((n) => n.id !== id) }), false),
 
   activeNote: null,
   setActiveNote: (note) =>
-    set({ activeNote: note }, false, 'notes/setActiveNote'),
+    set({ activeNote: note }, false),
 
   updateActiveNote: (partial) =>
     set(
-      (s) => ({ activeNote: s.activeNote ? { ...s.activeNote, ...partial } : null }),
-      false,
-      'notes/updateActiveNote'
-    ),
+      (s) => ({ activeNote: s.activeNote ? { ...s.activeNote, ...partial } : null }), false),
 
   filters: { ...DEFAULT_FILTERS },
   setFilters: (filters) =>
     set(
-      (s) => ({ filters: { ...s.filters, ...filters } }),
-      false,
-      'notes/setFilters'
-    ),
+      (s) => ({ filters: { ...s.filters, ...filters } }), false),
   resetFilters: () =>
-    set({ filters: { ...DEFAULT_FILTERS } }, false, 'notes/resetFilters'),
+    set({ filters: { ...DEFAULT_FILTERS } }, false),
 
   isListLoading: false,
   isNoteLoading: false,
   isSaving:      false,
-  setListLoading: (v) => set({ isListLoading: v }, false, 'notes/setListLoading'),
-  setNoteLoading: (v) => set({ isNoteLoading: v }, false, 'notes/setNoteLoading'),
-  setSaving:      (v) => set({ isSaving: v },      false, 'notes/setSaving'),
+  setListLoading: (v) => set({ isListLoading: v }, false),
+  setNoteLoading: (v) => set({ isNoteLoading: v }, false),
+  setSaving:      (v) => set({ isSaving: v }, false),
 
   toggleChecklistItem: (noteId, blockId, itemId) =>
     set(
@@ -114,8 +99,5 @@ export const useNotesStore = create<NotesStore>()((set) => ({
           }
         });
         return { activeNote: { ...s.activeNote, blocks } };
-      },
-      false,
-      'notes/toggleChecklistItem'
-    ),
+      }, false),
 }));

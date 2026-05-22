@@ -15,13 +15,10 @@ export const useSettingsStore = create<SettingsStore>()(
 
       setPreference: (key, value) =>
         set(
-          (s) => ({ preferences: { ...s.preferences, [key]: value } }),
-          false,
-          'settings/setPreference'
-        ),
+          (s: SettingsStore) => ({ preferences: { ...s.preferences, [key]: value } }), false),
 
       resetPreferences: () =>
-        set({ preferences: DEFAULT_PREFERENCES }, false, 'settings/resetPreferences'),
+        set({ preferences: DEFAULT_PREFERENCES }, false),
     }),
     { name: 'nalakoe-settings' }
   )

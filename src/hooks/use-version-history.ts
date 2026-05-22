@@ -98,7 +98,7 @@ export function diffText(
     const newLine = newLines[i];
 
     if (oldLine === undefined) {
-      result.push({ type: 'added', text: newLine });
+      result.push({ type: 'added', text: newLine ?? '' });
     } else if (newLine === undefined) {
       result.push({ type: 'removed', text: oldLine });
     } else if (oldLine === newLine) {

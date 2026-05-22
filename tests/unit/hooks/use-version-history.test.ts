@@ -12,14 +12,14 @@ describe('diffText', () => {
     const result = diffText('hello', 'hello\nworld');
     const added = result.filter((l) => l.type === 'added');
     expect(added.length).toBeGreaterThan(0);
-    expect(added[0].text).toBe('world');
+    expect(added[0]?.text).toBe('world');
   });
 
   it('marks removed lines when old content has more lines', () => {
     const result = diffText('hello\nworld', 'hello');
     const removed = result.filter((l) => l.type === 'removed');
     expect(removed.length).toBeGreaterThan(0);
-    expect(removed[0].text).toBe('world');
+    expect(removed[0]?.text).toBe('world');
   });
 
   it('marks changed lines as both removed and added', () => {
@@ -32,14 +32,14 @@ describe('diffText', () => {
   it('handles empty strings', () => {
     const result = diffText('', '');
     expect(result).toHaveLength(1);
-    expect(result[0].type).toBe('unchanged');
+    expect(result[0]?.type).toBe('unchanged');
   });
 
   it('handles old empty, new non-empty', () => {
     const result = diffText('', 'new content');
     const added = result.filter((l) => l.type === 'added');
     expect(added.length).toBe(1);
-    expect(added[0].text).toBe('new content');
+    expect(added[0]?.text).toBe('new content');
   });
 });
 

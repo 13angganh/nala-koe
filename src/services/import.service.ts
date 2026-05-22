@@ -47,9 +47,10 @@ export async function importNotesToFirestore(
     try {
       await batch.commit();
       imported += chunk.length;
-    } catch {
+    } catch (e) {
       logger.error('[import] Batch commit failed', e);
-      const startIdx = notes.indexOf(chunk[0]);
+      const firstNote = chunk[0];
+      const startIdx = firstNote ? notes.indexOf(firstNote) : -1;
       chunk.forEach((_, i) => {
         errors.push({ index: startIdx + i, reason: 'Gagal simpan ke database' });
       });

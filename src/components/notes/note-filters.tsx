@@ -152,8 +152,8 @@ export function NoteFilters({
               key={tag}
               tag={tag}
               isActive
-              onRemove={onTagRemove}
               size="sm"
+              {...(onTagRemove ? { onRemove: onTagRemove } : {})}
             />
           ))}
         </div>

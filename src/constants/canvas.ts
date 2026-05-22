@@ -24,7 +24,8 @@ export const CANVAS_STICKY_COLORS: { value: string; label: string }[] = [
 export const CANVAS_STICKY_LIGHT_COLOR = '#f1f5f9';
 
 // Warna border swatch yang sedang dipilih — pakai brand token.
-export const CANVAS_STICKY_SELECTED_BORDER = colors.brand[500]; // '#0ea5e9'
+// reason: brand[500] is a hardcoded design token — always defined at build time
+export const CANVAS_STICKY_SELECTED_BORDER = colors.brand[500] ?? '#0ea5e9';
 
 // Default color untuk sticky note baru
-export const CANVAS_STICKY_DEFAULT_COLOR = CANVAS_STICKY_COLORS[0].value; // kuning
+export const CANVAS_STICKY_DEFAULT_COLOR = CANVAS_STICKY_COLORS[0]?.value ?? '#fef08a'; // kuning

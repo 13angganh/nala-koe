@@ -29,32 +29,29 @@ export const useUiStore = create<UiStore>()(
     (set) => ({
       sidebarOpen: true,
       setSidebarOpen: (open) =>
-        set({ sidebarOpen: open }, false, 'ui/setSidebarOpen'),
+        set({ sidebarOpen: open }, false),
       toggleSidebar: () =>
-        set((s) => ({ sidebarOpen: !s.sidebarOpen }), false, 'ui/toggleSidebar'),
+        set((s: UiStore) => ({ sidebarOpen: !s.sidebarOpen }), false),
 
       theme: 'system',
       setTheme: (theme) =>
-        set({ theme }, false, 'ui/setTheme'),
+        set({ theme }, false),
 
       // Default accent color dari design token — bukan hardcoded hex
       accentColor: colors.brand[500],
       setAccentColor: (accentColor) =>
-        set({ accentColor }, false, 'ui/setAccentColor'),
+        set({ accentColor }, false),
 
       commandPaletteOpen: false,
       setCommandPaletteOpen: (open) =>
-        set({ commandPaletteOpen: open }, false, 'ui/setCommandPaletteOpen'),
+        set({ commandPaletteOpen: open }, false),
       toggleCommandPalette: () =>
         set(
-          (s) => ({ commandPaletteOpen: !s.commandPaletteOpen }),
-          false,
-          'ui/toggleCommandPalette'
-        ),
+          (s: UiStore) => ({ commandPaletteOpen: !s.commandPaletteOpen }), false),
     }),
     {
       name:       'nalakoe-ui',
-      partialize: (s) => ({
+      partialize: (s: UiStore) => ({
         sidebarOpen: s.sidebarOpen,
         theme:       s.theme,
         accentColor: s.accentColor,

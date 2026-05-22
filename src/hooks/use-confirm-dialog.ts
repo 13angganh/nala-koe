@@ -18,7 +18,6 @@ interface ConfirmDialogState extends ConfirmDialogOptions {
 const INITIAL_STATE: ConfirmDialogState = {
   isOpen: false,
   title: '',
-  description: undefined,
   confirmLabel: 'Konfirmasi',
   cancelLabel: 'Batal',
   variant: 'default',

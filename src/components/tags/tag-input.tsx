@@ -114,8 +114,8 @@ export function TagInput({
           <TagBadge
             key={tag}
             tag={tag}
-            onRemove={disabled ? undefined : removeTag}
             size="sm"
+            {...(!disabled ? { onRemove: removeTag } : {})}
           />
         ))}
         {canAddMore && (

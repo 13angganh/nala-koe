@@ -71,7 +71,7 @@ export function NoteSizeIndicator({
         >
           <HardDrive className="h-2.5 w-2.5 shrink-0" aria-hidden />
           <span>{config.text}</span>
-          {hasImages && <Image className="h-2.5 w-2.5 shrink-0" aria-hidden alt="" />}
+          {hasImages && <Image className="h-2.5 w-2.5 shrink-0" aria-hidden />}
           {hasAudio && <Mic className="h-2.5 w-2.5 shrink-0" aria-hidden />}
         </div>
       </TooltipTrigger>

@@ -211,9 +211,10 @@ export async function getNotes(
       );
     }
 
-    if (filters.tags && filters.tags.length > 0) {
+    const tagFilter = filters.tags;
+    if (tagFilter && tagFilter.length > 0) {
       notes = notes.filter((n) =>
-        filters.tags.some((t) => n.tags.includes(t))
+        tagFilter.some((t) => n.tags.includes(t))
       );
     }
 
@@ -478,6 +479,34 @@ export function getNoteSizeInfo(note: Note): {
   const label =
     totalBytes > 200_000 ? 'large' : totalBytes > 20_000 ? 'medium' : 'small';
   return { totalBytes, textBytes, hasImages, hasAudio, label };
+}
+
+/**
+ * Fetch full Note objects (not NoteListItem) for export.
+ * Export functions need fields like `blocks` that are not in NoteListItem.
+ */
+export async function getNotesForExport(
+  userId: string,
+  noteIds?: string[]
+): Promise<ApiResult<Note[]>> {
+  try {
+    const q = query(
+      collection(db, COLLECTION),
+      where('userId', '==', userId),
+      where('status', '==', 'active'),
+      orderBy('updatedAt', 'desc')
+    );
+    const snap = await getDocs(q);
+    let notes = snap.docs.map((d) =>
+      normalizeNote(d.id, d.data() as Record<string, unknown>)
+    );
+    if (noteIds && noteIds.length > 0) {
+      notes = notes.filter((n) => noteIds.includes(n.id));
+    }
+    return ok(notes);
+  } catch (error) {
+    return err('notes/export-failed', 'Gagal mengambil catatan untuk ekspor');
+  }
 }
 
 export async function getRecentNotes(

@@ -34,8 +34,8 @@ describe('buildSegments', () => {
   it('returns full content when no highlights', () => {
     const segs = buildSegments('Hello world', []);
     expect(segs).toHaveLength(1);
-    expect(segs[0].text).toBe('Hello world');
-    expect(segs[0].hasHighlight).toBe(false);
+    expect(segs[0]?.text).toBe('Hello world');
+    expect(segs[0]?.hasHighlight).toBe(false);
   });
 
   it('wraps single highlight in the middle', () => {
@@ -54,7 +54,7 @@ describe('buildSegments', () => {
   it('handles full content highlight', () => {
     const segs = buildSegments('Hi', [makeHighlight('h1', 0, 2, 'Hi')]);
     expect(segs).toHaveLength(1);
-    expect(segs[0].hasHighlight).toBe(true);
+    expect(segs[0]?.hasHighlight).toBe(true);
   });
 
   it('handles multiple highlights in order', () => {
@@ -75,9 +75,9 @@ describe('buildSegments', () => {
       makeHighlight('h2', 8, 11, 'ghi'),
       makeHighlight('h1', 0, 3, 'abc'),
     ]);
-    expect(segs[0].text).toBe('abc');
-    expect(segs[0].hasHighlight).toBe(true);
-    expect(segs[2].text).toBe('ghi');
-    expect(segs[2].hasHighlight).toBe(true);
+    expect(segs[0]?.text).toBe('abc');
+    expect(segs[0]?.hasHighlight).toBe(true);
+    expect(segs[2]?.text).toBe('ghi');
+    expect(segs[2]?.hasHighlight).toBe(true);
   });
 });

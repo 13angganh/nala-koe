@@ -158,7 +158,7 @@ export function parseKeepJson(
         return;
       }
       notes.push(keepNoteToNote(keepNote, userId));
-    } catch {
+    } catch (e) {
       errors.push({ index: idx, reason: `Parse error: ${String(e)}` });
     }
   });

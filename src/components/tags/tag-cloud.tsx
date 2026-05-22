@@ -55,7 +55,7 @@ export function TagCloud({ onTagClick, activeTag, className }: TagCloudProps) {
         icon={Hash}
         title="Belum ada tag"
         description="Tambahkan tag ke catatanmu untuk memulai."
-        className={className}
+        {...(className ? { className } : {})}
       />
     );
   }
@@ -81,8 +81,8 @@ export function TagCloud({ onTagClick, activeTag, className }: TagCloudProps) {
           <TagBadge
             tag={item.name}
             isActive={activeTag === item.name}
-            onClick={onTagClick}
             size={item.weight >= 4 ? 'md' : 'sm'}
+            {...(onTagClick ? { onClick: onTagClick } : {})}
           />
         </span>
       ))}

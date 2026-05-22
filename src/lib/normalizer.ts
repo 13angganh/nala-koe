@@ -44,11 +44,11 @@ export function normalizeDocument<T extends Record<string, unknown>>(doc: T): T 
     'originalCreatedAt',
   ];
 
-  const result = { ...doc };
+  const result = { ...doc } as Record<string, unknown>;
   for (const field of timestampFields) {
     if (field in result && result[field] !== null && result[field] !== undefined) {
-      result[field] = normalizeTimestamp(result[field]) as T[typeof field];
+      result[field] = normalizeTimestamp(result[field]);
     }
   }
-  return result;
+  return result as T;
 }

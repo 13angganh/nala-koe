@@ -24,7 +24,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 
   override componentDidCatch(error: Error, info: React.ErrorInfo): void {
-    logger.error('ErrorBoundary caught error', error, { componentStack: info.componentStack });
+    logger.error('ErrorBoundary caught error', { error, componentStack: info.componentStack });
   }
 
   override render() {

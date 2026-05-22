@@ -59,7 +59,7 @@ function normalizeSticky(id: string, data: Record<string, unknown>): CanvasStick
 
 export async function getOrCreateDefaultBoard(
   userId: string
-): Promise<ApiResult<CanvasBoard>> {
+): Promise<ApiResult<CanvasBoard | null>> {
   try {
     const q = query(
       collection(db, BOARDS_COLLECTION),
@@ -70,6 +70,7 @@ export async function getOrCreateDefaultBoard(
 
     if (!snap.empty) {
       const boardDoc = snap.docs[0];
+      if (!boardDoc) return ok(null);
       const board = normalizeBoard(boardDoc.id, boardDoc.data() as Record<string, unknown>);
 
       // Load stickies for this board

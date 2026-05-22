@@ -68,7 +68,7 @@ async function verifyCredential(credentialId: string): Promise<boolean> {
         allowCredentials: [
           {
             type: 'public-key',
-            id: base64ToBuffer(credentialId),
+            id: base64ToBuffer(credentialId).buffer as ArrayBuffer,
             transports: ['internal'],
           },
         ],

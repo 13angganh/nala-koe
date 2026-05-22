@@ -32,6 +32,6 @@ describe('buildExportFilename', () => {
     // Safe title part is 50 chars max
     const parts = filename.split('-');
     // nalakoe + title-part + date + ext — title part should be max 50 chars
-    expect(parts[1].length).toBeLessThanOrEqual(50);
+    expect(parts[1]?.length).toBeLessThanOrEqual(50);
   });
 });

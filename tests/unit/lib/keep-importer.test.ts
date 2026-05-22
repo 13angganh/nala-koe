@@ -14,10 +14,10 @@ describe('parseKeepJson', () => {
     const { notes, result } = parseKeepJson(raw, USER_ID);
     expect(result.total).toBe(1);
     expect(result.imported).toBe(1);
-    expect(notes[0].title).toBe('My Keep Note');
-    expect(notes[0].content).toBe('Hello world');
-    expect(notes[0].userId).toBe(USER_ID);
-    expect(notes[0].originalCreatedAt).toBeTruthy();
+    expect(notes[0]?.title).toBe('My Keep Note');
+    expect(notes[0]?.content).toBe('Hello world');
+    expect(notes[0]?.userId).toBe(USER_ID);
+    expect(notes[0]?.originalCreatedAt).toBeTruthy();
   });
 
   it('parses an array of notes', () => {
@@ -40,10 +40,10 @@ describe('parseKeepJson', () => {
       ],
     };
     const { notes } = parseKeepJson(raw, USER_ID);
-    expect(notes[0].blocks[0].type).toBe('checklist');
-    const items = JSON.parse(notes[0].blocks[0].content);
+    expect(notes[0]?.blocks[0]?.type).toBe('checklist');
+    const items = JSON.parse(notes[0]?.blocks[0]?.content);
     expect(items).toHaveLength(2);
-    expect(items[0].isChecked).toBe(true);
+    expect(items[0]?.isChecked).toBe(true);
   });
 
   it('maps Keep labels to tags', () => {
@@ -53,25 +53,25 @@ describe('parseKeepJson', () => {
       labels: [{ name: 'Work' }, { name: 'Personal' }],
     };
     const { notes } = parseKeepJson(raw, USER_ID);
-    expect(notes[0].tags).toContain('work');
-    expect(notes[0].tags).toContain('personal');
+    expect(notes[0]?.tags).toContain('work');
+    expect(notes[0]?.tags).toContain('personal');
   });
 
   it('preserves isPinned and trashed status', () => {
     const raw = { title: 'Pinned', textContent: 'x', isPinned: true };
     const { notes } = parseKeepJson(raw, USER_ID);
-    expect(notes[0].isPinned).toBe(true);
-    expect(notes[0].status).toBe('active');
+    expect(notes[0]?.isPinned).toBe(true);
+    expect(notes[0]?.status).toBe('active');
 
     const trashed = { title: 'Trashed', textContent: 'x', isTrashed: true };
     const { notes: t } = parseKeepJson(trashed, USER_ID);
-    expect(t[0].status).toBe('trashed');
+    expect(t[0]?.status).toBe('trashed');
   });
 
   it('maps Keep color to accent color', () => {
     const raw = { title: 'Red', textContent: 'x', color: 'RED' };
     const { notes } = parseKeepJson(raw, USER_ID);
-    expect(notes[0].accentColor).toBe('#ef4444');
+    expect(notes[0]?.accentColor).toBe('#ef4444');
   });
 
   it('skips empty notes and records in errors', () => {

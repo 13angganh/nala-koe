@@ -9,7 +9,7 @@ import { useState, useCallback } from 'react';
 
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/auth.store';
-import { getNotes } from '@/services/notes.service';
+import { getNotesForExport } from '@/services/notes.service';
 import { isOk } from '@/lib/normalizer';
 import type { ExportOptions } from '@/types/import-export.types';
 import type { Note } from '@/types/note.types';
@@ -40,13 +40,9 @@ export function useExport() {
       setState({ isExporting: true, progress: 10 });
 
       try {
-        // Fetch notes
-        const result = await getNotes(user.uid, {});
-        const allNotes = isOk(result) ? result.data : [];
-
-        const filtered: Note[] = opts.noteIds?.length
-          ? allNotes.filter((n) => opts.noteIds?.includes(n.id))
-          : allNotes;
+        // Fetch full Note objects (not NoteListItem) — export needs fields like blocks
+        const result = await getNotesForExport(user.uid, opts.noteIds);
+        const filtered: Note[] = isOk(result) ? result.data : [];
 
         if (filtered.length === 0) {
           toast.error('Tidak ada catatan untuk diekspor');

@@ -17,9 +17,9 @@ describe('parseColorNoteJson', () => {
     ];
     const { notes, result } = parseColorNoteJson(raw, USER_ID);
     expect(result.imported).toBe(1);
-    expect(notes[0].title).toBe('CN Note');
-    expect(notes[0].content).toBe('Hello from ColorNote');
-    expect(notes[0].userId).toBe(USER_ID);
+    expect(notes[0]?.title).toBe('CN Note');
+    expect(notes[0]?.content).toBe('Hello from ColorNote');
+    expect(notes[0]?.userId).toBe(USER_ID);
   });
 
   it('parses checklist note (type 1)', () => {
@@ -31,16 +31,16 @@ describe('parseColorNoteJson', () => {
       },
     ];
     const { notes } = parseColorNoteJson(raw, USER_ID);
-    expect(notes[0].blocks[0].type).toBe('checklist');
-    const items = JSON.parse(notes[0].blocks[0].content);
-    expect(items[0].isChecked).toBe(true);
-    expect(items[1].isChecked).toBe(false);
+    expect(notes[0]?.blocks[0]?.type).toBe('checklist');
+    const items = JSON.parse(notes[0]?.blocks[0]?.content);
+    expect(items[0]?.isChecked).toBe(true);
+    expect(items[1]?.isChecked).toBe(false);
   });
 
   it('maps color index to accent color', () => {
     const raw = [{ title: 'Red', note: 'x', color: 0, type: 0 }];
     const { notes } = parseColorNoteJson(raw, USER_ID);
-    expect(notes[0].accentColor).toBe('#ef4444');
+    expect(notes[0]?.accentColor).toBe('#ef4444');
   });
 
   it('handles wrapped object format', () => {
@@ -58,8 +58,8 @@ describe('parseColorNoteJson', () => {
   it('preserves original timestamps', () => {
     const raw = [{ title: 'T', note: 'x', create_time: 1_000_000, type: 0 }];
     const { notes } = parseColorNoteJson(raw, USER_ID);
-    expect(notes[0].originalCreatedAt).toBeTruthy();
-    expect(new Date(notes[0].createdAt).getTime()).toBe(1_000_000_000);
+    expect(notes[0]?.originalCreatedAt).toBeTruthy();
+    expect(new Date(notes[0]?.createdAt).getTime()).toBe(1_000_000_000);
   });
 
   it('skips empty notes', () => {
@@ -72,6 +72,6 @@ describe('parseColorNoteJson', () => {
   it('calculates word count', () => {
     const raw = [{ title: 'W', note: 'one two three four five', type: 0 }];
     const { notes } = parseColorNoteJson(raw, USER_ID);
-    expect(notes[0].wordCount).toBe(5);
+    expect(notes[0]?.wordCount).toBe(5);
   });
 });

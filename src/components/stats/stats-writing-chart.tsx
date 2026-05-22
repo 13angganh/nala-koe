@@ -51,7 +51,7 @@ export function StatsMonthlyChart({
       {/* Bars */}
       <div className="flex items-end gap-1.5 h-28">
         {data.map((d, i) => {
-          const val = values[i];
+          const val = values[i] ?? 0;
           const heightPct = Math.max((val / max) * 100, val > 0 ? 4 : 0);
           const isCurrentMonth =
             d.year === new Date().getFullYear() && d.month === new Date().getMonth() + 1;

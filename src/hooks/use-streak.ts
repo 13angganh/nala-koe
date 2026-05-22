@@ -36,8 +36,11 @@ function computeStreak(sortedDates: string[]): {
 
   // Walk backwards through sorted unique dates
   for (let i = sortedDates.length - 1; i > 0; i--) {
-    const a = new Date(sortedDates[i]);
-    const b = new Date(sortedDates[i - 1]);
+    const aStr = sortedDates[i];
+    const bStr = sortedDates[i - 1];
+    if (!aStr || !bStr) continue;
+    const a = new Date(aStr);
+    const b = new Date(bStr);
     const diffDays = Math.round((a.getTime() - b.getTime()) / 86400000);
     if (diffDays === 1) {
       run++;
@@ -53,8 +56,11 @@ function computeStreak(sortedDates: string[]): {
   if (last === todayStr || last === yesterdayStr) {
     let streak = 1;
     for (let i = sortedDates.length - 1; i > 0; i--) {
-      const a = new Date(sortedDates[i]);
-      const b = new Date(sortedDates[i - 1]);
+      const aStr = sortedDates[i];
+      const bStr = sortedDates[i - 1];
+      if (!aStr || !bStr) break;
+      const a = new Date(aStr);
+      const b = new Date(bStr);
       if (Math.round((a.getTime() - b.getTime()) / 86400000) === 1) {
         streak++;
       } else {

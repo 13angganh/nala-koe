@@ -46,7 +46,10 @@ function formatPrefix(level: LogLevel, context: string): string {
 
 function extractErrorInfo(payload: unknown): { message: string; stack?: string } {
   if (payload instanceof Error) {
-    return { message: payload.message, stack: payload.stack };
+    return {
+      message: payload.message,
+      ...(payload.stack !== undefined ? { stack: payload.stack } : {}),
+    };
   }
   // Handle { error: Error, ...extra } pattern dari services
   if (
@@ -56,7 +59,10 @@ function extractErrorInfo(payload: unknown): { message: string; stack?: string }
     (payload as Record<string, unknown>)['error'] instanceof Error
   ) {
     const err = (payload as Record<string, unknown>)['error'] as Error;
-    return { message: err.message, stack: err.stack };
+    return {
+      message: err.message,
+      ...(err.stack !== undefined ? { stack: err.stack } : {}),
+    };
   }
   return { message: String(payload ?? '') };
 }
@@ -78,7 +84,7 @@ async function persistToFirestore(
       level,
       context,
       message,
-      stack,
+      ...(stack !== undefined ? { stack } : {}),
       timestamp: serverTimestamp(),
       userAgent: navigator.userAgent,
       url:       window.location.href,

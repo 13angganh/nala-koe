@@ -53,8 +53,10 @@ const MILESTONE_CONFIG: Record<
 };
 
 function launchConfetti(canvas: HTMLCanvasElement, color: string) {
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
+  const rawCtx = canvas.getContext('2d');
+  if (!rawCtx) return;
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: rawCtx checked above, reassignment needed for draw() closure
+  const ctx = rawCtx;
 
   const W = canvas.width;
   const H = canvas.height;
@@ -85,7 +87,7 @@ function launchConfetti(canvas: HTMLCanvasElement, color: string) {
     y: Math.random() * H - H,
     r: Math.random() * 8 + 4,
     d: Math.random() * COUNT + 11,
-    color: palette[Math.floor(Math.random() * palette.length)],
+    color: palette[Math.floor(Math.random() * palette.length)] ?? color,
     tilt: Math.floor(Math.random() * 10) - 10,
     tiltAngle: 0,
     tiltAngleDelta: (Math.random() * 0.07 + 0.05) * (Math.random() > 0.5 ? 1 : -1),

@@ -42,8 +42,11 @@ function computeStreak(sortedDates: string[]): { current: number; longest: numbe
   let longest = 0;
 
   for (let i = sortedDates.length - 1; i > 0; i--) {
+    const a = sortedDates[i];
+    const b = sortedDates[i - 1];
+    if (!a || !b) continue;
     const diff = Math.round(
-      (new Date(sortedDates[i]).getTime() - new Date(sortedDates[i - 1]).getTime()) /
+      (new Date(a).getTime() - new Date(b).getTime()) /
         86400000
     );
     if (diff === 1) run++;
@@ -56,8 +59,11 @@ function computeStreak(sortedDates: string[]): { current: number; longest: numbe
   if (last === todayStr || last === yesterdayStr) {
     let streak = 1;
     for (let i = sortedDates.length - 1; i > 0; i--) {
+      const a = sortedDates[i];
+      const b = sortedDates[i - 1];
+      if (!a || !b) break;
       const diff = Math.round(
-        (new Date(sortedDates[i]).getTime() - new Date(sortedDates[i - 1]).getTime()) /
+        (new Date(a).getTime() - new Date(b).getTime()) /
           86400000
       );
       if (diff === 1) streak++;

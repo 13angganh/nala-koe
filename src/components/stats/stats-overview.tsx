@@ -91,9 +91,7 @@ export function StatsOverview({ stats, isLoading }: StatsOverviewProps) {
       icon: TrendingUp,
       label: 'Kata minggu ini',
       value: stats.wordsThisWeek.toLocaleString('id-ID'),
-      sub: stats.longestNote
-        ? `Terpanjang: "${stats.longestNote.title || 'Tanpa judul'}" (${stats.longestNote.wordCount.toLocaleString('id-ID')} kata)`
-        : undefined,
+      ...(stats.longestNote ? { sub: `Terpanjang: "${stats.longestNote.title || 'Tanpa judul'}" (${stats.longestNote.wordCount.toLocaleString('id-ID')} kata)` } : {}),
     },
     {
       icon: Flame,
@@ -106,9 +104,7 @@ export function StatsOverview({ stats, isLoading }: StatsOverviewProps) {
       icon: Trophy,
       label: 'Streak terpanjang',
       value: `${stats.longestStreak} hari`,
-      sub: stats.lastActiveDate
-        ? `Terakhir aktif: ${new Date(stats.lastActiveDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`
-        : undefined,
+      ...(stats.lastActiveDate ? { sub: `Terakhir aktif: ${new Date(stats.lastActiveDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}` } : {}),
     },
     {
       icon: Clock,

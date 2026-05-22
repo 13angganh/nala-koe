@@ -221,7 +221,7 @@ export function NoteEditor({
   const { suggestions, searchSuggestions } = useTags();
   const { requestLocation, isRequesting: isRequestingLocation } = useGeolocation();
   const { fetchWeather, isFetching: isFetchingWeather } = useWeather();
-  const { notes: allNotes, isLoading: isLoadingNotes } = useNotes({ status: 'active' });
+  const { data: allNotes = [], isLoading: isLoadingNotes } = useNotes({ status: 'active' });
 
   // ── Auto-resize textareas ─────────────────────────────────────────────────
 
@@ -543,7 +543,7 @@ export function NoteEditor({
               <NoteReactionBar
                 noteId={noteId}
                 reaction={reaction ?? null}
-                onReactionChange={onReactionChange}
+                {...(onReactionChange ? { onReactionChange } : {})}
               />
             </section>
           )}
@@ -555,7 +555,7 @@ export function NoteEditor({
                 noteId={noteId}
                 content={content}
                 highlights={highlights}
-                onHighlightsChange={onHighlightsChange}
+                {...(onHighlightsChange ? { onHighlightsChange } : {})}
               />
             </section>
           )}
