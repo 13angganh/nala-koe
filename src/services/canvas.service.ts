@@ -7,7 +7,6 @@ import {
   deleteDoc,
   query,
   where,
-  orderBy,
   serverTimestamp,
   writeBatch,
 } from 'firebase/firestore';
@@ -63,8 +62,7 @@ export async function getOrCreateDefaultBoard(
   try {
     const q = query(
       collection(db, BOARDS_COLLECTION),
-      where('userId', '==', userId),
-      orderBy('updatedAt', 'desc')
+      where('userId', '==', userId)
     );
     const snap = await getDocs(q);
 
@@ -139,13 +137,12 @@ export async function getBoardStickies(
     const q = query(
       collection(db, STICKIES_COLLECTION),
       where('boardId', '==', boardId),
-      where('userId', '==', userId),
-      orderBy('zIndex', 'asc')
+      where('userId', '==', userId)
     );
     const snap = await getDocs(q);
-    const stickies = snap.docs.map((d) =>
-      normalizeSticky(d.id, d.data() as Record<string, unknown>)
-    );
+    const stickies = snap.docs
+      .map((d) => normalizeSticky(d.id, d.data() as Record<string, unknown>))
+      .sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0));
     return ok(stickies);
   } catch (error) {
     logger.error('canvas.stickies.get.failed', { error });
