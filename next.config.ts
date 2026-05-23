@@ -1,4 +1,4 @@
-// next.config.ts — konfigurasi Next.js + security headers
+// next.config.ts — konfigurasi Next.js 16
 import type { NextConfig } from 'next';
 
 // ─── Security headers ───────────────────────────────────────────────────────
@@ -10,7 +10,6 @@ const securityHeaders = [
   { key: 'Referrer-Policy',           value: 'strict-origin-when-cross-origin' },
   {
     key:   'Permissions-Policy',
-    // camera dan microphone diizinkan (self) untuk fitur barcode scanner & audio note
     value: 'camera=(self), microphone=(self), geolocation=()',
   },
   {
@@ -37,9 +36,12 @@ const securityHeaders = [
 const config: NextConfig = {
   reactStrictMode: true,
 
-  // Error saat ada TS atau ESLint error — tidak pernah ignore
+  // Next.js 16: eslint key removed — use CLI flag instead (no-op here, lint runs separately)
   typescript: { ignoreBuildErrors: false },
-  eslint:     { ignoreDuringBuilds: false },
+
+  // Next.js 16 Turbopack is enabled by default.
+  // Empty turbopack config silences the webpack/turbopack mismatch error.
+  turbopack: {},
 
   images: {
     formats:        ['image/avif', 'image/webp'],
@@ -55,7 +57,6 @@ const config: NextConfig = {
         source:  '/(.*)',
         headers: securityHeaders,
       },
-      // Service Worker wajib tanpa cache agar update langsung aktif
       {
         source:  '/sw.js',
         headers: [
@@ -66,7 +67,6 @@ const config: NextConfig = {
     ];
   },
 
-  // Hapus console.log di production, pertahankan warn dan error
   compiler: {
     removeConsole:
       process.env.NODE_ENV === 'production'
@@ -74,20 +74,8 @@ const config: NextConfig = {
         : false,
   },
 
-  // Suppress protobufjs "Critical dependency" warning — ini dari firebase-admin (server-side)
-  // dan tidak mempengaruhi fungsi app. Mark firebase-admin sebagai server-only external.
+  // firebase-admin uses gRPC/protobufjs — keep server-side only
   serverExternalPackages: ['firebase-admin', '@google-cloud/firestore'],
-
-  webpack(config, { isServer }) {
-    if (isServer) {
-      // Suppress protobufjs dynamic require warning dari firebase-admin chain
-      config.ignoreWarnings = [
-        { module: /node_modules\/@protobufjs\/inquire/ },
-        { module: /node_modules\/protobufjs/ },
-      ];
-    }
-    return config;
-  },
 };
 
 export default config;
