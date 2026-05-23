@@ -99,7 +99,7 @@ export function Header() {
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>
               <p className="font-medium text-[var(--text-primary)] truncate">{user?.displayName ?? 'Pengguna'}</p>
-              <p className="text-xs font-normal text-[var(--text-tertiary)] truncate mt-0.5">{user?.email}</p>
+              <p className="text-xs font-normal text-[var(--text-tertiary)] truncate mt-0.5 lowercase">{user?.email}</p>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => router.push(ROUTES.SETTINGS)} className="gap-2">

@@ -121,6 +121,33 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ─── Canvas Boards ────────────────────────────────────────────────────────
+
+    match /canvas_boards/{boardId} {
+      allow read: if isWhitelisted()
+        && resource.data.userId == request.auth.uid;
+      allow create: if isWhitelisted()
+        && request.resource.data.userId == request.auth.uid;
+      allow update: if isWhitelisted()
+        && resource.data.userId == request.auth.uid
+        && fieldUnchanged('userId');
+      allow delete: if isWhitelisted()
+        && resource.data.userId == request.auth.uid;
+    }
+
+    // ─── Canvas Stickies ──────────────────────────────────────────────────────
+
+    match /canvas_stickies/{stickyId} {
+      allow read: if isWhitelisted()
+        && resource.data.userId == request.auth.uid;
+      allow create: if isWhitelisted()
+        && request.resource.data.userId == request.auth.uid;
+      allow update: if isWhitelisted()
+        && resource.data.userId == request.auth.uid;
+      allow delete: if isWhitelisted()
+        && resource.data.userId == request.auth.uid;
+    }
+
     // ─── Error Logs — write-only dari whitelisted client ─────────────────────
     // Tidak bisa dibaca dari client — hanya Firebase Console / Admin SDK
 

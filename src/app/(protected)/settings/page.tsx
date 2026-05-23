@@ -59,7 +59,7 @@ export default function SettingsPage() {
                 <p className="truncate text-sm font-medium text-[var(--text-primary)]">
                   {user.displayName ?? 'Pengguna NalaKoe'}
                 </p>
-                <p className="truncate text-xs text-[var(--text-tertiary)]">{user.email}</p>
+                <p className="truncate text-xs text-[var(--text-tertiary)] lowercase">{user.email}</p>
               </div>
             </div>
           </section>

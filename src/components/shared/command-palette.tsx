@@ -115,9 +115,9 @@ export function CommandPalette() {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cari halaman atau perintah…"
+              placeholder="Cari catatan, halaman, atau perintah…"
               className="flex-1 bg-transparent text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none"
-              aria-label="Cari perintah"
+              aria-label="Cari catatan atau perintah"
             />
             <kbd className="text-xs text-[var(--text-tertiary)] font-mono">Esc</kbd>
           </div>

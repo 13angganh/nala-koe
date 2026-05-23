@@ -383,7 +383,7 @@ export function NoteEditor({
             ref={titleRef}
             value={title}
             onChange={(e) => { onTitleChange(e.target.value); autoResize(e.target); }}
-            placeholder="Judul catatan\u2026"
+            placeholder="Judul catatan…"
             aria-label="Judul catatan"
             rows={1}
             className={cn(
@@ -435,7 +435,7 @@ export function NoteEditor({
                 ) : (
                   <Button variant="outline" size="sm" onClick={() => void handleRequestLocation()} disabled={isRequestingLocation || isFetchingWeather} className="h-7 text-xs gap-1.5">
                     {isRequestingLocation || isFetchingWeather ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MapPin className="h-3.5 w-3.5" />}
-                    {isRequestingLocation ? 'Mencari lokasi\u2026' : isFetchingWeather ? 'Mengambil cuaca\u2026' : 'Tambah lokasi'}
+                    {isRequestingLocation ? 'Mencari lokasi…' : isFetchingWeather ? 'Mengambil cuaca…' : 'Tambah lokasi'}
                   </Button>
                 )}
                 {weather && (
@@ -643,7 +643,7 @@ export function NoteEditor({
             ref={contentRef}
             value={content}
             onChange={(e) => { onContentChange(e.target.value); autoResize(e.target); }}
-            placeholder="Tulis pikiranmu di sini\u2026"
+            placeholder="Tulis pikiranmu di sini…"
             aria-label="Konten catatan"
             rows={10}
             className={cn(
