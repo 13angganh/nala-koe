@@ -10,8 +10,11 @@ const envSchema = z.object({
   // NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET dihapus — Storage tidak dipakai (plan Blaze)
 
   // Firebase Realtime Database — opsional.
-  // Di Vercel, set ke string kosong "" jika tidak dipakai (jangan diisi undefined/hapus var-nya).
-  NEXT_PUBLIC_FIREBASE_DATABASE_URL: z.string().url().optional().or(z.literal('')),
+  // Kosongkan ("") di Vercel jika tidak dipakai — preprocess converts "" to undefined.
+  NEXT_PUBLIC_FIREBASE_DATABASE_URL: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z.string().url().optional()
+  ),
 
   // App
   NEXT_PUBLIC_APP_URL: z.string().url(),
