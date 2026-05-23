@@ -6,7 +6,7 @@ const PUBLIC_PATHS = ['/', '/login', '/register', '/offline'];
 // Route khusus auth (redirect ke dashboard jika sudah login)
 const AUTH_PATHS   = ['/login', '/register'];
 
-export function middleware(request: NextRequest): NextResponse {
+export function proxy(request: NextRequest): NextResponse {
   const { pathname } = request.nextUrl;
 
   // Skip: API routes, static assets, SW, manifest
