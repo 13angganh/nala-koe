@@ -12,13 +12,16 @@ import { QueryClient } from '@tanstack/react-query';
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime:            1000 * 60 * 5,  // 5 menit
-      gcTime:               1000 * 60 * 10, // 10 menit (garbage collect)
+      staleTime:            1000 * 60 * 5,
+      gcTime:               1000 * 60 * 10,
       retry:                1,
       refetchOnWindowFocus: true,
+      // Jangan throw ke React Error Boundary — tangani error di komponen masing-masing
+      throwOnError:         false,
     },
     mutations: {
-      retry: 0,
+      retry:        0,
+      throwOnError: false,
     },
   },
 });

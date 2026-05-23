@@ -122,7 +122,12 @@ export default function CanvasPage() {
             onDeleteSticky={handleDeleteSticky}
             onViewportChange={handleViewportChange}
           />
-        ) : null}
+        ) : (
+          <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-[var(--text-secondary)]">
+            <LayoutDashboard size={32} className="opacity-30" aria-hidden />
+            <p className="text-sm">Gagal memuat canvas. Coba muat ulang halaman.</p>
+          </div>
+        )}
       </div>
 
       <ConfirmDialog {...dialogProps} />
