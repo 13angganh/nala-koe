@@ -12,13 +12,13 @@
 import { QueryClientProvider }   from '@tanstack/react-query';
 import { ReactQueryDevtools }    from '@tanstack/react-query-devtools';
 import { Toaster }               from 'sonner';
+import { TooltipProvider }       from '@/components/ui/tooltip';
 import { queryClient }           from '@/lib/query-client';
 import { ThemeProvider }         from '@/components/shared/theme-provider';
 import { NetworkStatus }         from '@/components/shared/network-status';
 import { PwaInstallBanner }      from '@/components/shared/pwa-install-banner';
 import { useServiceWorker }      from '@/hooks/use-service-worker';
 
-// Komponen tersendiri agar useServiceWorker dipanggil di dalam QueryClientProvider
 function ServiceWorkerInit() {
   useServiceWorker();
   return null;
@@ -27,24 +27,26 @@ function ServiceWorkerInit() {
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <ServiceWorkerInit />
-        <NetworkStatus />
-        <PwaInstallBanner />
-        {children}
-        <Toaster
-          position="top-center"
-          richColors
-          closeButton
-          duration={4000}
-          toastOptions={{
-            style: { fontFamily: 'var(--font-sans)' },
-          }}
-        />
-        {process.env.NODE_ENV === 'development' && (
-          <ReactQueryDevtools initialIsOpen={false} />
-        )}
-      </ThemeProvider>
+      <TooltipProvider delayDuration={300}>
+        <ThemeProvider>
+          <ServiceWorkerInit />
+          <NetworkStatus />
+          <PwaInstallBanner />
+          {children}
+          <Toaster
+            position="top-center"
+            richColors
+            closeButton
+            duration={4000}
+            toastOptions={{
+              style: { fontFamily: 'var(--font-sans)' },
+            }}
+          />
+          {process.env.NODE_ENV === 'development' && (
+            <ReactQueryDevtools initialIsOpen={false} />
+          )}
+        </ThemeProvider>
+      </TooltipProvider>
     </QueryClientProvider>
   );
 }
