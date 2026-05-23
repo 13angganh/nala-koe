@@ -8,26 +8,21 @@ import {
   type Firestore,
 } from 'firebase/firestore';
 import { getDatabase, type Database } from 'firebase/database';
-import { env } from './env';
 
+// Firebase client config — hardcoded (public keys, aman di client-side)
 const firebaseConfig = {
-  apiKey:            env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain:        env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId:         env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  messagingSenderId: env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId:             env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  // storageBucket dihapus — Firebase Storage tidak dipakai (perlu plan Blaze)
-  // databaseURL opsional — hanya diisi jika RTDB diaktifkan
-  ...(env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
-    ? { databaseURL: env.NEXT_PUBLIC_FIREBASE_DATABASE_URL }
-    : {}),
+  apiKey:            'AIzaSyBU8mNtvsOUhBYTwyg6cNBjkxT_vqK8XYo',
+  authDomain:        'nala-koe.firebaseapp.com',
+  projectId:         'nala-koe',
+  messagingSenderId: '904590595183',
+  appId:             '1:904590595183:web:de30c46a69746f34fce99a',
+  // storageBucket tidak dipakai (perlu plan Blaze)
+  // databaseURL tidak dipakai (RTDB belum diaktifkan)
 };
 
-// Singleton pattern — prevent duplicate Firebase app initialization
 let app: FirebaseApp;
 let auth: Auth;
 let db: Firestore;
-// rtdb hanya diinisialisasi jika NEXT_PUBLIC_FIREBASE_DATABASE_URL tersedia
 let rtdb: Database | null = null;
 
 function initFirebase(): void {
@@ -40,9 +35,6 @@ function initFirebase(): void {
 
   auth = getAuth(app);
 
-  // Aktifkan offline persistence dengan IndexedDB.
-  // persistentMultipleTabManager: data tersedia di semua tab secara bersamaan.
-  // Hanya di browser — SSR tetap pakai getFirestore biasa.
   if (typeof window !== 'undefined') {
     db = initializeFirestore(app, {
       localCache: persistentLocalCache({
@@ -52,14 +44,8 @@ function initFirebase(): void {
   } else {
     db = getFirestore(app);
   }
-
-  // RTDB: hanya inisialisasi jika databaseURL tersedia di env
-  if (env.NEXT_PUBLIC_FIREBASE_DATABASE_URL) {
-    rtdb = getDatabase(app);
-  }
 }
 
-// Initialize immediately
 initFirebase();
 
 export { auth, db, rtdb };
