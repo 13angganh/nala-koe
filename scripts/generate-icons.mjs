@@ -53,7 +53,7 @@ function drawIcon(canvas, size) {
   const barH = size * 0.05;
   const barW = size * 0.4;
   const barX = (size - barW) / 2;
-  const barY = size * 0.68;
+  const barY = size * 0.72;
   ctx.fillStyle = BRAND.accent;
   ctx.beginPath();
   ctx.roundRect(barX, barY, barW, barH, barH / 2);
@@ -64,7 +64,7 @@ function drawIcon(canvas, size) {
   ctx.font = `bold ${size * 0.45}px Inter, system-ui, sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(BRAND.letter, size / 2, size * 0.44);
+  ctx.fillText(BRAND.letter, size / 2, size * 0.42);
 }
 
 /** Draw a rounded rectangle path */

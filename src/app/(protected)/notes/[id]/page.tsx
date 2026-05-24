@@ -17,7 +17,7 @@ export default function NotePage() {
 
   const {
     note,
-    
+    isLoading,
     isError,
     isSaving,
     isDirty,
@@ -53,6 +53,21 @@ export default function NotePage() {
   const archiveMutation = useArchiveNote();
   const duplicateMutation = useDuplicateNote();
   const sizeInfo = note ? getNoteSizeInfo(note) : undefined;
+
+  // Tampilkan skeleton saat pertama kali load — menghindari flash kosong
+  if (isLoading) {
+    return (
+      <div className="flex flex-col h-[calc(100dvh-3.5rem)] animate-pulse">
+        <div className="h-10 border-b border-[var(--border)] bg-[var(--surface-subtle)]" />
+        <div className="flex-1 mx-auto w-full max-w-2xl px-6 py-8 space-y-4">
+          <div className="h-8 w-2/3 rounded-lg bg-[var(--surface-muted)]" />
+          <div className="h-4 w-full rounded bg-[var(--surface-muted)]" />
+          <div className="h-4 w-5/6 rounded bg-[var(--surface-muted)]" />
+          <div className="h-4 w-4/6 rounded bg-[var(--surface-muted)]" />
+        </div>
+      </div>
+    );
+  }
 
   if (isError || !note) {
     return (

@@ -181,6 +181,7 @@ export function CanvasBoard({
       <div
         ref={boardRef}
         className="absolute inset-0 cursor-grab active:cursor-grabbing"
+        style={{ touchAction: 'none', WebkitUserSelect: 'none' }}
         onPointerDown={handleBoardPointerDown}
         onPointerMove={handleBoardPointerMove}
         onPointerUp={handleBoardPointerUp}

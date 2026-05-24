@@ -11,10 +11,10 @@ import type { NoteListItem } from '@/types/note.types';
 // ─── Canvas color constants ───────────────────────────────────────────────────
 // reason: Canvas API tidak bisa membaca CSS variables. Nilai harus hardcoded.
 // Sumber warna: tokens/colors.ts surfaceDark.base dan brand.500
-const CANVAS_BG_DARK = colors.surfaceDark.base;       // '#0f172a'
-const CANVAS_BG_LIGHT = colors.surface.subtle;         // '#f8fafc'
-const CANVAS_NODE_DEFAULT = colors.brand[500];          // '#0ea5e9'
-const CANVAS_NODE_HOVER = colors.brand[400];            // '#38bdf8'
+const CANVAS_BG_DARK = colors.surfaceDark?.base ?? '#0f172a';
+const CANVAS_BG_LIGHT = colors.surface?.subtle ?? '#f8fafc';
+const CANVAS_NODE_DEFAULT = colors.brand[500] ?? '#0ea5e9';
+const CANVAS_NODE_HOVER = colors.brand[400] ?? '#38bdf8';
 
 interface GraphNode {
   id: string;
