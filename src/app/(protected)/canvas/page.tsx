@@ -109,7 +109,7 @@ export default function CanvasPage() {
         </div>
       </div>
 
-      <div className="flex-1 p-4 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden">
         {isLoading ? (
           <div className="w-full h-full flex items-center justify-center">
             <Loader2 size={24} className="animate-spin text-[var(--text-tertiary)]" />

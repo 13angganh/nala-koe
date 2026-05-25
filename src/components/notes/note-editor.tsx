@@ -255,7 +255,12 @@ export function NoteEditor({
 
   const handleChecklistChange = useCallback(
     (blockId: string, items: ChecklistItem[]) => {
-      onBlocksChange(blocks.map((b) => b.id === blockId ? { ...b, content: JSON.stringify(items) } : b));
+      if (items.length === 0) {
+        // Hapus seluruh block checklist jika semua item dihapus
+        onBlocksChange(blocks.filter((b) => b.id !== blockId));
+      } else {
+        onBlocksChange(blocks.map((b) => b.id === blockId ? { ...b, content: JSON.stringify(items) } : b));
+      }
     },
     [blocks, onBlocksChange]
   );

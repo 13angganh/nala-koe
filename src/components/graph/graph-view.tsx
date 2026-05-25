@@ -155,8 +155,9 @@ export function GraphView({ notes }: GraphViewProps) {
     const isDark = document.documentElement.classList.contains('dark');
     const bg = isDark ? CANVAS_BG_DARK : CANVAS_BG_LIGHT;
     const edgeColor = isDark ? 'rgba(148,163,184,0.25)' : 'rgba(100,116,139,0.2)';
-    // reason: Canvas API tidak bisa membaca CSS variables — harus pakai nilai dari tokens
-    const labelColor = isDark ? colors.textDark.secondary : colors.text.secondary;
+    const labelColor = isDark
+      ? (colors.textDark?.secondary ?? '#cbd5e1')
+      : (colors.text?.secondary ?? '#64748b');
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = bg;
@@ -346,11 +347,44 @@ export function GraphView({ notes }: GraphViewProps) {
       <canvas
         ref={canvasRef}
         className="w-full h-full cursor-grab"
+        style={{ touchAction: 'none' }}
         onMouseMove={handleMouseMove}
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
         onMouseLeave={() => { setHoveredId(null); setTooltip(null); }}
         onWheel={handleWheel}
+        onTouchStart={(e) => {
+          e.preventDefault();
+          const t = e.touches[0];
+          if (!t) return;
+          const rect = canvasRef.current!.getBoundingClientRect();
+          const cx = t.clientX - rect.left;
+          const cy = t.clientY - rect.top;
+          const node = getNodeAtPoint(cx, cy);
+          if (node) return;
+          panState.current = { startX: cx, startY: cy, origX: viewportRef.current.x, origY: viewportRef.current.y };
+        }}
+        onTouchMove={(e) => {
+          e.preventDefault();
+          const t = e.touches[0];
+          if (!t || !panState.current) return;
+          const rect = canvasRef.current!.getBoundingClientRect();
+          const cx = t.clientX - rect.left;
+          const cy = t.clientY - rect.top;
+          viewportRef.current = { ...viewportRef.current, x: panState.current.origX + (cx - panState.current.startX), y: panState.current.origY + (cy - panState.current.startY) };
+          draw();
+        }}
+        onTouchEnd={(e) => {
+          const wasPanning = panState.current !== null;
+          panState.current = null;
+          if (!wasPanning) {
+            const t = e.changedTouches[0];
+            if (!t) return;
+            const rect = canvasRef.current!.getBoundingClientRect();
+            const node = getNodeAtPoint(t.clientX - rect.left, t.clientY - rect.top);
+            if (node) router.push(ROUTES.NOTE(node.id));
+          }
+        }}
       />
 
       {/* Tooltip */}

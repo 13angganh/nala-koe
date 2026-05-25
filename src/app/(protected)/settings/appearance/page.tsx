@@ -16,10 +16,10 @@ const THEMES = [
 
 function SettingsRow({ label, description, children }: { label: string; description?: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-4 py-4 border-b border-[var(--border)] last:border-0">
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-[var(--text-primary)]">{label}</p>
-        {description && <p className="mt-0.5 text-xs text-[var(--text-tertiary)]">{description}</p>}
+    <div className="flex flex-col gap-3 py-4 border-b border-[var(--border)] last:border-0 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+      <div className="min-w-0">
+        <p className="text-[15px] font-medium text-[var(--text-primary)]">{label}</p>
+        {description && <p className="mt-0.5 text-sm text-[var(--text-tertiary)] leading-relaxed">{description}</p>}
       </div>
       <div className="shrink-0">{children}</div>
     </div>
