@@ -147,7 +147,7 @@ export function NoteTimeCapsuleLock({
             </div>
             <div>
               <p className="text-xs font-medium text-[var(--text-primary)]">Kapsul Waktu</p>
-              <p className="text-[11px] text-[var(--text-tertiary)]">
+              <p className="text-xs text-[var(--text-tertiary)]">
                 Terbuka{' '}
                 {format(status.unlockAt, "d MMM yyyy 'pukul' HH:mm", { locale: localeId })}
               </p>
@@ -202,7 +202,7 @@ export function NoteTimeCapsuleLock({
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
-        <p className="text-[11px] text-[var(--text-tertiary)] mt-1 ml-6">
+        <p className="text-xs text-[var(--text-tertiary)] mt-1 ml-6">
           Catatan ini dibuka pada{' '}
           {status.unlockAt &&
             format(status.unlockAt, "d MMM yyyy", { locale: localeId })}
@@ -230,7 +230,7 @@ export function NoteTimeCapsuleLock({
         <Timer className="h-4 w-4 text-[var(--accent)]" aria-hidden="true" />
         <p className="text-xs font-medium text-[var(--text-primary)]">Kapsul Waktu</p>
       </div>
-      <p className="text-[11px] text-[var(--text-tertiary)]">
+      <p className="text-xs text-[var(--text-tertiary)]">
         Catatan ini akan dikunci dan baru bisa dibaca pada tanggal yang kamu tentukan.
       </p>
 
@@ -241,7 +241,7 @@ export function NoteTimeCapsuleLock({
             key={p.label}
             type="button"
             onClick={() => handlePreset(p)}
-            className="rounded-full border border-[var(--border)] px-2.5 py-0.5 text-[11px] text-[var(--text-secondary)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
+            className="rounded-full border border-[var(--border)] px-2.5 py-0.5 text-xs text-[var(--text-secondary)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
           >
             {p.label}
           </button>
@@ -273,7 +273,7 @@ export function NoteTimeCapsuleLock({
       </div>
 
       {dateError && (
-        <p className="flex items-center gap-1.5 text-[11px] text-[var(--error)]">
+        <p className="flex items-center gap-1.5 text-xs text-[var(--error)]">
           <AlertCircle className="h-3 w-3 shrink-0" aria-hidden="true" />
           {dateError}
         </p>

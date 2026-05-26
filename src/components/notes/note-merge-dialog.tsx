@@ -134,7 +134,7 @@ export function NoteMergeDialog({
                       <p className="truncate font-medium">
                         {note.title || 'Tanpa judul'}
                       </p>
-                      <p className="truncate text-[11px] text-[var(--text-tertiary)]">
+                      <p className="truncate text-xs text-[var(--text-tertiary)]">
                         {note.wordCount} kata
                         {note.tags.length > 0 && ` · ${note.tags.slice(0, 2).join(', ')}`}
                       </p>

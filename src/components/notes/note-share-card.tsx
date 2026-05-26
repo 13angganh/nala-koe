@@ -106,14 +106,14 @@ function CardPreview({ note, styleId, accentColor, gradient }: CardPreviewProps)
             {note.tags.slice(0, 3).map((tag) => (
               <span
                 key={tag}
-                className="rounded-full px-2 py-0.5 text-[10px] font-medium"
+                className="rounded-full px-2 py-0.5 text-xs font-medium"
                 style={{ backgroundColor: `${accentColor}33`, color: accentColor }}
               >
                 #{tag}
               </span>
             ))}
           </div>
-          <time className="text-[10px] opacity-40 tabular-nums shrink-0">
+          <time className="text-xs opacity-40 tabular-nums shrink-0">
             {formatRelativeTime(note.createdAt)}
           </time>
         </footer>
@@ -146,13 +146,13 @@ function CardPreview({ note, styleId, accentColor, gradient }: CardPreviewProps)
             {note.tags.slice(0, 3).map((tag) => (
               <span
                 key={tag}
-                className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-medium text-white"
+                className="rounded-full bg-white/20 px-2 py-0.5 text-xs font-medium text-white"
               >
                 #{tag}
               </span>
             ))}
           </div>
-          <time className="text-[10px] opacity-60 tabular-nums shrink-0">
+          <time className="text-xs opacity-60 tabular-nums shrink-0">
             {formatRelativeTime(note.createdAt)}
           </time>
         </footer>
@@ -183,12 +183,12 @@ function CardPreview({ note, styleId, accentColor, gradient }: CardPreviewProps)
       <footer className="mt-auto flex items-center justify-between gap-2">
         <div className="flex flex-wrap gap-1">
           {note.tags.slice(0, 3).map((tag) => (
-            <Badge key={tag} variant="outline" className="text-[10px] px-1.5 py-0">
+            <Badge key={tag} variant="outline" className="text-xs px-1.5 py-0">
               #{tag}
             </Badge>
           ))}
         </div>
-        <time className="text-[10px] text-[var(--text-tertiary)] tabular-nums shrink-0">
+        <time className="text-xs text-[var(--text-tertiary)] tabular-nums shrink-0">
           {formatRelativeTime(note.createdAt)}
         </time>
       </footer>

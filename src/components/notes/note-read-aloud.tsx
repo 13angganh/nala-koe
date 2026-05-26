@@ -127,7 +127,7 @@ export function NoteReadAloud({ text, title, className }: NoteReadAloudProps) {
         </div>
 
         {/* Status label */}
-        <span className="text-[10px] text-[var(--text-tertiary)] shrink-0 w-12 text-right">
+        <span className="text-xs text-[var(--text-tertiary)] shrink-0 w-12 text-right">
           {isPlaying ? 'Membaca…' : isPaused ? 'Dijeda' : 'Siap'}
         </span>
 
@@ -195,10 +195,10 @@ export function NoteReadAloud({ text, title, className }: NoteReadAloudProps) {
           {/* Speed control */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-medium text-[var(--text-secondary)] uppercase tracking-wide">
+              <span className="text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wide">
                 Kecepatan
               </span>
-              <span className="text-[10px] text-[var(--accent)] font-medium font-mono">
+              <span className="text-xs text-[var(--accent)] font-medium font-mono">
                 {formatRate(rate)}
               </span>
             </div>
@@ -225,7 +225,7 @@ export function NoteReadAloud({ text, title, className }: NoteReadAloudProps) {
           {/* Voice selector */}
           {voices.length > 0 && (
             <div className="space-y-1.5">
-              <span className="text-[10px] font-medium text-[var(--text-secondary)] uppercase tracking-wide block">
+              <span className="text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wide block">
                 Suara
               </span>
               <select

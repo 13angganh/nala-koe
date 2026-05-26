@@ -165,7 +165,7 @@ export default function StatsPage() {
                 </p>
               </div>
               {tagFrequency.length > 0 && (
-                <span className="shrink-0 rounded-full bg-[var(--surface-muted)] px-2 py-0.5 text-[10px] text-[var(--text-tertiary)]">
+                <span className="shrink-0 rounded-full bg-[var(--surface-muted)] px-2 py-0.5 text-xs text-[var(--text-tertiary)]">
                   {tagFrequency.length} tag
                 </span>
               )}
@@ -186,7 +186,7 @@ export default function StatsPage() {
                 </p>
               </div>
               {scheduledNotes.length > 0 && (
-                <span className="shrink-0 rounded-full bg-[var(--accent-subtle)] px-2 py-0.5 text-[10px] font-medium text-[var(--accent)]">
+                <span className="shrink-0 rounded-full bg-[var(--accent-subtle)] px-2 py-0.5 text-xs font-medium text-[var(--accent)]">
                   {scheduledNotes.length} terjadwal
                 </span>
               )}

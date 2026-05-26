@@ -15,7 +15,7 @@ export function NoteWordCount({ wordCount, readingTimeMinutes, className }: Note
   return (
     <div
       className={cn(
-        'flex items-center gap-2 text-[10px] text-[var(--text-tertiary)] tabular-nums',
+        'flex items-center gap-2 text-xs text-[var(--text-tertiary)] tabular-nums',
         className
       )}
       aria-live="polite"

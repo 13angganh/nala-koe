@@ -129,7 +129,7 @@ export function NoteFilters({
                 activeTags.forEach((t) => onTagRemove?.(t));
               }}
               className={cn(
-                'flex items-center gap-1 rounded-lg px-2 h-7 text-[10px]',
+                'flex items-center gap-1 rounded-lg px-2 h-7 text-xs',
                 'border border-[var(--border)] bg-[var(--surface-base)]',
                 'text-[var(--text-tertiary)] hover:text-[var(--error)] hover:border-[var(--error)]/30',
                 'transition-colors duration-100',

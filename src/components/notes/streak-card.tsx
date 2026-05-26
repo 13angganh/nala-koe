@@ -38,7 +38,7 @@ export function StreakCard({ className, compact = false }: StreakCardProps) {
           <span className="ml-1 text-xs text-[var(--text-secondary)]">hari berturut-turut</span>
         </div>
         {!todayHasNote && (
-          <span className="ml-auto text-[10px] text-[var(--warning)] font-medium">Tulis hari ini!</span>
+          <span className="ml-auto text-xs text-[var(--warning)] font-medium">Tulis hari ini!</span>
         )}
       </div>
     );
@@ -84,12 +84,12 @@ export function StreakCard({ className, compact = false }: StreakCardProps) {
           <h3 className="text-sm font-semibold text-[var(--text-primary)]">Streak Menulis</h3>
         </div>
         {!todayHasNote && (
-          <span className="rounded-full bg-[var(--warning-subtle)] px-2 py-0.5 text-[10px] font-semibold text-[var(--warning)]">
+          <span className="rounded-full bg-[var(--warning-subtle)] px-2 py-0.5 text-xs font-semibold text-[var(--warning)]">
             Belum menulis hari ini
           </span>
         )}
         {todayHasNote && currentStreak > 0 && (
-          <span className="rounded-full bg-[var(--success-subtle)] px-2 py-0.5 text-[10px] font-semibold text-[var(--success)]">
+          <span className="rounded-full bg-[var(--success-subtle)] px-2 py-0.5 text-xs font-semibold text-[var(--success)]">
             Sudah menulis hari ini
           </span>
         )}
@@ -106,7 +106,7 @@ export function StreakCard({ className, compact = false }: StreakCardProps) {
                 {value}
                 <span className="ml-0.5 text-xs font-normal text-[var(--text-tertiary)]">{unit}</span>
               </p>
-              <p className="text-[10px] text-[var(--text-tertiary)]">{label}</p>
+              <p className="text-xs text-[var(--text-tertiary)]">{label}</p>
             </div>
           </div>
         ))}
@@ -114,7 +114,7 @@ export function StreakCard({ className, compact = false }: StreakCardProps) {
 
       {/* Mini calendar — last 7 days */}
       <div className="mt-4 border-t border-[var(--border)] pt-3">
-        <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-[var(--text-tertiary)]">
+        <p className="mb-2 text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">
           7 hari terakhir
         </p>
         <LastSevenDays activeDates={data.activeDates} />

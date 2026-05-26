@@ -131,7 +131,7 @@ export function CommandPalette() {
             )}
             {Object.entries(groups).map(([group, items]) => (
               <div key={group}>
-                <p className="px-4 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-widest text-[var(--text-tertiary)]">
+                <p className="px-4 pb-1 pt-2 text-xs font-semibold uppercase tracking-widest text-[var(--text-tertiary)]">
                   {group}
                 </p>
                 {items.map((item) => {
@@ -162,13 +162,13 @@ export function CommandPalette() {
 
           {/* Footer hint */}
           <div className="flex items-center gap-4 border-t border-[var(--border)] px-4 py-2.5">
-            <span className="flex items-center gap-1.5 text-[10px] text-[var(--text-tertiary)]">
+            <span className="flex items-center gap-1.5 text-xs text-[var(--text-tertiary)]">
               <kbd className="font-mono">↑↓</kbd> navigasi
             </span>
-            <span className="flex items-center gap-1.5 text-[10px] text-[var(--text-tertiary)]">
+            <span className="flex items-center gap-1.5 text-xs text-[var(--text-tertiary)]">
               <kbd className="font-mono">↵</kbd> pilih
             </span>
-            <span className="flex items-center gap-1.5 text-[10px] text-[var(--text-tertiary)]">
+            <span className="flex items-center gap-1.5 text-xs text-[var(--text-tertiary)]">
               <kbd className="font-mono">Esc</kbd> tutup
             </span>
           </div>

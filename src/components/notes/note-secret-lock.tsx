@@ -230,7 +230,7 @@ export function NoteSecretLock({
           <Lock className="h-4 w-4 text-[var(--text-tertiary)]" aria-hidden="true" />
           <p className="text-xs font-medium text-[var(--text-primary)]">Catatan Rahasia</p>
         </div>
-        <p className="text-[11px] text-[var(--text-tertiary)]">
+        <p className="text-xs text-[var(--text-tertiary)]">
           Kunci catatan ini dengan PIN. Tampil sebagai kunci di daftar catatan.
         </p>
         <Button
@@ -246,7 +246,7 @@ export function NoteSecretLock({
         {/* PIN setup form */}
         {mode === 'pin-setup' && (
           <div className="space-y-3 pt-1">
-            <p className="text-[11px] font-medium text-[var(--text-secondary)]">Buat PIN baru</p>
+            <p className="text-xs font-medium text-[var(--text-secondary)]">Buat PIN baru</p>
             <PinDots value={pin} length={PIN_LENGTH} />
             <div className="relative">
               <Input
@@ -285,7 +285,7 @@ export function NoteSecretLock({
               onKeyDown={(e) => e.key === 'Enter' && confirmPin.length === PIN_LENGTH && handlePinSetupSubmit()}
             />
             {pinError && (
-              <p className="flex items-center gap-1 text-[11px] text-[var(--error)]">
+              <p className="flex items-center gap-1 text-xs text-[var(--error)]">
                 <AlertCircle className="h-3 w-3 shrink-0" />
                 {pinError}
               </p>
@@ -402,7 +402,7 @@ export function NoteSecretLock({
           </button>
         </div>
         {pinError && (
-          <p className="flex items-center gap-1 text-[11px] text-[var(--error)]">
+          <p className="flex items-center gap-1 text-xs text-[var(--error)]">
             <AlertCircle className="h-3 w-3 shrink-0" />
             {pinError}
           </p>
@@ -437,7 +437,7 @@ export function NoteSecretLock({
         <div className="flex items-center gap-2">
           <ShieldCheck className="h-4 w-4 text-[var(--success)]" aria-hidden="true" />
           <p className="text-xs font-medium text-[var(--text-primary)]">Catatan Rahasia</p>
-          <span className="rounded-full bg-[var(--success)]/15 px-2 py-0.5 text-[10px] text-[var(--success)] font-medium">
+          <span className="rounded-full bg-[var(--success)]/15 px-2 py-0.5 text-xs text-[var(--success)] font-medium">
             Terbuka
           </span>
         </div>

@@ -139,7 +139,7 @@ export function SettingsAccentPicker({ className }: SettingsAccentPickerProps) {
 
         {/* Seasonal schedule */}
         <div className="mt-3 space-y-1.5">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-[var(--text-tertiary)]">Jadwal tema</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-[var(--text-tertiary)]">Jadwal tema</p>
           <div className="grid gap-1">
             {[
               { name: 'Ramadan', period: '~1–30 Maret' },

@@ -100,7 +100,7 @@ export function NoteBarcodeScanner({
           >
             <CheckCircle2 className="h-4 w-4 text-[var(--success,_hsl(142_76%_36%))] shrink-0 mt-0.5" aria-hidden="true" />
             <div className="flex-1 min-w-0">
-              <p className="text-[10px] text-[var(--text-tertiary)] font-medium uppercase tracking-wide">
+              <p className="text-xs text-[var(--text-tertiary)] font-medium uppercase tracking-wide">
                 {result.format.replace(/_/g, ' ')}
               </p>
               <p className="text-sm font-mono text-[var(--text-primary)] break-all mt-0.5">
@@ -161,7 +161,7 @@ export function NoteBarcodeScanner({
       {/* Header */}
       <div className="flex items-center gap-2 px-3 py-1.5 border-b border-[var(--border)] bg-[var(--surface-base)]">
         <ScanBarcode className="h-3.5 w-3.5 text-[var(--accent)] shrink-0" aria-hidden="true" />
-        <span className="text-[10px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide">
+        <span className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wide">
           Pemindai Barcode
         </span>
       </div>

@@ -93,7 +93,7 @@ export function NoteReactionBar({
       role="group"
       aria-label="Reaksi catatan"
     >
-      <span className="text-[10px] font-medium text-[var(--text-tertiary)] px-1 select-none">
+      <span className="text-xs font-medium text-[var(--text-tertiary)] px-1 select-none">
         Reaksi
       </span>
       {REACTIONS.map(({ type, label, icon: Icon, activeClass }) => {

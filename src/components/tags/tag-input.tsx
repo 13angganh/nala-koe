@@ -138,7 +138,7 @@ export function TagInput({
           />
         )}
         {!canAddMore && value.length >= maxTags && (
-          <span className="text-[10px] text-[var(--text-tertiary)]">
+          <span className="text-xs text-[var(--text-tertiary)]">
             Maks {maxTags} tag
           </span>
         )}

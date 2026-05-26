@@ -142,7 +142,7 @@ export function NoteLinkedNotes({
 
       {/* Empty state */}
       {linkedNoteIds.length === 0 && !isPickerOpen && (
-        <p className="text-[10px] text-[var(--text-tertiary)]">
+        <p className="text-xs text-[var(--text-tertiary)]">
           Belum ada catatan terhubung.
           {!readOnly && ' Klik "Tautkan" untuk menghubungkan catatan.'}
         </p>
@@ -218,7 +218,7 @@ export function NoteLinkedNotes({
                       {note.title || 'Tanpa judul'}
                     </p>
                     {note.content && (
-                      <p className="text-[var(--text-tertiary)] truncate text-[10px] mt-0.5">
+                      <p className="text-[var(--text-tertiary)] truncate text-xs mt-0.5">
                         {truncate(note.content, 60)}
                       </p>
                     )}

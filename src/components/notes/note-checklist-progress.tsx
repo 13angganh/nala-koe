@@ -19,10 +19,10 @@ export function NoteChecklistProgress({ items, className }: NoteChecklistProgres
   return (
     <div className={cn('space-y-1', className)}>
       <div className="flex items-center justify-between">
-        <span className="text-[10px] text-[var(--text-tertiary)]">
+        <span className="text-xs text-[var(--text-tertiary)]">
           {checked}/{total} selesai
         </span>
-        <span className="text-[10px] text-[var(--text-tertiary)] tabular-nums">{percentage}%</span>
+        <span className="text-xs text-[var(--text-tertiary)] tabular-nums">{percentage}%</span>
       </div>
       <Progress
         value={percentage}

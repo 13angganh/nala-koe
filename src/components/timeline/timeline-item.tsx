@@ -53,7 +53,7 @@ export function TimelineItem({ note, isLeft }: TimelineItemProps) {
           {mood && (
             <span className="text-base flex-shrink-0" aria-label={mood.label}>
               {/* mood icon rendered as text since it's data, not UI decoration */}
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+              <Badge variant="outline" className="text-xs px-1.5 py-0">
                 {mood.label}
               </Badge>
             </span>
@@ -70,21 +70,21 @@ export function TimelineItem({ note, isLeft }: TimelineItemProps) {
 
         {/* Footer */}
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[11px] text-[var(--text-muted)] font-mono">
+          <span className="text-xs text-[var(--text-muted)] font-mono">
             {formatDate(note.createdAt)}
           </span>
           {note.tags.slice(0, 2).map((tag) => (
-            <Badge key={tag} variant="secondary" className="text-[10px] px-1.5 py-0">
+            <Badge key={tag} variant="secondary" className="text-xs px-1.5 py-0">
               {tag}
             </Badge>
           ))}
           {note.tags.length > 2 && (
-            <span className="text-[10px] text-[var(--text-muted)]">
+            <span className="text-xs text-[var(--text-muted)]">
               +{note.tags.length - 2}
             </span>
           )}
           {note.wordCount > 0 && (
-            <span className="text-[10px] text-[var(--text-muted)] ml-auto flex items-center gap-1">
+            <span className="text-xs text-[var(--text-muted)] ml-auto flex items-center gap-1">
               <FileText size={10} />
               {note.wordCount} kata
             </span>

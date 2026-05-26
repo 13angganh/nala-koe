@@ -459,7 +459,7 @@ export function NoteEditor({
                 )}
               </div>
               {language && (
-                <p className="text-[10px] text-[var(--text-tertiary)]">
+                <p className="text-xs text-[var(--text-tertiary)]">
                   Bahasa terdeteksi: <span className="font-medium">{language.toUpperCase()}</span>
                 </p>
               )}
@@ -595,7 +595,7 @@ export function NoteEditor({
               return (
                 <div key={block.id} className="space-y-1">
                   <NoteTable data={deserializeTable(block.content)} onChange={(data) => handleTableChange(block.id, data)} />
-                  <button type="button" onClick={() => handleRemoveBlock(block.id)} aria-label="Hapus tabel" className="text-[10px] text-[var(--text-tertiary)] hover:text-[var(--error)] outline-none focus-visible:ring-1 rounded">
+                  <button type="button" onClick={() => handleRemoveBlock(block.id)} aria-label="Hapus tabel" className="text-xs text-[var(--text-tertiary)] hover:text-[var(--error)] outline-none focus-visible:ring-1 rounded">
                     Hapus tabel
                   </button>
                 </div>
@@ -606,7 +606,7 @@ export function NoteEditor({
               return (
                 <div key={block.id} className="space-y-1">
                   <NoteMathBlock expression={block.content} onChange={(expr) => handleMathChange(block.id, expr)} />
-                  <button type="button" onClick={() => handleRemoveBlock(block.id)} aria-label="Hapus kalkulasi" className="text-[10px] text-[var(--text-tertiary)] hover:text-[var(--error)] outline-none focus-visible:ring-1 rounded">
+                  <button type="button" onClick={() => handleRemoveBlock(block.id)} aria-label="Hapus kalkulasi" className="text-xs text-[var(--text-tertiary)] hover:text-[var(--error)] outline-none focus-visible:ring-1 rounded">
                     Hapus kalkulasi
                   </button>
                 </div>

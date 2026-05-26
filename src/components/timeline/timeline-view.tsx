@@ -146,7 +146,7 @@ function VerticalTimelineItem({ note }: VerticalTimelineItemProps) {
     <div className="flex gap-3 group">
       {/* Date indicator */}
       <div className="flex flex-col items-center flex-shrink-0 pt-2">
-        <span className="text-[10px] font-mono text-[var(--text-muted)] whitespace-nowrap">
+        <span className="text-xs font-mono text-[var(--text-muted)] whitespace-nowrap">
           {dayLabel}
         </span>
         <div className="mt-1 w-0.5 flex-1 bg-[var(--border)] group-last:hidden" />
@@ -180,7 +180,7 @@ function TimelineCard({ note }: { note: NoteListItem }) {
           {note.tags.slice(0, 3).map((tag) => (
             <span
               key={tag}
-              className="text-[10px] px-1.5 py-0.5 rounded-sm bg-[var(--surface-subtle)] text-[var(--text-muted)] border border-[var(--border)]"
+              className="text-xs px-1.5 py-0.5 rounded-sm bg-[var(--surface-subtle)] text-[var(--text-muted)] border border-[var(--border)]"
             >
               {tag}
             </span>

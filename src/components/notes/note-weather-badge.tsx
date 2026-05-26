@@ -68,7 +68,7 @@ export function NoteWeatherBadge({
         <TooltipTrigger asChild>
           <span
             className={cn(
-              'inline-flex items-center gap-1 text-[10px] text-[var(--text-tertiary)]',
+              'inline-flex items-center gap-1 text-xs text-[var(--text-tertiary)]',
               'cursor-default select-none',
               className
             )}
@@ -100,7 +100,7 @@ export function NoteWeatherBadge({
             <span className="text-xs font-medium text-[var(--text-primary)] leading-tight">
               {weather.temperature}°C · {weather.description}
             </span>
-            <span className="text-[10px] text-[var(--text-tertiary)] leading-tight">
+            <span className="text-xs text-[var(--text-tertiary)] leading-tight">
               {weather.humidity}% lembap · Angin {weather.windSpeed} km/h
             </span>
           </div>

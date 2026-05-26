@@ -73,7 +73,7 @@ export function NoteMathBlock({
       {/* Header */}
       <div className="flex items-center gap-2 px-3 py-1.5 border-b border-[var(--border)] bg-[var(--surface-base)]">
         <Calculator className="h-3.5 w-3.5 text-[var(--accent)] shrink-0" aria-hidden="true" />
-        <span className="text-[10px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide">
+        <span className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wide">
           Kalkulasi
         </span>
       </div>
@@ -128,7 +128,7 @@ export function NoteMathBlock({
 
         {/* Hint — only shown when input is empty */}
         {!readOnly && !localExpr.trim() && (
-          <p className="text-[10px] text-[var(--text-tertiary)]">
+          <p className="text-xs text-[var(--text-tertiary)]">
             Ketik ekspresi dan akhiri dengan <kbd className="px-1 py-0.5 rounded bg-[var(--surface-base)] border border-[var(--border)] font-mono">=</kbd> untuk menghitung.
           </p>
         )}

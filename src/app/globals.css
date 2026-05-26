@@ -350,3 +350,10 @@
     background: var(--surface-muted);
   }
 }
+
+/* ── Global font size consistency for mobile ─────────────────────────────── */
+/* Ensure minimum readable sizes everywhere */
+.text-xs  { font-size: 0.8125rem !important; } /* 13px instead of 12px */
+.text-sm  { font-size: 0.9375rem !important; } /* 15px instead of 14px */
+/* text-base stays at 16px */
+/* text-lg stays at 18px */

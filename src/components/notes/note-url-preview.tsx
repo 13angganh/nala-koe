@@ -201,7 +201,7 @@ export function NoteUrlPreview({
                 onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
               />
             )}
-            <span className="text-[10px] text-[var(--text-tertiary)] truncate">
+            <span className="text-xs text-[var(--text-tertiary)] truncate">
               {meta?.siteName ?? hostOf(href)}
             </span>
             <ExternalLink className="h-3 w-3 text-[var(--text-tertiary)] ml-auto shrink-0" aria-hidden="true" />

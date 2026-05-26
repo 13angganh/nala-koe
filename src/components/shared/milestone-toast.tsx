@@ -174,7 +174,7 @@ export function MilestoneToast({ streak, className }: MilestoneToastProps) {
               Streak {config.label}!
             </p>
             <span
-              className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
+              className="rounded-full px-1.5 py-0.5 text-xs font-semibold"
               style={{ backgroundColor: `${config.color}20`, color: config.color }}
             >
               {streak} hari

@@ -119,7 +119,7 @@ export function NoteCard({ note, onTrash, onRestore, onDelete, onArchive, onDupl
         )}
 
         <div
-          className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-100"
+          className="shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-100"
           onClick={(e) => e.stopPropagation()}
         >
           <DropdownMenu>
@@ -199,15 +199,15 @@ export function NoteCard({ note, onTrash, onRestore, onDelete, onArchive, onDupl
             <NotePriorityBadge isPinned={note.isPinned} />
           )}
           {note.tags.slice(0, 2).map((tag) => (
-            <Badge key={tag} variant="outline" className="text-[11px] px-1.5 py-0">#{tag}</Badge>
+            <Badge key={tag} variant="outline" className="text-xs px-1.5 py-0">#{tag}</Badge>
           ))}
           {note.tags.length > 2 && (
-            <span className="text-[11px] text-[var(--text-tertiary)]">+{note.tags.length - 2}</span>
+            <span className="text-xs text-[var(--text-tertiary)]">+{note.tags.length - 2}</span>
           )}
           {note.language && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="inline-flex items-center gap-0.5 text-[11px] text-[var(--text-tertiary)] cursor-default" aria-label={`Bahasa: ${getLanguageLabel(note.language)}`}>
+                <span className="inline-flex items-center gap-0.5 text-xs text-[var(--text-tertiary)] cursor-default" aria-label={`Bahasa: ${getLanguageLabel(note.language)}`}>
                   <Globe className="h-2.5 w-2.5" />{note.language.toUpperCase()}
                 </span>
               </TooltipTrigger>
@@ -219,16 +219,16 @@ export function NoteCard({ note, onTrash, onRestore, onDelete, onArchive, onDupl
           {sizeLabel && <NoteSizeBadge label={sizeLabel} />}
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="text-[11px] tabular-nums" style={{ color: `${accentColor}99` }} aria-label={`Dibuat saat ${gradient.label}`}>
+              <span className="text-xs tabular-nums" style={{ color: `${accentColor}99` }} aria-label={`Dibuat saat ${gradient.label}`}>
                 {gradient.label}
               </span>
             </TooltipTrigger>
             <TooltipContent side="top" className="text-xs">Dibuat saat {gradient.label}</TooltipContent>
           </Tooltip>
           {note.wordCount > 0 && (
-            <span className="text-[11px] text-[var(--text-tertiary)] tabular-nums">{note.wordCount} kata</span>
+            <span className="text-xs text-[var(--text-tertiary)] tabular-nums">{note.wordCount} kata</span>
           )}
-          <time dateTime={note.updatedAt} className="text-[11px] text-[var(--text-tertiary)] tabular-nums">
+          <time dateTime={note.updatedAt} className="text-xs text-[var(--text-tertiary)] tabular-nums">
             {formatRelativeTime(note.updatedAt)}
           </time>
         </div>

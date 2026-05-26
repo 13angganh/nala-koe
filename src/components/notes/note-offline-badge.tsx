@@ -50,7 +50,7 @@ export function NoteOfflineBadge({
           >
             <WifiOff className="h-3 w-3 shrink-0" aria-hidden="true" />
             {variant === 'default' && (
-              <span className="text-[10px] font-medium">Offline</span>
+              <span className="text-xs font-medium">Offline</span>
             )}
           </div>
         </TooltipTrigger>
@@ -74,7 +74,7 @@ export function NoteOfflineBadge({
       >
         <Loader2 className="h-3 w-3 animate-spin shrink-0" aria-hidden="true" />
         {variant === 'default' && (
-          <span className="text-[10px]">Menyimpan...</span>
+          <span className="text-xs">Menyimpan...</span>
         )}
       </div>
     );
@@ -95,7 +95,7 @@ export function NoteOfflineBadge({
           >
             <div className="h-1.5 w-1.5 rounded-full bg-[var(--warning)] shrink-0" aria-hidden="true" />
             {variant === 'default' && (
-              <span className="text-[10px]">Belum disimpan</span>
+              <span className="text-xs">Belum disimpan</span>
             )}
           </div>
         </TooltipTrigger>
@@ -122,7 +122,7 @@ export function NoteOfflineBadge({
           >
             <Cloud className="h-3 w-3 shrink-0" aria-hidden="true" />
             {variant === 'default' && (
-              <span className="text-[10px]">{label}</span>
+              <span className="text-xs">{label}</span>
             )}
           </div>
         </TooltipTrigger>

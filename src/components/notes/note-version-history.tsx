@@ -22,7 +22,7 @@ function DiffViewer({
 
   if (!hasChanges) {
     return (
-      <p className="text-[11px] text-[var(--text-tertiary)] italic px-1">
+      <p className="text-xs text-[var(--text-tertiary)] italic px-1">
         Konten identik dengan versi ini.
       </p>
     );
@@ -30,7 +30,7 @@ function DiffViewer({
 
   return (
     <div
-      className="rounded-md border border-[var(--border)] overflow-hidden max-h-48 overflow-y-auto font-mono text-[10px] leading-relaxed"
+      className="rounded-md border border-[var(--border)] overflow-hidden max-h-48 overflow-y-auto font-mono text-xs leading-relaxed"
       role="region"
       aria-label="Perbandingan versi"
     >
@@ -97,10 +97,10 @@ function VersionItem({
           <Clock className="h-2.5 w-2.5 text-[var(--text-tertiary)]" aria-hidden="true" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[11px] font-medium text-[var(--text-primary)] truncate">
+          <p className="text-xs font-medium text-[var(--text-primary)] truncate">
             {label}
           </p>
-          <p className="text-[10px] text-[var(--text-tertiary)]">
+          <p className="text-xs text-[var(--text-tertiary)]">
             Versi {total - index} dari {total}
             {isLatest && (
               <span className="ml-1.5 text-[var(--accent)]">· terbaru</span>
@@ -140,7 +140,7 @@ function VersionItem({
       {/* Diff panel */}
       {expanded && (
         <div className="border-t border-[var(--border)] px-3 pb-3 pt-2 space-y-1.5 bg-[var(--surface-subtle)]">
-          <p className="text-[10px] text-[var(--text-tertiary)] font-medium uppercase tracking-wide">
+          <p className="text-xs text-[var(--text-tertiary)] font-medium uppercase tracking-wide">
             Perbandingan dengan saat ini
           </p>
           <DiffViewer currentContent={currentContent} version={version} />
@@ -192,7 +192,7 @@ export function NoteVersionHistory({
           <History className="h-3.5 w-3.5 text-[var(--text-tertiary)]" aria-hidden="true" />
           <span className="font-medium">Riwayat Versi</span>
           {versions.length > 0 && (
-            <span className="rounded-full bg-[var(--surface-muted)] px-1.5 py-0.5 text-[10px] text-[var(--text-tertiary)]">
+            <span className="rounded-full bg-[var(--surface-muted)] px-1.5 py-0.5 text-xs text-[var(--text-tertiary)]">
               {versions.length}
             </span>
           )}
@@ -221,7 +221,7 @@ export function NoteVersionHistory({
               <p className="text-xs text-[var(--text-tertiary)]">
                 Belum ada riwayat versi.
               </p>
-              <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">
+              <p className="text-xs text-[var(--text-tertiary)] mt-0.5">
                 Riwayat tersimpan otomatis setiap kali kamu menyimpan catatan.
               </p>
             </div>
@@ -229,7 +229,7 @@ export function NoteVersionHistory({
 
           {!isLoading && versions.length > 0 && (
             <div className="space-y-2">
-              <p className="text-[10px] text-[var(--text-tertiary)]">
+              <p className="text-xs text-[var(--text-tertiary)]">
                 Maks. 10 versi disimpan. Versi lama dihapus otomatis.
               </p>
               {versions.map((v, i) => (

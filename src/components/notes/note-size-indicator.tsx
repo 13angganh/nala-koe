@@ -61,7 +61,7 @@ export function NoteSizeIndicator({
       <TooltipTrigger asChild>
         <div
           className={cn(
-            'inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-medium cursor-default',
+            'inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs font-medium cursor-default',
             config.bgColor,
             config.borderColor,
             config.color,
@@ -96,7 +96,7 @@ export function NoteSizeBadge({
     <Badge
       variant="outline"
       className={cn(
-        'text-[10px] px-1.5 py-0 h-4',
+        'text-xs px-1.5 py-0 h-4',
         config.color,
         config.bgColor,
         config.borderColor,

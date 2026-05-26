@@ -40,7 +40,7 @@ export function SmartFolderPanel({
 
   return (
     <div className={cn('space-y-0.5', className)}>
-      <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
+      <p className="px-2 pb-1 text-xs font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
         Smart Folder
       </p>
 
@@ -81,7 +81,7 @@ export function SmartFolderPanel({
             <span className="flex-1 truncate text-left text-xs">{folder.label}</span>
             <span
               className={cn(
-                'ml-auto text-[10px] tabular-nums rounded-full px-1.5 py-0 min-w-[18px] text-center',
+                'ml-auto text-xs tabular-nums rounded-full px-1.5 py-0 min-w-[18px] text-center',
                 isActive
                   ? 'bg-[var(--accent)] text-white'
                   : 'bg-[var(--surface-subtle)] text-[var(--text-tertiary)] group-hover:bg-[var(--border)]'

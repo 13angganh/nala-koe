@@ -143,7 +143,7 @@ export function NoteHighlightMarker({
   return (
     <div className={cn('relative group', className)}>
       {/* Highlight instruction banner */}
-      <div className="mb-2 flex items-center gap-1.5 text-[11px] text-[var(--text-tertiary)]">
+      <div className="mb-2 flex items-center gap-1.5 text-xs text-[var(--text-tertiary)]">
         <Highlighter className="h-3 w-3 shrink-0" aria-hidden="true" />
         <span>Pilih teks lalu lepas untuk meng-highlight</span>
       </div>
@@ -194,7 +194,7 @@ export function NoteHighlightMarker({
       </div>
 
       {highlights.length > 0 && (
-        <p className="mt-1.5 text-[11px] text-[var(--text-tertiary)]">
+        <p className="mt-1.5 text-xs text-[var(--text-tertiary)]">
           {highlights.length} highlight aktif
         </p>
       )}

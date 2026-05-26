@@ -95,7 +95,7 @@ export function ScheduledNotesPanel({ notes, isLoading }: ScheduledNotesPanelPro
           <div className="mt-1.5 flex items-center gap-1.5">
             <span
               className={cn(
-                'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium',
+                'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium',
                 isPast
                   ? 'bg-[var(--surface-muted)] text-[var(--text-tertiary)]'
                   : isSoon

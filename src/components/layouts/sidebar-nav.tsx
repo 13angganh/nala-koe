@@ -59,7 +59,7 @@ function NavGroup({
 }) {
   return (
     <div>
-      <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-[var(--text-tertiary)]">
+      <p className="mb-1 px-3 text-xs font-semibold uppercase tracking-widest text-[var(--text-tertiary)]">
         {label}
       </p>
       <ul role="list" className="space-y-0.5">
