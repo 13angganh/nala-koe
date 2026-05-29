@@ -38,7 +38,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
           </p>
           <button
             onClick={() => this.setState({ hasError: false, error: null })}
-            className="text-xs text-[var(--text-secondary)] underline"
+            className="text-sm text-[var(--text-secondary)] underline"
           >
             Coba lagi
           </button>

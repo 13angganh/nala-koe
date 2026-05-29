@@ -114,7 +114,7 @@ export default function HighlightsPage() {
                     >
                       {noteTitle || 'Tanpa judul'}
                     </h2>
-                    <p className="text-xs text-[var(--text-tertiary)]">
+                    <p className="text-sm text-[var(--text-tertiary)]">
                       {formatRelativeTime(noteCreatedAt)}
                     </p>
                   </div>
@@ -140,7 +140,7 @@ export default function HighlightsPage() {
                         </p>
                         <time
                           dateTime={highlight.createdAt}
-                          className="text-xs text-[var(--text-tertiary)]"
+                          className="text-sm text-[var(--text-tertiary)]"
                         >
                           Di-highlight {formatRelativeTime(highlight.createdAt)}
                         </time>

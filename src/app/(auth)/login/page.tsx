@@ -84,7 +84,7 @@ export default function LoginPage() {
 
         <div className="my-6 flex items-center gap-3">
           <div className="h-px flex-1 bg-[var(--border)]" />
-          <span className="text-xs text-[var(--text-tertiary)]">atau</span>
+          <span className="text-sm text-[var(--text-tertiary)]">atau</span>
           <div className="h-px flex-1 bg-[var(--border)]" />
         </div>
 
@@ -93,13 +93,13 @@ export default function LoginPage() {
             <label htmlFor="email" className="block text-sm font-medium text-[var(--text-primary)]">Email</label>
             <Input id="email" type="email" autoComplete="email" placeholder="kamu@email.com"
               error={Boolean(errors.email)} disabled={isSubmitting || isGoogleLoading} {...register('email')} />
-            {errors.email && <p className="text-xs text-[var(--error)]" role="alert">{errors.email.message}</p>}
+            {errors.email && <p className="text-sm text-[var(--error)]" role="alert">{errors.email.message}</p>}
           </div>
 
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <label htmlFor="password" className="block text-sm font-medium text-[var(--text-primary)]">Password</label>
-              <Link href="/forgot-password" className="text-xs text-[var(--accent)] hover:underline" tabIndex={-1}>
+              <Link href="/forgot-password" className="text-sm text-[var(--accent)] hover:underline" tabIndex={-1}>
                 Lupa password?
               </Link>
             </div>
@@ -114,7 +114,7 @@ export default function LoginPage() {
                 {showPassword ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
               </button>
             </div>
-            {errors.password && <p className="text-xs text-[var(--error)]" role="alert">{errors.password.message}</p>}
+            {errors.password && <p className="text-sm text-[var(--error)]" role="alert">{errors.password.message}</p>}
           </div>
 
           <Button type="submit" size="lg" className="w-full" isLoading={isSubmitting} disabled={isGoogleLoading}>

@@ -11,8 +11,8 @@ import { Hash } from 'lucide-react';
 // ─── Weight → visual scale ────────────────────────────────────────────────────
 
 const WEIGHT_STYLES: Record<number, string> = {
-  1: 'text-xs opacity-60',
-  2: 'text-xs opacity-75',
+  1: 'text-sm opacity-60',
+  2: 'text-sm opacity-75',
   3: 'text-sm opacity-85',
   4: 'text-base',
   5: 'text-lg font-medium',

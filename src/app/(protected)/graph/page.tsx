@@ -29,7 +29,7 @@ export default function GraphPage() {
             <h1 className="text-lg font-semibold text-[var(--text-primary)]">
               Graph Catatan
             </h1>
-            <p className="text-xs text-[var(--text-tertiary)]">
+            <p className="text-sm text-[var(--text-tertiary)]">
               Visualisasi koneksi antar catatan · Klik node untuk membuka
             </p>
           </div>

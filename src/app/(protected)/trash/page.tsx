@@ -52,7 +52,7 @@ export default function TrashPage() {
         <Trash2 className="h-5 w-5 text-[var(--text-tertiary)]" aria-hidden />
         <h1 className="text-xl font-semibold text-[var(--text-primary)]">Sampah</h1>
         {notes.length > 0 && (
-          <span className="rounded-full bg-[var(--surface-subtle)] px-2 py-0.5 text-xs text-[var(--text-tertiary)] tabular-nums">
+          <span className="rounded-full bg-[var(--surface-subtle)] px-2 py-0.5 text-sm text-[var(--text-tertiary)] tabular-nums">
             {notes.length}
           </span>
         )}
@@ -60,7 +60,7 @@ export default function TrashPage() {
           <Button
             variant="ghost"
             size="sm"
-            className="ml-auto text-[var(--error)] hover:text-[var(--error)] hover:bg-[var(--error)]/10 text-xs"
+            className="ml-auto text-[var(--error)] hover:text-[var(--error)] hover:bg-[var(--error)]/10 text-sm"
             onClick={() => setDeleteAllConfirm(true)}
             disabled={isDeletingAll}
           >
@@ -70,7 +70,7 @@ export default function TrashPage() {
       </div>
 
       {notes.length > 0 && (
-        <p className="mb-4 flex items-center gap-1.5 text-xs text-[var(--text-tertiary)]">
+        <p className="mb-4 flex items-center gap-1.5 text-sm text-[var(--text-tertiary)]">
           <AlertTriangle className="h-3 w-3 shrink-0" aria-hidden />
           Catatan di sampah otomatis dihapus setelah {CONFIG.TRASH_RETENTION_DAYS} hari.
         </p>

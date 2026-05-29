@@ -64,7 +64,7 @@ export function StatsMoodChart({ insights, isLoading }: StatsMoodChartProps) {
             </div>
 
             {/* Count + % */}
-            <div className="w-20 shrink-0 text-right text-xs tabular-nums text-[var(--text-tertiary)]">
+            <div className="w-20 shrink-0 text-right text-sm tabular-nums text-[var(--text-tertiary)]">
               {count}× · {percentage}%
             </div>
           </div>

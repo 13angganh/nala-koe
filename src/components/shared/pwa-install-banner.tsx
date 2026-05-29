@@ -36,7 +36,7 @@ export function PwaInstallBanner() {
         <p className="text-sm font-semibold text-[var(--text-primary)]">
           Pasang NalaKoe
         </p>
-        <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
+        <p className="mt-0.5 text-sm text-[var(--text-secondary)]">
           Akses lebih cepat langsung dari layar utama.
         </p>
       </div>
@@ -47,7 +47,7 @@ export function PwaInstallBanner() {
         aria-label="Pasang aplikasi NalaKoe"
         className={[
           'flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5',
-          'bg-[var(--accent)] text-white text-xs font-medium',
+          'bg-[var(--accent)] text-white text-sm font-medium',
           'transition-opacity hover:opacity-90 disabled:opacity-50',
         ].join(' ')}
       >

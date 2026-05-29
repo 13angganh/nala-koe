@@ -102,7 +102,7 @@ export default function CanvasPage() {
             <h1 className="text-lg font-semibold text-[var(--text-primary)]">
               {board?.name ?? 'Canvas'}
             </h1>
-            <p className="text-xs text-[var(--text-tertiary)]">
+            <p className="text-sm text-[var(--text-tertiary)]">
               Papan sticky note bebas · Scroll untuk zoom · Drag untuk pan
             </p>
           </div>

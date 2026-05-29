@@ -41,8 +41,8 @@ export function TagBadge({
       className={cn(
         'inline-flex items-center gap-1 rounded-md font-medium',
         'border transition-colors duration-100',
-        size === 'sm' && 'text-xs px-1.5 py-0.5',
-        size === 'md' && 'text-xs px-2 py-1',
+        size === 'sm' && 'text-sm px-1.5 py-0.5',
+        size === 'md' && 'text-sm px-2 py-1',
         isActive
           ? 'border-[var(--accent)]/50 bg-[var(--accent-subtle)] text-[var(--accent)]'
           : 'border-[var(--border)] bg-[var(--surface-subtle)] text-[var(--text-secondary)]',

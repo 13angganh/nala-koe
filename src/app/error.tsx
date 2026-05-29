@@ -29,7 +29,7 @@ export default function ErrorPage({
           Maaf, ada masalah yang tidak terduga. Tim kami sudah diberitahu.
         </p>
         {error.digest && (
-          <p className="font-mono text-xs text-[var(--text-tertiary)]">
+          <p className="font-mono text-sm text-[var(--text-tertiary)]">
             ID: {error.digest}
           </p>
         )}

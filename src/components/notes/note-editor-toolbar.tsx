@@ -165,7 +165,7 @@ export function NoteEditorToolbar({
         />
 
         <div
-          className="text-xs text-[var(--text-tertiary)] min-w-[64px] text-right shrink-0 px-1"
+          className="text-sm text-[var(--text-tertiary)] min-w-[72px] text-right shrink-0 px-1"
           aria-live="polite"
         >
           {isSaving ? (

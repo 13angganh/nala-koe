@@ -20,9 +20,9 @@ const config: Config = {
       // ── FONT SIZE (dari tokens/typography.ts) ──────────────────────────
       fontSize: {
         '2xs': ['12px', { lineHeight: '16px', letterSpacing: '0.01em' }],
-        xs:    ['12px', { lineHeight: '16px', letterSpacing: '0.01em' }],
-        sm:    ['14px', { lineHeight: '20px', letterSpacing: '0' }],
-        base:  ['16px', { lineHeight: '24px', letterSpacing: '0' }],
+        xs:    ['13px', { lineHeight: '18px', letterSpacing: '0.01em' }],  // 12→13px
+        sm:    ['15px', { lineHeight: '22px', letterSpacing: '0' }],       // 14→15px
+        base:  ['16px', { lineHeight: '26px', letterSpacing: '0' }],
         lg:    ['18px', { lineHeight: '28px', letterSpacing: '-0.01em' }],
         xl:    ['20px', { lineHeight: '30px', letterSpacing: '-0.01em' }],
         '2xl': ['24px', { lineHeight: '32px', letterSpacing: '-0.02em' }],

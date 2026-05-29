@@ -46,7 +46,7 @@ function StatCard({ icon: Icon, label, value, sub, accent }: StatCardProps) {
         {value}
       </p>
       <p className="mt-0.5 text-sm text-[var(--text-secondary)]">{label}</p>
-      {sub && <p className="mt-1 text-xs text-[var(--text-tertiary)]">{sub}</p>}
+      {sub && <p className="mt-1 text-sm text-[var(--text-tertiary)]">{sub}</p>}
     </div>
   );
 }

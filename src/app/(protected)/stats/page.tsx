@@ -96,7 +96,7 @@ export default function StatsPage() {
                 <h2 className="text-sm font-semibold text-[var(--text-primary)]">
                   Aktivitas 6 bulan terakhir
                 </h2>
-                <div className="flex rounded-lg border border-[var(--border-subtle)] p-0.5 text-xs">
+                <div className="flex rounded-lg border border-[var(--border-subtle)] p-0.5 text-sm">
                   {(['notes', 'words'] as WritingMode[]).map((m) => (
                     <button
                       key={m}
@@ -160,12 +160,12 @@ export default function StatsPage() {
             <div className="mb-4 flex items-start justify-between gap-2">
               <div>
                 <h2 className="text-sm font-semibold text-[var(--text-primary)]">Tag Cloud</h2>
-                <p className="mt-0.5 text-xs text-[var(--text-tertiary)]">
+                <p className="mt-0.5 text-sm text-[var(--text-tertiary)]">
                   Tag lebih besar = lebih sering dipakai. Klik untuk filter catatan.
                 </p>
               </div>
               {tagFrequency.length > 0 && (
-                <span className="shrink-0 rounded-full bg-[var(--surface-muted)] px-2 py-0.5 text-xs text-[var(--text-tertiary)]">
+                <span className="shrink-0 rounded-full bg-[var(--surface-muted)] px-2 py-0.5 text-sm text-[var(--text-tertiary)]">
                   {tagFrequency.length} tag
                 </span>
               )}
@@ -181,12 +181,12 @@ export default function StatsPage() {
                 <h2 className="text-sm font-semibold text-[var(--text-primary)]">
                   Catatan Terjadwal
                 </h2>
-                <p className="mt-0.5 text-xs text-[var(--text-tertiary)]">
+                <p className="mt-0.5 text-sm text-[var(--text-tertiary)]">
                   Catatan yang akan muncul di feed pada waktu tertentu
                 </p>
               </div>
               {scheduledNotes.length > 0 && (
-                <span className="shrink-0 rounded-full bg-[var(--accent-subtle)] px-2 py-0.5 text-xs font-medium text-[var(--accent)]">
+                <span className="shrink-0 rounded-full bg-[var(--accent-subtle)] px-2 py-0.5 text-sm font-medium text-[var(--accent)]">
                   {scheduledNotes.length} terjadwal
                 </span>
               )}

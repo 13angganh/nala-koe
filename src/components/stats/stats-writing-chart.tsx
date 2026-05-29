@@ -63,7 +63,7 @@ export function StatsMonthlyChart({
             >
               {/* Tooltip */}
               <div className="relative">
-                <div className="pointer-events-none absolute bottom-full left-1/2 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded bg-[var(--surface-emphasis)] px-2 py-1 text-xs text-[var(--text-primary)] shadow group-hover:block z-10">
+                <div className="pointer-events-none absolute bottom-full left-1/2 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded bg-[var(--surface-emphasis)] px-2 py-1 text-sm text-[var(--text-primary)] shadow group-hover:block z-10">
                   {MONTH_LABELS[d.month - 1]} {d.year}
                   <br />
                   {val.toLocaleString('id-ID')} {mode === 'notes' ? 'catatan' : 'kata'}
@@ -90,7 +90,7 @@ export function StatsMonthlyChart({
         {data.map((d) => (
           <div
             key={`${d.year}-${d.month}-lbl`}
-            className="flex-1 text-center text-xs text-[var(--text-tertiary)]"
+            className="flex-1 text-center text-sm text-[var(--text-tertiary)]"
           >
             {MONTH_LABELS[d.month - 1]}
           </div>
@@ -163,7 +163,7 @@ export function StatsActivityHeatmap({ data, isLoading }: StatsActivityHeatmapPr
           />
         ))}
       </div>
-      <div className="flex items-center gap-1.5 text-xs text-[var(--text-tertiary)]">
+      <div className="flex items-center gap-1.5 text-sm text-[var(--text-tertiary)]">
         <span>Sedikit</span>
         {[0.25, 0.5, 0.75, 1].map((op) => (
           <div

@@ -85,7 +85,7 @@ export default function DashboardPage() {
           </h2>
           <Link
             href={ROUTES.NOTES}
-            className="text-xs text-[var(--accent)] hover:underline flex items-center gap-1"
+            className="text-sm text-[var(--accent)] hover:underline flex items-center gap-1"
           >
             Lihat semua
             <ArrowRight className="h-3 w-3" aria-hidden="true" />
@@ -105,7 +105,7 @@ export default function DashboardPage() {
         ) : (
           <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-subtle)] p-6 text-center">
             <FileText className="h-8 w-8 text-[var(--text-tertiary)] mx-auto mb-3" aria-hidden="true" />
-            <p className="text-sm text-[var(--text-tertiary)]">
+            <p className="text-base text-[var(--text-tertiary)]">
               Belum ada catatan.{' '}
               <button
                 onClick={handleCreateNote}
@@ -144,10 +144,10 @@ export default function DashboardPage() {
                 <Icon className="h-4 w-4" aria-hidden="true" />
               </div>
               <div>
-                <p className="text-sm font-medium text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors duration-100">
+                <p className="text-base font-medium text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors duration-100">
                   {label}
                 </p>
-                <p className="text-xs text-[var(--text-tertiary)]">{description}</p>
+                <p className="text-sm text-[var(--text-tertiary)]">{description}</p>
               </div>
             </Link>
           ))}

@@ -59,7 +59,7 @@ export default function SettingsPage() {
                 <p className="truncate text-sm font-medium text-[var(--text-primary)]">
                   {user.displayName ?? 'Pengguna NalaKoe'}
                 </p>
-                <p className="truncate text-xs text-[var(--text-tertiary)] lowercase">{user.email}</p>
+                <p className="truncate text-sm text-[var(--text-tertiary)] lowercase">{user.email}</p>
               </div>
             </div>
           </section>
@@ -79,7 +79,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-[var(--text-primary)]">{label}</p>
-                  <p className="text-xs text-[var(--text-tertiary)]">{description}</p>
+                  <p className="text-sm text-[var(--text-tertiary)]">{description}</p>
                 </div>
                 <ChevronRight className="h-4 w-4 shrink-0 text-[var(--text-tertiary)]" aria-hidden />
               </Link>
@@ -100,7 +100,7 @@ export default function SettingsPage() {
           </Button>
         </section>
 
-        <p className="text-center text-xs text-[var(--text-tertiary)]">NalaKoe · Versi 1.0.0</p>
+        <p className="text-center text-sm text-[var(--text-tertiary)]">NalaKoe · Versi 1.0.0</p>
       </div>
     </SettingsShell>
   );

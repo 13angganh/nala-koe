@@ -104,7 +104,7 @@ export function NoteCard({ note, onTrash, onRestore, onDelete, onArchive, onDupl
           {note.isPinned && <Pin className="h-3.5 w-3.5 shrink-0 text-[var(--accent)]" aria-label="Disematkan" fill="currentColor" />}
           {note.isSecret && <Lock className="h-3.5 w-3.5 shrink-0 text-[var(--text-tertiary)]" aria-label="Rahasia" />}
           {note.isTimeCapsule && <Clock className="h-3.5 w-3.5 shrink-0 text-[var(--warning)]" aria-label="Kapsul waktu" />}
-          <h2 className="text-sm font-medium text-[var(--text-primary)] truncate">{truncate(title, 60)}</h2>
+          <h2 className="text-base font-medium text-[var(--text-primary)] truncate">{truncate(title, 60)}</h2>
         </div>
 
         {MoodIcon && moodOption && (
@@ -124,7 +124,7 @@ export function NoteCard({ note, onTrash, onRestore, onDelete, onArchive, onDupl
         >
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon-sm" aria-label="Opsi catatan">
+              <Button variant="ghost" size="icon" aria-label="Opsi catatan">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -180,16 +180,16 @@ export function NoteCard({ note, onTrash, onRestore, onDelete, onArchive, onDupl
 
       {/* Content preview — masked if secret locked or time capsule locked */}
       {note.isSecret ? (
-        <p className="text-xs text-[var(--text-tertiary)] italic pl-2">Konten terenkripsi</p>
+        <p className="text-sm text-[var(--text-tertiary)] italic pl-2">Konten terenkripsi</p>
       ) : capsuleStatus.isLocked ? (
         <div className="flex items-center gap-1.5 pl-2">
           <Clock className="h-3 w-3 text-[var(--warning)] shrink-0" aria-hidden="true" />
-          <p className="text-xs text-[var(--warning)]">
+          <p className="text-sm text-[var(--warning)]">
             Terbuka dalam {capsuleStatus.formattedCountdown}
           </p>
         </div>
       ) : preview ? (
-        <p className="text-xs text-[var(--text-tertiary)] leading-relaxed line-clamp-2 pl-2">{preview}</p>
+        <p className="text-sm text-[var(--text-secondary)] leading-relaxed line-clamp-2 pl-2">{preview}</p>
       ) : null}
 
       {/* Footer */}
@@ -199,10 +199,10 @@ export function NoteCard({ note, onTrash, onRestore, onDelete, onArchive, onDupl
             <NotePriorityBadge isPinned={note.isPinned} />
           )}
           {note.tags.slice(0, 2).map((tag) => (
-            <Badge key={tag} variant="outline" className="text-xs px-1.5 py-0">#{tag}</Badge>
+            <Badge key={tag} variant="outline" className="text-sm px-2 py-0.5">#{tag}</Badge>
           ))}
           {note.tags.length > 2 && (
-            <span className="text-xs text-[var(--text-tertiary)]">+{note.tags.length - 2}</span>
+            <span className="text-sm text-[var(--text-tertiary)]">+{note.tags.length - 2}</span>
           )}
           {note.language && (
             <Tooltip>
@@ -219,16 +219,16 @@ export function NoteCard({ note, onTrash, onRestore, onDelete, onArchive, onDupl
           {sizeLabel && <NoteSizeBadge label={sizeLabel} />}
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="text-xs tabular-nums" style={{ color: `${accentColor}99` }} aria-label={`Dibuat saat ${gradient.label}`}>
+              <span className="text-sm tabular-nums" style={{ color: `${accentColor}99` }} aria-label={`Dibuat saat ${gradient.label}`}>
                 {gradient.label}
               </span>
             </TooltipTrigger>
             <TooltipContent side="top" className="text-xs">Dibuat saat {gradient.label}</TooltipContent>
           </Tooltip>
           {note.wordCount > 0 && (
-            <span className="text-xs text-[var(--text-tertiary)] tabular-nums">{note.wordCount} kata</span>
+            <span className="text-sm text-[var(--text-tertiary)] tabular-nums">{note.wordCount} kata</span>
           )}
-          <time dateTime={note.updatedAt} className="text-xs text-[var(--text-tertiary)] tabular-nums">
+          <time dateTime={note.updatedAt} className="text-sm text-[var(--text-tertiary)] tabular-nums">
             {formatRelativeTime(note.updatedAt)}
           </time>
         </div>

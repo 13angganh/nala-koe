@@ -20,7 +20,7 @@ export default function ArchivePage() {
         <Archive className="h-5 w-5 text-[var(--text-tertiary)]" aria-hidden />
         <h1 className="text-xl font-semibold text-[var(--text-primary)]">Arsip</h1>
         {notes.length > 0 && (
-          <span className="rounded-full bg-[var(--surface-subtle)] px-2 py-0.5 text-xs text-[var(--text-tertiary)] tabular-nums">
+          <span className="rounded-full bg-[var(--surface-subtle)] px-2 py-0.5 text-sm text-[var(--text-tertiary)] tabular-nums">
             {notes.length}
           </span>
         )}

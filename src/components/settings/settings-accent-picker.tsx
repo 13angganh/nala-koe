@@ -35,7 +35,7 @@ export function SettingsAccentPicker({ className }: SettingsAccentPickerProps) {
     <div className={cn('space-y-4', className)}>
       {/* Accent presets */}
       <div>
-        <p className="mb-3 text-xs text-[var(--text-tertiary)]">
+        <p className="mb-3 text-sm text-[var(--text-tertiary)]">
           Warna utama untuk tombol, tautan, dan elemen interaktif
         </p>
         <div className="flex flex-wrap gap-2">
@@ -55,7 +55,7 @@ export function SettingsAccentPicker({ className }: SettingsAccentPickerProps) {
                   style={{ backgroundColor: color }}
                 />
               </TooltipTrigger>
-              <TooltipContent className="text-xs">{label}</TooltipContent>
+              <TooltipContent className="text-sm">{label}</TooltipContent>
             </Tooltip>
           ))}
 
@@ -66,7 +66,7 @@ export function SettingsAccentPicker({ className }: SettingsAccentPickerProps) {
                 className="relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-[var(--border)] text-[var(--text-tertiary)] hover:border-[var(--accent)] transition-colors"
                 aria-label="Pilih warna kustom"
               >
-                <span className="text-xs font-bold leading-none">+</span>
+                <span className="text-sm font-bold leading-none">+</span>
                 <input
                   type="color"
                   value={accentColor}
@@ -76,7 +76,7 @@ export function SettingsAccentPicker({ className }: SettingsAccentPickerProps) {
                 />
               </label>
             </TooltipTrigger>
-            <TooltipContent className="text-xs">Warna kustom</TooltipContent>
+            <TooltipContent className="text-sm">Warna kustom</TooltipContent>
           </Tooltip>
         </div>
 
@@ -87,11 +87,11 @@ export function SettingsAccentPicker({ className }: SettingsAccentPickerProps) {
             style={{ backgroundColor: accentColor }}
             aria-hidden
           />
-          <span className="font-mono text-xs text-[var(--text-secondary)]">{accentColor}</span>
+          <span className="font-mono text-sm text-[var(--text-secondary)]">{accentColor}</span>
           {accentColor !== colors.brand[500] && (
             <button
               onClick={() => setAccentColor(colors.brand[500])}
-              className="ml-auto text-xs text-[var(--text-tertiary)] hover:text-[var(--accent)] transition-colors"
+              className="ml-auto text-sm text-[var(--text-tertiary)] hover:text-[var(--accent)] transition-colors"
             >
               Reset
             </button>
@@ -106,7 +106,7 @@ export function SettingsAccentPicker({ className }: SettingsAccentPickerProps) {
             <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent)]" aria-hidden />
             <div>
               <p className="text-sm font-medium text-[var(--text-primary)]">Tema Musiman Otomatis</p>
-              <p className="mt-0.5 text-xs text-[var(--text-tertiary)]">
+              <p className="mt-0.5 text-sm text-[var(--text-tertiary)]">
                 Tema berubah otomatis saat Ramadan, Lebaran, dan Tahun Baru
               </p>
             </div>
@@ -121,7 +121,7 @@ export function SettingsAccentPicker({ className }: SettingsAccentPickerProps) {
         {/* Active seasonal theme indicator */}
         {isSeasonalActive && activeTheme && (
           <div
-            className="mt-3 flex items-center gap-2 rounded-lg px-3 py-2 text-xs"
+            className="mt-3 flex items-center gap-2 rounded-lg px-3 py-2 text-sm"
             style={{
               backgroundColor: `${activeTheme.accentColor}18`,
               color: activeTheme.accentColor,
@@ -139,14 +139,14 @@ export function SettingsAccentPicker({ className }: SettingsAccentPickerProps) {
 
         {/* Seasonal schedule */}
         <div className="mt-3 space-y-1.5">
-          <p className="text-xs font-medium uppercase tracking-wide text-[var(--text-tertiary)]">Jadwal tema</p>
+          <p className="text-sm font-medium uppercase tracking-wide text-[var(--text-tertiary)]">Jadwal tema</p>
           <div className="grid gap-1">
             {[
               { name: 'Ramadan', period: '~1–30 Maret' },
               { name: 'Lebaran', period: '~1–14 April' },
               { name: 'Tahun Baru', period: '25 Des – 5 Jan' },
             ].map(({ name, period }) => (
-              <div key={name} className="flex items-center justify-between text-xs text-[var(--text-secondary)]">
+              <div key={name} className="flex items-center justify-between text-sm text-[var(--text-secondary)]">
                 <span>{name}</span>
                 <span className="text-[var(--text-tertiary)]">{period}</span>
               </div>

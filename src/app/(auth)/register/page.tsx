@@ -83,7 +83,7 @@ export default function RegisterPage() {
 
         <div className="my-6 flex items-center gap-3">
           <div className="h-px flex-1 bg-[var(--border)]" />
-          <span className="text-xs text-[var(--text-tertiary)]">atau</span>
+          <span className="text-sm text-[var(--text-tertiary)]">atau</span>
           <div className="h-px flex-1 bg-[var(--border)]" />
         </div>
 
@@ -92,14 +92,14 @@ export default function RegisterPage() {
             <label htmlFor="displayName" className="block text-sm font-medium text-[var(--text-primary)]">Nama</label>
             <Input id="displayName" type="text" autoComplete="name" placeholder="Nama panggilanmu"
               error={Boolean(errors.displayName)} disabled={isSubmitting || isGoogleLoading} {...register('displayName')} />
-            {errors.displayName && <p className="text-xs text-[var(--error)]" role="alert">{errors.displayName.message}</p>}
+            {errors.displayName && <p className="text-sm text-[var(--error)]" role="alert">{errors.displayName.message}</p>}
           </div>
 
           <div className="space-y-1.5">
             <label htmlFor="email" className="block text-sm font-medium text-[var(--text-primary)]">Email</label>
             <Input id="email" type="email" autoComplete="email" placeholder="kamu@email.com"
               error={Boolean(errors.email)} disabled={isSubmitting || isGoogleLoading} {...register('email')} />
-            {errors.email && <p className="text-xs text-[var(--error)]" role="alert">{errors.email.message}</p>}
+            {errors.email && <p className="text-sm text-[var(--error)]" role="alert">{errors.email.message}</p>}
           </div>
 
           <div className="space-y-1.5">
@@ -115,14 +115,14 @@ export default function RegisterPage() {
                 {showPassword ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
               </button>
             </div>
-            {errors.password && <p className="text-xs text-[var(--error)]" role="alert">{errors.password.message}</p>}
+            {errors.password && <p className="text-sm text-[var(--error)]" role="alert">{errors.password.message}</p>}
           </div>
 
           <div className="space-y-1.5">
             <label htmlFor="confirmPassword" className="block text-sm font-medium text-[var(--text-primary)]">Konfirmasi Password</label>
             <Input id="confirmPassword" type="password" autoComplete="new-password" placeholder="Ulangi password"
               error={Boolean(errors.confirmPassword)} disabled={isSubmitting || isGoogleLoading} {...register('confirmPassword')} />
-            {errors.confirmPassword && <p className="text-xs text-[var(--error)]" role="alert">{errors.confirmPassword.message}</p>}
+            {errors.confirmPassword && <p className="text-sm text-[var(--error)]" role="alert">{errors.confirmPassword.message}</p>}
           </div>
 
           <Button type="submit" size="lg" className="w-full" isLoading={isSubmitting} disabled={isGoogleLoading}>

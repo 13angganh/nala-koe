@@ -129,7 +129,7 @@ export function TagInput({
             placeholder={value.length === 0 ? placeholder : ''}
             disabled={disabled}
             className={cn(
-              'flex-1 min-w-[80px] bg-transparent text-xs text-[var(--text-primary)]',
+              'flex-1 min-w-[80px] bg-transparent text-sm text-[var(--text-primary)]',
               'placeholder:text-[var(--text-tertiary)] outline-none',
               'disabled:cursor-not-allowed'
             )}
@@ -138,7 +138,7 @@ export function TagInput({
           />
         )}
         {!canAddMore && value.length >= maxTags && (
-          <span className="text-xs text-[var(--text-tertiary)]">
+          <span className="text-sm text-[var(--text-tertiary)]">
             Maks {maxTags} tag
           </span>
         )}
@@ -167,7 +167,7 @@ export function TagInput({
               }}
               onMouseEnter={() => setHighlightedIdx(idx)}
               className={cn(
-                'w-full text-left px-3 py-1.5 text-xs',
+                'w-full text-left px-3 py-1.5 text-sm',
                 'text-[var(--text-primary)] transition-colors',
                 idx === highlightedIdx
                   ? 'bg-[var(--accent-subtle)] text-[var(--accent)]'

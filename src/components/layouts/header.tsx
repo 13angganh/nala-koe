@@ -59,7 +59,7 @@ export function Header() {
 
         <div className="flex-1" />
 
-        <Button variant="outline" className="hidden sm:flex h-9 w-64 justify-start gap-2 text-[var(--text-tertiary)] text-sm font-normal"
+        <Button variant="outline" className="hidden sm:flex h-9 w-64 justify-start gap-2 text-[var(--text-tertiary)] text-base font-normal"
           onClick={toggleCommandPalette} aria-label="Buka command palette (Cmd+K)">
           <Search className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           <span>Cari catatan…</span>
@@ -99,7 +99,7 @@ export function Header() {
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>
               <p className="font-medium text-[var(--text-primary)] truncate">{user?.displayName ?? 'Pengguna'}</p>
-              <p className="text-xs font-normal text-[var(--text-tertiary)] truncate mt-0.5 lowercase">{user?.email}</p>
+              <p className="text-sm font-normal text-[var(--text-tertiary)] truncate mt-0.5 lowercase">{user?.email}</p>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => router.push(ROUTES.SETTINGS)} className="gap-2">

@@ -96,7 +96,7 @@ export default function NotePage() {
           variant="ghost"
           size="sm"
           onClick={() => router.push(ROUTES.NOTES)}
-          className="gap-1.5 text-xs text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
+          className="gap-1.5 text-sm text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
         >
           <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
           Catatan

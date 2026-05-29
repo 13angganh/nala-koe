@@ -72,7 +72,7 @@ export function ImportPanel() {
             <p className={cn('text-sm font-medium', selectedSource === source ? 'text-[var(--accent)]' : 'text-[var(--text-primary)]')}>
               {label}
             </p>
-            <p className="mt-0.5 text-xs text-[var(--text-tertiary)]">{description}</p>
+            <p className="mt-0.5 text-sm text-[var(--text-tertiary)]">{description}</p>
           </button>
         ))}
       </div>
@@ -90,7 +90,7 @@ export function ImportPanel() {
           <>
             <CheckCircle className="h-8 w-8 text-[var(--accent)]" aria-hidden />
             <p className="text-sm font-medium text-[var(--text-primary)]">{selectedFile.name}</p>
-            <p className="text-xs text-[var(--text-tertiary)]">
+            <p className="text-sm text-[var(--text-tertiary)]">
               {(selectedFile.size / 1024).toFixed(1)} KB
             </p>
           </>
@@ -98,7 +98,7 @@ export function ImportPanel() {
           <>
             <Upload className="h-8 w-8 text-[var(--text-tertiary)]" aria-hidden />
             <p className="text-sm font-medium text-[var(--text-primary)]">Pilih atau seret file JSON</p>
-            <p className="text-xs text-[var(--text-tertiary)]">Hanya file .json yang didukung</p>
+            <p className="text-sm text-[var(--text-tertiary)]">Hanya file .json yang didukung</p>
           </>
         )}
         <input
@@ -132,7 +132,7 @@ export function ImportPanel() {
               {result.imported} dari {result.total} catatan berhasil diimpor
             </p>
             {result.skipped > 0 && (
-              <p className="mt-0.5 text-xs text-[var(--text-tertiary)]">
+              <p className="mt-0.5 text-sm text-[var(--text-tertiary)]">
                 {result.skipped} dilewati
                 {result.errors[0] && ` — ${result.errors[0].reason}`}
               </p>
@@ -171,7 +171,7 @@ export function ImportPanel() {
       </div>
 
       {/* Info */}
-      <p className="text-xs text-[var(--text-tertiary)]">
+      <p className="text-sm text-[var(--text-tertiary)]">
         Catatan yang diimpor akan ditambahkan ke koleksimu. Tanggal asli catatan akan dipertahankan di field{' '}
         <code className="font-mono">originalCreatedAt</code>.
       </p>

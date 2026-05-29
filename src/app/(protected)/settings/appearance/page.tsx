@@ -16,7 +16,7 @@ const THEMES = [
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-[var(--text-tertiary)]">
+    <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-[var(--text-tertiary)]">
       {children}
     </h2>
   );

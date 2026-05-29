@@ -65,7 +65,7 @@ export default function NotesPage() {
             onClick={() => setShowSmartFolders((v) => !v)}
             aria-pressed={showSmartFolders}
             aria-label="Smart Folder"
-            className="gap-1.5 text-xs"
+            className="gap-1.5 text-sm"
           >
             <FolderOpen className="h-4 w-4" aria-hidden />
             Smart Folder

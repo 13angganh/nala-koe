@@ -57,7 +57,7 @@ export function ExportPanel() {
               <p className={cn('text-sm font-medium', selectedFormat === format ? 'text-[var(--accent)]' : 'text-[var(--text-primary)]')}>
                 {label}
               </p>
-              <p className="mt-0.5 text-xs text-[var(--text-tertiary)] truncate">{description}</p>
+              <p className="mt-0.5 text-sm text-[var(--text-tertiary)] truncate">{description}</p>
             </div>
           </button>
         ))}
@@ -76,7 +76,7 @@ export function ExportPanel() {
             <div key={key} className="flex items-center justify-between gap-4 px-3 py-3">
               <div>
                 <p className="text-sm text-[var(--text-primary)]">{label}</p>
-                <p className="text-xs text-[var(--text-tertiary)]">{desc}</p>
+                <p className="text-sm text-[var(--text-tertiary)]">{desc}</p>
               </div>
               <Switch
                 checked={opts[key]}

@@ -9,7 +9,7 @@ function InfoRow({ icon: Icon, title, description }: { icon: React.ElementType; 
       <Icon className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent)]" aria-hidden />
       <div>
         <p className="text-sm font-medium text-[var(--text-primary)]">{title}</p>
-        <p className="mt-0.5 text-xs text-[var(--text-tertiary)]">{description}</p>
+        <p className="mt-0.5 text-sm text-[var(--text-tertiary)]">{description}</p>
       </div>
     </div>
   );

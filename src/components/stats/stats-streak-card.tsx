@@ -53,7 +53,7 @@ export function StatsStreakCard({ stats, isLoading }: StatsStreakCardProps) {
           <p className="text-2xl font-semibold tabular-nums text-[var(--text-primary)]">
             {currentStreak}
           </p>
-          <p className="text-xs text-[var(--text-tertiary)]">Streak</p>
+          <p className="text-sm text-[var(--text-tertiary)]">Streak</p>
         </div>
 
         <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-base)] p-4 text-center">
@@ -61,7 +61,7 @@ export function StatsStreakCard({ stats, isLoading }: StatsStreakCardProps) {
           <p className="text-2xl font-semibold tabular-nums text-[var(--text-primary)]">
             {longestStreak}
           </p>
-          <p className="text-xs text-[var(--text-tertiary)]">Rekor</p>
+          <p className="text-sm text-[var(--text-tertiary)]">Rekor</p>
         </div>
 
         <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-base)] p-4 text-center">
@@ -69,7 +69,7 @@ export function StatsStreakCard({ stats, isLoading }: StatsStreakCardProps) {
           <p className="text-2xl font-semibold tabular-nums text-[var(--text-primary)]">
             {totalNotes}
           </p>
-          <p className="text-xs text-[var(--text-tertiary)]">Catatan</p>
+          <p className="text-sm text-[var(--text-tertiary)]">Catatan</p>
         </div>
       </div>
 
@@ -94,7 +94,7 @@ export function StatsStreakCard({ stats, isLoading }: StatsStreakCardProps) {
               aria-valuemax={nextMilestone}
             />
           </div>
-          <p className="text-xs text-[var(--text-tertiary)]">
+          <p className="text-sm text-[var(--text-tertiary)]">
             {nextMilestone - currentStreak} hari lagi untuk mencapai milestone
           </p>
         </div>
@@ -106,7 +106,7 @@ export function StatsStreakCard({ stats, isLoading }: StatsStreakCardProps) {
           <div
             key={m}
             className={cn(
-              'flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors',
+              'flex h-8 items-center gap-1.5 rounded-full px-3 text-sm font-medium transition-colors',
               currentStreak >= m
                 ? 'bg-[var(--accent)] text-white'
                 : 'bg-[var(--surface-muted)] text-[var(--text-tertiary)]'

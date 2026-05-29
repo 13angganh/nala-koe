@@ -89,13 +89,13 @@ export function ScheduledNotesPanel({ notes, isLoading }: ScheduledNotesPanelPro
           <p className="truncate text-sm font-medium text-[var(--text-primary)]">
             {note.title || 'Tanpa judul'}
           </p>
-          <p className="mt-0.5 truncate text-xs text-[var(--text-tertiary)]">
+          <p className="mt-0.5 truncate text-sm text-[var(--text-tertiary)]">
             {note.content.slice(0, 80) || '—'}
           </p>
           <div className="mt-1.5 flex items-center gap-1.5">
             <span
               className={cn(
-                'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium',
+                'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-sm font-medium',
                 isPast
                   ? 'bg-[var(--surface-muted)] text-[var(--text-tertiary)]'
                   : isSoon
@@ -118,7 +118,7 @@ export function ScheduledNotesPanel({ notes, isLoading }: ScheduledNotesPanelPro
     <div className="space-y-4">
       {upcoming.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-widest text-[var(--text-tertiary)]">
+          <p className="text-sm font-semibold uppercase tracking-widest text-[var(--text-tertiary)]">
             Akan datang
           </p>
           <div className="space-y-2">{upcoming.map(renderNote)}</div>
@@ -126,7 +126,7 @@ export function ScheduledNotesPanel({ notes, isLoading }: ScheduledNotesPanelPro
       )}
       {past.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-widest text-[var(--text-tertiary)]">
+          <p className="text-sm font-semibold uppercase tracking-widest text-[var(--text-tertiary)]">
             Sudah lewat
           </p>
           <div className="space-y-2 opacity-60">{past.map(renderNote)}</div>

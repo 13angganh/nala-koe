@@ -19,7 +19,7 @@ function tagFontSize(count: number, max: number): string {
   if (ratio >= 0.6) return 'text-xl font-medium';
   if (ratio >= 0.4) return 'text-base font-medium';
   if (ratio >= 0.2) return 'text-sm';
-  return 'text-xs';
+  return 'text-sm';
 }
 
 function tagOpacity(count: number, max: number): number {
