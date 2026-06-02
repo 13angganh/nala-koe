@@ -10,12 +10,14 @@ import { Button } from '@/components/ui/button';
 import { NoteCard } from '@/components/notes/note-card';
 import { NoteCardSkeleton } from '@/components/notes/note-card-skeleton';
 import { ROUTES } from '@/constants/routes';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { StreakCard } from '@/components/notes/streak-card';
 import { useStreak } from '@/hooks/use-streak';
 import { MilestoneToast } from '@/components/shared/milestone-toast';
 import { toast as sonnerToast } from 'sonner';
+import { ConfirmDialog } from '@/components/shared/confirm-dialog';
+import { useTrashNote, useArchiveNote } from '@/hooks/use-notes';
 
 const QUICK_LINKS = [
   { label: 'Canvas', description: 'Papan sticky note bebas', href: ROUTES.CANVAS, icon: Layout, color: 'bg-[var(--success-subtle)] text-[var(--success)]' },
@@ -45,6 +47,14 @@ export default function DashboardPage() {
     }
   }, [streakData?.milestoneReached]);
   const { mutateAsync: createNote, isPending: isCreating } = useCreateNote();
+  const { mutate: trashNote } = useTrashNote();
+  const { mutate: archiveNote } = useArchiveNote();
+  const [pendingTrashId, setPendingTrashId] = useState<string | null>(null);
+  const handleTrash = useCallback((id: string) => setPendingTrashId(id), []);
+  const handleArchive = useCallback((id: string) => archiveNote(id), [archiveNote]);
+  const confirmTrash = useCallback(() => {
+    if (pendingTrashId) { trashNote(pendingTrashId); setPendingTrashId(null); }
+  }, [pendingTrashId, trashNote]);
 
   async function handleCreateNote() {
     const note = await createNote({});
@@ -99,7 +109,12 @@ export default function DashboardPage() {
         ) : recentNotes.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {recentNotes.map((note) => (
-              <NoteCard key={note.id} note={note} />
+              <NoteCard
+                key={note.id}
+                note={note}
+                onTrash={handleTrash}
+                onArchive={handleArchive}
+              />
             ))}
           </div>
         ) : (
@@ -153,6 +168,17 @@ export default function DashboardPage() {
           ))}
         </div>
       </section>
+
+      <ConfirmDialog
+        isOpen={!!pendingTrashId}
+        title="Pindahkan ke sampah?"
+        description="Catatan akan dihapus otomatis setelah 30 hari di sampah."
+        confirmLabel="Pindahkan"
+        cancelLabel="Batal"
+        variant="destructive"
+        onConfirm={confirmTrash}
+        onCancel={() => setPendingTrashId(null)}
+      />
     </div>
   );
 }
