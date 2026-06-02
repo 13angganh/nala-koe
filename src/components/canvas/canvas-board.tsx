@@ -59,7 +59,9 @@ export function CanvasBoard({
   // ─── Pan ──────────────────────────────────────────────────────────────────
 
   const handleBoardPointerDown = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
-    if ((e.target as HTMLElement) !== boardRef.current) return;
+    // Izinkan pan dari mana saja di canvas surface, kecuali dari elemen interaktif (sticky, button, dll)
+    const target = e.target as HTMLElement;
+    if (target.closest('button, textarea, a, [data-sticky]')) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     panState.current = {
       startX: e.clientX,

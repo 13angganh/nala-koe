@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Pin, Lock, Clock, MoreHorizontal, Trash2, Archive,
@@ -63,8 +64,17 @@ export function NoteCard({ note, onTrash, onRestore, onDelete, onArchive, onDupl
   const moodOption = note.mood ? MOOD_MAP[note.mood] : null;
   const MoodIcon = moodOption ? (MOOD_ICONS[moodOption.icon] ?? MinusCircle) : null;
   const { status: capsuleStatus } = useTimeCapsule(note.isTimeCapsule, note.timeCapsuleUnlockAt);
+  // Track apakah klik berasal dari area dropdown/button agar tidak navigate
+  const suppressNextClick = React.useRef(false);
 
-  function handleCardClick() {
+  function handleCardClick(e: React.MouseEvent<HTMLElement>) {
+    if (suppressNextClick.current) {
+      suppressNextClick.current = false;
+      return;
+    }
+    // Jika target adalah button/anchor di dalam card, jangan navigate
+    const target = e.target as HTMLElement;
+    if (target.closest('button, a, [role="menuitem"]')) return;
     router.push(ROUTES.NOTE(note.id));
   }
 
@@ -73,7 +83,7 @@ export function NoteCard({ note, onTrash, onRestore, onDelete, onArchive, onDupl
       role="button"
       tabIndex={0}
       onClick={handleCardClick}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardClick(); }}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') router.push(ROUTES.NOTE(note.id)); }}
       className={cn(
         'group relative flex flex-col gap-2.5 rounded-xl border bg-[var(--surface-base)]',
         'p-4 cursor-pointer outline-none overflow-hidden',
@@ -120,6 +130,11 @@ export function NoteCard({ note, onTrash, onRestore, onDelete, onArchive, onDupl
 
         <div
           className="shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-100"
+          onPointerDown={(e) => {
+            // Tandai: klik berikutnya pada article harus diabaikan (ini bukan navigasi)
+            suppressNextClick.current = true;
+            e.stopPropagation();
+          }}
           onClick={(e) => e.stopPropagation()}
         >
           <DropdownMenu>

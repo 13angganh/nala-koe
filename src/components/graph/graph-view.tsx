@@ -133,6 +133,7 @@ export function GraphView({ notes }: GraphViewProps) {
   const graphRef = useRef<GraphData | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<{ x: number; y: number; title: string } | null>(null);
+  const [legendOpen, setLegendOpen] = useState(false);
   const viewportRef = useRef({ x: 0, y: 0, zoom: 1 });
   const panState = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
 
@@ -398,16 +399,27 @@ export function GraphView({ notes }: GraphViewProps) {
       )}
 
       {/* Stats badge */}
-      <div className="absolute bottom-4 left-4 text-xs text-[var(--text-muted)] bg-[var(--surface-card)] border border-[var(--border)] px-2 py-1 rounded">
+      <div className="absolute bottom-4 left-4 text-xs text-[var(--text-muted)] bg-[var(--surface-card)] border border-[var(--border)] px-2 py-1 rounded pointer-events-none">
         {notes.length} catatan · {totalLinks} koneksi
       </div>
 
-      {/* Legend */}
-      <div className="absolute top-4 right-4 text-xs text-[var(--text-muted)] bg-[var(--surface-card)] border border-[var(--border)] px-3 py-2 rounded space-y-1">
-        <p className="font-medium text-[var(--text-primary)]">Graph</p>
-        <p>Klik node untuk buka catatan</p>
-        <p>Drag untuk pan · Scroll untuk zoom</p>
-        <p>Ukuran node = jumlah kata</p>
+      {/* Legend — toggle button, tidak menghalangi canvas */}
+      <div className="absolute top-3 right-3 z-20 flex flex-col items-end gap-1">
+        <button
+          onClick={() => setLegendOpen((v) => !v)}
+          className="text-xs text-[var(--text-muted)] bg-[var(--surface-card)] border border-[var(--border)] px-2.5 py-1 rounded shadow-sm hover:border-[var(--accent)] hover:text-[var(--text-primary)] transition-colors"
+          aria-label={legendOpen ? 'Tutup info graph' : 'Lihat info graph'}
+        >
+          {legendOpen ? '✕ Tutup' : 'ℹ Info'}
+        </button>
+        {legendOpen && (
+          <div className="text-xs text-[var(--text-muted)] bg-[var(--surface-card)] border border-[var(--border)] px-3 py-2 rounded shadow-md space-y-1 min-w-[180px]">
+            <p className="font-medium text-[var(--text-primary)]">Cara pakai Graph</p>
+            <p>Klik node untuk buka catatan</p>
+            <p>Drag untuk pan · Scroll untuk zoom</p>
+            <p>Ukuran node = jumlah kata</p>
+          </div>
+        )}
       </div>
     </div>
   );

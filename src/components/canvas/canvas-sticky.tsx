@@ -76,6 +76,7 @@ export function CanvasSticky({
     <div
       ref={stickyRef}
       className="absolute select-none group"
+      data-sticky="true"
       style={{
         left: sticky.x,
         top: sticky.y,
