@@ -151,7 +151,7 @@ export function TagInput({
           aria-label="Saran tag"
           className={cn(
             'absolute top-full left-0 right-0 z-[var(--z-dropdown)] mt-1',
-            'rounded-lg border border-[var(--border)] bg-[var(--surface-overlay)]',
+            'rounded-lg border border-[var(--border)] bg-[var(--surface-base)]',
             'shadow-[var(--shadow-md)] py-1 max-h-48 overflow-y-auto'
           )}
         >

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Share2 } from 'lucide-react';
+import { Share2, Info, X } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 import { EmptyState } from '@/components/shared/empty-state';
 import { colors } from '@/tokens/colors';
@@ -357,8 +357,9 @@ export function GraphView({ notes }: GraphViewProps) {
         onTouchStart={(e) => {
           e.preventDefault();
           const t = e.touches[0];
-          if (!t) return;
-          const rect = canvasRef.current!.getBoundingClientRect();
+          const canvas = canvasRef.current;
+          if (!t || !canvas) return;
+          const rect = canvas.getBoundingClientRect();
           const cx = t.clientX - rect.left;
           const cy = t.clientY - rect.top;
           const node = getNodeAtPoint(cx, cy);
@@ -368,8 +369,9 @@ export function GraphView({ notes }: GraphViewProps) {
         onTouchMove={(e) => {
           e.preventDefault();
           const t = e.touches[0];
-          if (!t || !panState.current) return;
-          const rect = canvasRef.current!.getBoundingClientRect();
+          const canvas = canvasRef.current;
+          if (!t || !panState.current || !canvas) return;
+          const rect = canvas.getBoundingClientRect();
           const cx = t.clientX - rect.left;
           const cy = t.clientY - rect.top;
           viewportRef.current = { ...viewportRef.current, x: panState.current.origX + (cx - panState.current.startX), y: panState.current.origY + (cy - panState.current.startY) };
@@ -380,8 +382,9 @@ export function GraphView({ notes }: GraphViewProps) {
           panState.current = null;
           if (!wasPanning) {
             const t = e.changedTouches[0];
-            if (!t) return;
-            const rect = canvasRef.current!.getBoundingClientRect();
+            const canvas = canvasRef.current;
+            if (!t || !canvas) return;
+            const rect = canvas.getBoundingClientRect();
             const node = getNodeAtPoint(t.clientX - rect.left, t.clientY - rect.top);
             if (node) router.push(ROUTES.NOTE(node.id));
           }
@@ -391,7 +394,7 @@ export function GraphView({ notes }: GraphViewProps) {
       {/* Tooltip */}
       {tooltip && (
         <div
-          className="absolute pointer-events-none z-10 px-2 py-1 rounded text-xs bg-[var(--surface-card)] border border-[var(--border)] text-[var(--text-primary)] shadow-md max-w-[200px] truncate"
+          className="absolute pointer-events-none z-[var(--z-overlay)] px-2 py-1 rounded text-xs bg-[var(--surface-card)] border border-[var(--border)] text-[var(--text-primary)] shadow-md max-w-[200px] truncate"
           style={{ left: tooltip.x, top: tooltip.y }}
         >
           {tooltip.title}
@@ -404,13 +407,14 @@ export function GraphView({ notes }: GraphViewProps) {
       </div>
 
       {/* Legend — toggle button, tidak menghalangi canvas */}
-      <div className="absolute top-3 right-3 z-20 flex flex-col items-end gap-1">
+      <div className="absolute top-3 right-3 z-[var(--z-overlay)] flex flex-col items-end gap-1">
         <button
           onClick={() => setLegendOpen((v) => !v)}
-          className="text-xs text-[var(--text-muted)] bg-[var(--surface-card)] border border-[var(--border)] px-2.5 py-1 rounded shadow-sm hover:border-[var(--accent)] hover:text-[var(--text-primary)] transition-colors"
+          className="inline-flex items-center gap-1 text-xs text-[var(--text-muted)] bg-[var(--surface-card)] border border-[var(--border)] px-2.5 py-1 rounded shadow-sm hover:border-[var(--accent)] hover:text-[var(--text-primary)] transition-colors"
           aria-label={legendOpen ? 'Tutup info graph' : 'Lihat info graph'}
         >
-          {legendOpen ? '✕ Tutup' : 'ℹ Info'}
+          {legendOpen ? <X size={12} /> : <Info size={12} />}
+          {legendOpen ? 'Tutup' : 'Info'}
         </button>
         {legendOpen && (
           <div className="text-xs text-[var(--text-muted)] bg-[var(--surface-card)] border border-[var(--border)] px-3 py-2 rounded shadow-md space-y-1 min-w-[180px]">

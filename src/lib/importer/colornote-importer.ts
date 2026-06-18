@@ -78,6 +78,7 @@ function colorNoteToNote(item: ColorNoteItem, userId: string): Note {
     userId,
     title: item.title ?? '',
     content: plainContent,
+    contentFormat: 'plain',
     blocks,
     mood: null,
     tags: [],

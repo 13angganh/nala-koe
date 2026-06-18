@@ -41,7 +41,15 @@ export interface Note {
   id: string;
   userId: string;
   title: string;
-  content: string; // Plain text fallback / search index
+  content: string; // Plain text, OR sanitized HTML when contentFormat === 'html'
+  /**
+   * 'plain' (default): content is rendered/edited as plain text, exactly as
+   * every note worked before rich formatting existed — zero behavior change.
+   * 'html': content holds sanitized HTML (p/strong/em/u + text-align) and is
+   * edited via the rich text editor. A note is upgraded the moment the user
+   * applies their first inline format or alignment; it never auto-downgrades.
+   */
+  contentFormat: 'plain' | 'html';
   blocks: NoteContentBlock[];
   mood: MoodId | null;
   tags: string[];

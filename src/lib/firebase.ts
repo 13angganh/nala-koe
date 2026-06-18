@@ -7,7 +7,7 @@ import {
   getFirestore,
   type Firestore,
 } from 'firebase/firestore';
-import { getDatabase, type Database } from 'firebase/database';
+import { type Database } from 'firebase/database';
 
 // Firebase client config — hardcoded (public keys, aman di client-side)
 const firebaseConfig = {
@@ -23,7 +23,7 @@ const firebaseConfig = {
 let app: FirebaseApp;
 let auth: Auth;
 let db: Firestore;
-let rtdb: Database | null = null;
+const rtdb: Database | null = null;
 
 function initFirebase(): void {
   if (getApps().length === 0) {

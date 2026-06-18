@@ -480,6 +480,12 @@ Sesi baru        : Upload ZIP sesi sebelumnya + readme-nala-koe.md
 - **`middleware.ts`** ada di `src/` folder sesuai Next.js App Router convention.
 - **Canvas Firestore collections** — `canvas_boards` + `canvas_stickies`. Perlu buat Firestore indexes: `canvas_stickies` composite index `(boardId, userId, zIndex ASC)`.
 - **Biometrik PIN** — Hash PIN disimpan di localStorage (bukan enkripsi konten). Ini adalah gate UI, bukan enkripsi end-to-end.
+- **Rich text (`content`)** — Sejak Sesi 15, `Note.content` punya pendamping `contentFormat: 'plain' | 'html'` (default `'plain'`, semua catatan lama otomatis aman tanpa migrasi). Catatan hanya "naik kelas" ke `'html'` pas user pertama kali pakai tombol format (Tebal/Miring/Underline/Align) di `NoteFormatToolbar` — sebelum itu tetap textarea polos seperti dulu. Vocabulary HTML dibatasi ketat ke `p/br/strong/em/u` + `style="text-align"`, disanitasi via DOMPurify (`lib/rich-text.ts: sanitizeRichHtml`) setiap kali simpan & render. Paste selalu dipaksa jadi plain text (`note-rich-editor.tsx`). Highlight feature (selection-to-bookmark) tetap beroperasi di representasi plain-text (`stripHtml(content)`) — terpisah total dari sistem mark inline, jadi tidak saling pengaruh.
+- **Editor toolbar** — Dirombak jadi baris utama (Pin/Checklist/Meta/Save, ikon saja — sudah umum & sering dipakai) + menu **"Lainnya"** (dropdown berlabel teks penuh, dikelompokkan) untuk semua aksi sekunder termasuk Reaksi & Highlight yang sebelumnya hilang dari render (props-nya ada tapi tombolnya tak pernah digambar — root cause "highlight tak bisa").
+- **Autosave** — `use-note-editor.ts` sekarang mem-flush perubahan yang masih pending ke Firestore saat komponen unmount (sebelumnya `clearTimeout` polos, jadi perubahan dalam window 1.5 detik terakhir sebelum pindah halaman hilang tanpa tersimpan). Perubahan antar-field dalam window debounce yang sama juga di-merge, bukan saling timpa.
+- **ESLint** — Sempat rusak total (`eslint@9` butuh `eslint.config.js`, project masih `.eslintrc.json` lama → `npm run lint` selalu gagal start, jadi error sebenarnya tak pernah tertangkap berbulan-bulan). Sudah dimigrasi ke `eslint.config.mjs` (flat config) dengan rule yang sama persis.
+- **Animasi** — Semua transisi baru (panel editor, dashboard, settings, stats) menghormati Settings → Tampilan → "Animasi" (`preferences.enableAnimations`), bukan cuma di note list seperti sebelumnya.
+- **Test backlog yang diketahui (bukan regresi sesi ini)** — `use-read-aloud.test.ts` & `use-barcode-scanner.test.ts` gagal karena jsdom tak punya `SpeechSynthesisUtterance`/`BarcodeDetector` (perlu mock global di `tests/setup.ts`, belum dikerjakan — fitur aslinya tetap jalan normal di browser asli). E2E Playwright tak bisa dijalankan di sandbox audit ini (browser binary tak terinstal), perlu dicoba lagi di mesin dev biasa.
 
 ---
 
@@ -502,9 +508,10 @@ Sesi baru        : Upload ZIP sesi sebelumnya + readme-nala-koe.md
 | Sesi 12 | Phase 11 & 12 — Share Card, Seasonal Theme, PWA Final, Testing | ✅ Selesai | 2026-05-09 |
 | Sesi 13 | Audit Penuh + Fix 14 Temuan (Kritis/Penting/Perlu Fix/Saran) | ✅ Selesai | 2026-05-10 |
 | Sesi 14 | Audit Ulang v4 + Fix 13 Temuan — SESSION_COOKIE_NAME, logger Firestore, providers lengkap, stores action names, tailwind CSS vars, database.rules | ✅ Selesai | 2026-05-14 |
+| Sesi 15 | Audit Klik/Render + Rich Text Editor + Toolbar Redesign + Polish Animasi Menyeluruh | ✅ Selesai | 2026-06-18 |
 
 ---
 
 *readme-nala-koe.md — Dibuat: 2026-05-02 — Token Version: 1.0.0*
-*Terakhir diperbarui: Sesi 14 — Audit Fix v4 — 2026-05-14 — 0 Temuan — Siap Deploy*
+*Terakhir diperbarui: Sesi 15 — Rich Text Editor + Toolbar Redesign + Polish — 2026-06-18 — Lihat CHANGES.md untuk detail*
 *Update otomatis setiap akhir sesi oleh Claude*

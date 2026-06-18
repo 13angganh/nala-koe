@@ -214,7 +214,7 @@ export function CanvasBoard({
       </div>
 
       {/* Controls overlay */}
-      <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-50">
+      <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-[var(--z-overlay)]">
         <Button
           variant="outline"
           size="sm"
@@ -259,7 +259,7 @@ export function CanvasBoard({
       </div>
 
       {/* Zoom indicator */}
-      <div className="absolute bottom-4 left-4 z-50">
+      <div className="absolute bottom-4 left-4 z-[var(--z-overlay)]">
         <span className="text-xs font-mono text-[var(--text-muted)] bg-[var(--surface-card)] border border-[var(--border)] px-2 py-1 rounded">
           {Math.round(viewport.zoom * 100)}%
         </span>
@@ -267,7 +267,7 @@ export function CanvasBoard({
 
       {/* Empty hint */}
       {stickies.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[var(--z-overlay)]">
           <div className="text-center">
             <p className="text-sm text-[var(--text-muted)] mb-1">Canvas kosong</p>
             <p className="text-xs text-[var(--text-muted)]">

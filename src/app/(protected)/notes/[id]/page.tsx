@@ -124,9 +124,11 @@ export default function NotePage() {
 
       {/* Editor — Phase 7 props */}
       <NoteEditor
+        key={note.id}
         noteId={note.id}
         title={note.title}
         content={note.content}
+        contentFormat={note.contentFormat}
         blocks={note.blocks}
         isPinned={note.isPinned}
         isSaving={isSaving}

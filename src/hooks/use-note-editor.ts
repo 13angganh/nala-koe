@@ -13,7 +13,7 @@ import type { UpdateNoteInput, NoteLocation, NoteContentBlock, NoteReaction, Not
 import type { MoodId } from '@/types/mood.types';
 import type { WeatherSnapshot } from '@/types/api.types';
 import type { NoteFontWeight, NoteTexture } from '@/types/settings.types';
-import { generateId } from '@/lib/utils';
+import { generateId, stripHtml } from '@/lib/utils';
 import { createEmptyTable, serializeTable } from '@/components/notes/note-table';
 import { NOTES_QUERY_KEY } from './use-notes';
 
@@ -24,6 +24,10 @@ export function useNoteEditor(noteId: string) {
   const { activeNote, setActiveNote, updateActiveNote, setSaving } = useNotesStore();
   const qc = useQueryClient();
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Accumulates field patches scheduled within the same debounce window so that
+  // e.g. a title edit followed by a content edit (both within 1.5s) are saved
+  // together instead of the later call silently overwriting/dropping the earlier one.
+  const pendingInputRef = useRef<UpdateNoteInput>({});
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [isDirty, setIsDirty] = useState(false);
 
@@ -63,9 +67,13 @@ export function useNoteEditor(noteId: string) {
 
   const scheduleAutoSave = useCallback(
     (input: UpdateNoteInput) => {
+      pendingInputRef.current = { ...pendingInputRef.current, ...input };
       if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
       autoSaveTimer.current = setTimeout(() => {
-        saveMutation.mutate(input);
+        const merged = pendingInputRef.current;
+        pendingInputRef.current = {};
+        autoSaveTimer.current = null;
+        saveMutation.mutate(merged);
       }, AUTO_SAVE_DELAY);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -82,14 +90,16 @@ export function useNoteEditor(noteId: string) {
   );
 
   const handleContentChange = useCallback(
-    (content: string) => {
+    (content: string, contentFormat?: 'plain' | 'html') => {
       const { wordCount } = analyzeContent(content);
       // Auto-detect language when content is long enough
-      const detection = detectLanguage(content);
+      const detection = detectLanguage(stripHtml(content));
       const language = detection.confidence >= 0.5 ? detection.language : (activeNote?.language ?? null);
-      updateActiveNote({ content, wordCount, language });
+      const patch: UpdateNoteInput = { content, wordCount, language };
+      if (contentFormat) patch.contentFormat = contentFormat;
+      updateActiveNote(patch);
       setIsDirty(true);
-      scheduleAutoSave({ content, wordCount, language });
+      scheduleAutoSave(patch);
     },
     [updateActiveNote, scheduleAutoSave, activeNote?.language]
   );
@@ -106,6 +116,8 @@ export function useNoteEditor(noteId: string) {
   const handleManualSave = useCallback(() => {
     if (!activeNote) return;
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = null;
+    pendingInputRef.current = {};
     saveMutation.mutate({
       title: activeNote.title,
       content: activeNote.content,
@@ -263,8 +275,20 @@ export function useNoteEditor(noteId: string) {
 
   useEffect(() => {
     return () => {
-      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+      if (autoSaveTimer.current) {
+        clearTimeout(autoSaveTimer.current);
+        autoSaveTimer.current = null;
+      }
+      const pending = pendingInputRef.current;
+      pendingInputRef.current = {};
+      if (Object.keys(pending).length > 0) {
+        // Fire-and-forget: the mutation runs against the query client, which
+        // outlives this component, so the patch still reaches Firestore even
+        // though we're navigating away right now.
+        saveMutation.mutate(pending);
+      }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reason: intentionally only runs on mount/unmount; saveMutation.mutate is stable
   }, []);
 
   const { wordCount, readingTimeMinutes } = analyzeContent(activeNote?.content ?? '');

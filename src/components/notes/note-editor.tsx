@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import { MapPin, CloudSun, Loader2, X } from 'lucide-react';
 import { useKeyboard } from '@/hooks/use-keyboard';
 import { useGeolocation } from '@/hooks/use-geolocation';
@@ -8,7 +8,11 @@ import { useWeather } from '@/hooks/use-weather';
 import { useNotes } from '@/hooks/use-notes';
 import { cn } from '@/lib/utils';
 import { generateId, stripHtml } from '@/lib/utils';
+import { appendPlainLine } from '@/lib/rich-text';
+import { NoteFormatToolbar } from './note-format-toolbar';
+import { NoteRichEditor } from './note-rich-editor';
 import { NoteEditorToolbar } from './note-editor-toolbar';
+import { AnimatedPanel } from '@/components/shared/animated-panel';
 import { NoteChecklist } from './note-checklist';
 import { NoteChecklistProgress } from './note-checklist-progress';
 import { NoteMoodPicker } from './note-mood-picker';
@@ -45,6 +49,7 @@ interface NoteEditorProps {
   noteId: string;
   title: string;
   content: string;
+  contentFormat: 'plain' | 'html';
   blocks: NoteContentBlock[];
   isPinned: boolean;
   isSaving: boolean;
@@ -60,7 +65,7 @@ interface NoteEditorProps {
   texture: NoteTexture;
   linkedNoteIds: string[];
   onTitleChange: (title: string) => void;
-  onContentChange: (content: string) => void;
+  onContentChange: (content: string, contentFormat?: 'plain' | 'html') => void;
   onBlocksChange: (blocks: NoteContentBlock[]) => void;
   onTogglePin: () => void;
   onSave: () => void;
@@ -152,6 +157,7 @@ export function NoteEditor({
   noteId,
   title,
   content,
+  contentFormat,
   blocks,
   isPinned,
   isSaving,
@@ -199,10 +205,10 @@ export function NoteEditor({
   className,
 }: NoteEditorProps) {
   const titleRef = useRef<HTMLTextAreaElement>(null);
-  const contentRef = useRef<HTMLTextAreaElement>(null);
+  const contentRef = useRef<HTMLTextAreaElement | HTMLDivElement>(null);
 
   // Panel visibility
-  const [isMetaOpen, setIsMetaOpen] = useState(false);
+  const [isMetaOpen, setIsMetaOpen] = useState(() => Boolean(mood || tags.length > 0 || weather || location));
   const [isFontOpen, setIsFontOpen] = useState(false);
   const [isTextureOpen, setIsTextureOpen] = useState(false);
   const [isLinkedNotesOpen, setIsLinkedNotesOpen] = useState(false);
@@ -232,14 +238,13 @@ export function NoteEditor({
   }
 
   useEffect(() => { autoResize(titleRef.current); }, [title]);
-  useEffect(() => { autoResize(contentRef.current); }, [content]);
+  useEffect(() => {
+    if (contentFormat === 'plain' && contentRef.current instanceof HTMLTextAreaElement) {
+      autoResize(contentRef.current);
+    }
+  }, [content, contentFormat]);
   useKeyboard([{ key: 's', modifiers: ['meta'], onKeyDown: onSave }]);
   useEffect(() => { if (!title && titleRef.current) titleRef.current.focus(); }, [title]);
-
-  useEffect(() => {
-    if (mood || tags.length > 0 || weather || location) setIsMetaOpen(true);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // ── Checklist ─────────────────────────────────────────────────────────────
 
@@ -315,10 +320,10 @@ export function NoteEditor({
   const handleBarcodeScanned = useCallback(
     (value: string, format: string) => {
       const insert = `[Barcode ${format.replace(/_/g, ' ')}: ${value}]`;
-      onContentChange(content ? `${content}\n${insert}` : insert);
+      onContentChange(appendPlainLine(content, contentFormat, insert), contentFormat);
       setIsBarcodeOpen(false);
     },
-    [content, onContentChange]
+    [content, contentFormat, onContentChange]
   );
 
   // ── Derived ───────────────────────────────────────────────────────────────
@@ -400,23 +405,23 @@ export function NoteEditor({
           />
 
           {/* Font panel */}
-          {isFontOpen && (
+          <AnimatedPanel show={isFontOpen ?? false}>
             <section aria-label="Gaya font" className="rounded-xl border border-[var(--border)] bg-[var(--surface-subtle)] p-4 space-y-2">
               <p className="text-xs font-medium text-[var(--text-secondary)]">Gaya Font</p>
               <NoteFontPicker value={fontWeight} onChange={onFontChange} />
             </section>
-          )}
+          </AnimatedPanel>
 
           {/* Texture panel */}
-          {isTextureOpen && (
+          <AnimatedPanel show={isTextureOpen ?? false}>
             <section aria-label="Tekstur catatan" className="rounded-xl border border-[var(--border)] bg-[var(--surface-subtle)] p-4 space-y-2">
               <p className="text-xs font-medium text-[var(--text-secondary)]">Tekstur Catatan</p>
               <NoteTexturePicker value={texture} onChange={onTextureChange} />
             </section>
-          )}
+          </AnimatedPanel>
 
           {/* Meta panel */}
-          {isMetaOpen && (
+          <AnimatedPanel show={isMetaOpen ?? false}>
             <section aria-label="Metadata catatan" className="rounded-xl border border-[var(--border)] bg-[var(--surface-subtle)] p-4 space-y-4">
               <div className="space-y-2">
                 <p className="text-xs font-medium text-[var(--text-secondary)]">Mood</p>
@@ -464,10 +469,10 @@ export function NoteEditor({
                 </p>
               )}
             </section>
-          )}
+          </AnimatedPanel>
 
           {/* Linked notes panel */}
-          {isLinkedNotesOpen && (
+          <AnimatedPanel show={isLinkedNotesOpen ?? false}>
             <section aria-label="Catatan terhubung" className="rounded-xl border border-[var(--border)] bg-[var(--surface-subtle)] p-4">
               <NoteLinkedNotes
                 linkedNoteIds={linkedNoteIds}
@@ -477,26 +482,26 @@ export function NoteEditor({
                 onChange={onLinkedNotesChange}
               />
             </section>
-          )}
+          </AnimatedPanel>
 
           {/* Barcode scanner panel */}
-          {isBarcodeOpen && (
+          <AnimatedPanel show={isBarcodeOpen ?? false}>
             <section aria-label="Pemindai barcode">
               <NoteBarcodeScanner onScanned={handleBarcodeScanned} variant="inline" />
             </section>
-          )}
+          </AnimatedPanel>
 
           {/* Read aloud panel */}
-          {isReadAloudOpen && (
+          <AnimatedPanel show={isReadAloudOpen ?? false}>
             <section aria-label="Baca keras">
               <NoteReadAloud text={plainText} title={title} />
             </section>
-          )}
+          </AnimatedPanel>
 
           {/* ── Phase 6 panels ───────────────────────────────────────── */}
 
           {/* Time Capsule panel */}
-          {isTimeCapsuleOpen && (
+          <AnimatedPanel show={isTimeCapsuleOpen ?? false}>
             <section aria-label="Kapsul waktu" className="rounded-xl border border-[var(--border)] bg-[var(--surface-subtle)] p-4">
               <NoteTimeCapsuleLock
                 isTimeCapsule={isTimeCapsule}
@@ -504,10 +509,10 @@ export function NoteEditor({
                 onTimeCapsuleChange={onTimeCapsuleChange ?? (() => {})}
               />
             </section>
-          )}
+          </AnimatedPanel>
 
           {/* Secret Note panel */}
-          {isSecretOpen && (
+          <AnimatedPanel show={isSecretOpen ?? false}>
             <section aria-label="Catatan rahasia" className="rounded-xl border border-[var(--border)] bg-[var(--surface-subtle)] p-4">
               <NoteSecretLock
                 noteId={noteId}
@@ -518,17 +523,17 @@ export function NoteEditor({
                 onLock={() => setIsSecretUnlocked(false)}
               />
             </section>
-          )}
+          </AnimatedPanel>
 
           {/* Version History panel */}
-          {isVersionHistoryOpen && (
+          <AnimatedPanel show={isVersionHistoryOpen ?? false}>
             <section aria-label="Riwayat versi" className="rounded-xl border border-[var(--border)] bg-[var(--surface-subtle)] p-4">
               <NoteVersionHistory
                 noteId={noteId}
                 currentContent={content}
               />
             </section>
-          )}
+          </AnimatedPanel>
 
           {/* ── Phase 7: Note Size Indicator ─────────────────────────── */}
           {sizeInfo && sizeInfo.label !== 'small' && (
@@ -543,7 +548,7 @@ export function NoteEditor({
           )}
 
           {/* ── Phase 8: Reaction Bar ────────────────────────────── */}
-          {isReactionOpen && (
+          <AnimatedPanel show={isReactionOpen ?? false}>
             <section aria-label="Reaksi catatan">
               <NoteReactionBar
                 noteId={noteId}
@@ -551,30 +556,30 @@ export function NoteEditor({
                 {...(onReactionChange ? { onReactionChange } : {})}
               />
             </section>
-          )}
+          </AnimatedPanel>
 
           {/* ── Phase 8: Highlight Marker ────────────────────────── */}
-          {isHighlightOpen && content.trim() && (
+          <AnimatedPanel show={Boolean(isHighlightOpen && content.trim())}>
             <section aria-label="Highlight catatan">
               <NoteHighlightMarker
                 noteId={noteId}
-                content={content}
+                content={contentFormat === 'html' ? stripHtml(content) : content}
                 highlights={highlights}
                 {...(onHighlightsChange ? { onHighlightsChange } : {})}
               />
             </section>
-          )}
+          </AnimatedPanel>
 
           {/* ── Phase 9: Scheduled Note ───────────────────────── */}
-          {isScheduledOpen && onScheduledChange && (
+          <AnimatedPanel show={Boolean(isScheduledOpen && onScheduledChange)}>
             <section aria-label="Jadwal catatan">
               <NoteScheduled
                 isScheduled={isScheduled}
                 scheduledAt={scheduledAt ?? null}
-                onChange={onScheduledChange}
+                onChange={onScheduledChange ?? (() => {})}
               />
             </section>
-          )}
+          </AnimatedPanel>
 
           {/* Checklist progress */}
           {allChecklistItems.length > 0 && <NoteChecklistProgress items={allChecklistItems} />}
@@ -636,29 +641,48 @@ export function NoteEditor({
           })}
 
           {/* URL prompt */}
-          {showUrlPrompt && (
+          <AnimatedPanel show={showUrlPrompt}>
             <UrlPromptBar
               onSubmit={(url) => { onInsertUrlPreview(url); setShowUrlPrompt(false); }}
               onCancel={() => setShowUrlPrompt(false)}
             />
-          )}
+          </AnimatedPanel>
 
-          {/* Main content textarea */}
-          <textarea
-            ref={contentRef}
-            value={content}
-            onChange={(e) => { onContentChange(e.target.value); autoResize(e.target); }}
-            placeholder="Tulis pikiranmu di sini…"
-            aria-label="Konten catatan"
-            rows={10}
-            className={cn(
-              'w-full min-h-[240px] resize-none overflow-hidden bg-transparent',
-              'text-sm text-[var(--text-primary)] leading-relaxed',
-              'placeholder:text-[var(--text-tertiary)]',
-              'outline-none border-none focus:ring-0',
-              fontCls
-            )}
+          {/* Format toolbar — selalu terlihat; pada catatan 'plain' klik pertama akan upgrade ke mode kaya */}
+          <NoteFormatToolbar
+            contentFormat={contentFormat}
+            content={content}
+            editableRef={contentRef}
+            onContentChange={onContentChange}
+            className="mb-2"
           />
+
+          {/* Main content */}
+          {contentFormat === 'html' ? (
+            <NoteRichEditor
+              content={content}
+              onChange={(html) => onContentChange(html, 'html')}
+              editableRef={contentRef as RefObject<HTMLDivElement | null>}
+              placeholder="Tulis pikiranmu di sini…"
+              className={fontCls}
+            />
+          ) : (
+            <textarea
+              ref={contentRef as RefObject<HTMLTextAreaElement | null>}
+              value={content}
+              onChange={(e) => { onContentChange(e.target.value, 'plain'); autoResize(e.target); }}
+              placeholder="Tulis pikiranmu di sini…"
+              aria-label="Konten catatan"
+              rows={10}
+              className={cn(
+                'w-full min-h-[240px] resize-none overflow-hidden bg-transparent',
+                'text-sm text-[var(--text-primary)] leading-relaxed',
+                'placeholder:text-[var(--text-tertiary)]',
+                'outline-none border-none focus:ring-0',
+                fontCls
+              )}
+            />
+          )}
         </div>
       </div>
 
@@ -669,6 +693,7 @@ export function NoteEditor({
           userId: '',
           title,
           content,
+          contentFormat,
           blocks,
           mood,
           tags,

@@ -18,6 +18,7 @@ import { db } from '@/lib/firebase';
 import { logger } from '@/lib/logger';
 import { ok, err, normalizeDocument } from '@/lib/normalizer';
 import { analyzeContent } from '@/lib/reading-time';
+import { stripHtml } from '@/lib/utils';
 import type { ApiResult } from '@/types/api.types';
 import type {
   Note,
@@ -64,6 +65,7 @@ function normalizeNote(id: string, data: Record<string, unknown>): Note {
     userId: (normalized.userId as string) ?? '',
     title: (normalized.title as string) ?? '',
     content: (normalized.content as string) ?? '',
+    contentFormat: (normalized.contentFormat as Note['contentFormat']) ?? 'plain',
     blocks: (normalized.blocks as Note['blocks']) ?? [],
     mood: (normalized.mood as Note['mood']) ?? null,
     tags: (normalized.tags as string[]) ?? [],
@@ -106,6 +108,7 @@ export async function createNote(
       userId,
       title: input.title ?? '',
       content: input.content ?? '',
+      contentFormat: input.contentFormat ?? 'plain',
       blocks: input.blocks ?? [],
       mood: input.mood ?? null,
       tags: input.tags ?? [],
@@ -207,7 +210,7 @@ export async function getNotes(
       notes = notes.filter(
         (n) =>
           n.title.toLowerCase().includes(term) ||
-          n.content.toLowerCase().includes(term)
+          stripHtml(n.content).toLowerCase().includes(term)
       );
     }
 
@@ -369,6 +372,7 @@ export async function duplicateNote(
       userId,
       title: `${original.title} (Salinan)`,
       content: original.content,
+      contentFormat: original.contentFormat,
       blocks: original.blocks.map((b) => ({ ...b, id: `${b.id}_copy` })),
       mood: original.mood,
       tags: original.tags,
@@ -477,7 +481,7 @@ export function getNoteSizeInfo(note: Note): {
   const mediaEstimate = (hasImages ? 100_000 : 0) + (hasAudio ? 500_000 : 0);
   const totalBytes = textBytes + mediaEstimate;
   const label =
-    totalBytes > 200_000 ? 'large' : totalBytes > 20_000 ? 'medium' : 'small';
+    totalBytes >= 100_000 ? 'large' : totalBytes > 20_000 ? 'medium' : 'small';
   return { totalBytes, textBytes, hasImages, hasAudio, label };
 }
 

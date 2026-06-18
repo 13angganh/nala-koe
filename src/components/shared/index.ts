@@ -1,4 +1,5 @@
 export { ConfirmDialog } from './confirm-dialog';
+export { AnimatedPanel } from './animated-panel';
 export { NetworkStatus } from './network-status';
 export { ErrorBoundary } from './error-boundary';
 export { EmptyState } from './empty-state';

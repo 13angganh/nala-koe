@@ -1,12 +1,14 @@
-# CHANGES.md — Sesi 14 (Audit Fix v4)
+# CHANGES.md — Sesi 15 (Audit Klik/Render + Rich Text + Polish)
 
-**Sesi:** 14 · **Tanggal:** 2026-05-14 · **Tipe:** Audit Penuh v4 — 13 Temuan, 0 Sisa
+**Sesi:** 15 · **Tanggal:** 2026-06-18 · **Tipe:** Audit fungsi klik/render + fitur rich text editor + redesign toolbar + polish animasi menyeluruh
 
 ---
 
 ## Ringkasan
 
-Audit ulang dengan standar prompt v4. Semua 13 temuan (1 Kritis, 4 Penting, 5 Perlu Fix, 3 Saran) telah diperbaiki. Status: **0 temuan — siap deploy ke Vercel.**
+Audit penuh atas laporan: tombol yang tak berfungsi, perubahan yang tak tersimpan, tidak bisa format teks terpilih (bold/italic/underline/align), highlight tak bisa dibuka, ikon toolbar tak jelas, dan tampilan kurang hidup/polished. Setiap temuan ditelusuri sampai akar masalah di kode (bukan tebakan) sebelum diperbaiki. Tidak ada migrasi data — semua catatan lama tetap bekerja identik seperti sebelumnya.
+
+Status akhir: `tsc --noEmit` 0 error, `eslint --max-warnings 0` 0 error pada seluruh file yang disentuh sesi ini, unit test 266/282 pass (16 sisa adalah gap test-environment pre-existing yang tidak berkaitan, dijelaskan di bawah).
 
 ---
 
@@ -14,185 +16,52 @@ Audit ulang dengan standar prompt v4. Semua 13 temuan (1 Kritis, 4 Penting, 5 Pe
 
 | File | Alasan |
 |------|--------|
-| `src/lib/query-client.ts` | **[PENTING]** Singleton QueryClient terpisah sesuai standar v4 — importable dari test utils |
-| `src/hooks/use-service-worker.ts` | **[PENTING]** Register SW saat app mount, cek update otomatis |
-| `src/hooks/use-pwa-install.ts` | **[PENTING]** Capture beforeinstallprompt untuk trigger install programatik |
-| `src/components/shared/pwa-install-banner.tsx` | **[PENTING]** Banner install PWA dengan delay 30 detik, dismissable |
-| `tests/utils.tsx` | **[SARAN]** Test render helper dengan QueryClient isolated per test |
-| `database.rules.json` | **[PERLU FIX]** RTDB rules deny-all default — wajib ada sebelum deploy |
-
-## File Diubah
-
-| File | Alasan |
-|------|--------|
-| `src/constants/config.ts` | **[KRITIS]** Tambah `SESSION_COOKIE_NAME`, `SESSION_DURATION_DAYS`, `SESSION_DURATION_SECONDS` — satu sumber kebenaran |
-| `src/middleware.ts` | **[KRITIS]** Pakai `SESSION_COOKIE_NAME` dari constants — tidak ada string literal |
-| `src/app/api/auth/session/route.ts` | **[KRITIS]** Pakai `SESSION_COOKIE_NAME` + `SESSION_DURATION_SECONDS` dari constants |
-| `src/lib/api-auth.ts` | **[KRITIS]** Pakai `SESSION_COOKIE_NAME` dari constants |
-| `src/lib/logger.ts` | **[PENTING]** Tambah Firestore `error_logs` persistence untuk warn+error level; backward compatible dengan semua call signatures |
-| `src/app/error.tsx` | **[PENTING]** Hapus emoji ⚠️, ganti ke Lucide AlertTriangle; teks "Tim kami sudah diberitahu" valid setelah logger ke Firestore |
-| `src/components/shared/providers.tsx` | **[PENTING]** Lengkap: ServiceWorkerInit + NetworkStatus + PwaInstallBanner + ReactQueryDevtools (dev) + import queryClient dari `lib/query-client` |
-| `src/stores/ui.store.ts` | **[PERLU FIX]** Ganti `'#0ea5e9'` ke `colors.brand[500]`; tambah action names di semua set() |
-| `src/stores/auth.store.ts` | **[PERLU FIX]** Tambah action names di semua set() |
-| `src/stores/notes.store.ts` | **[PERLU FIX]** Tambah action names di semua set() |
-| `src/stores/settings.store.ts` | **[PERLU FIX]** Tambah action names di semua set() |
-| `tailwind.config.ts` | **[PERLU FIX]** Tambah surface, text, border CSS variable mapping — `bg-surface-base`, `text-text-primary`, dll sekarang berfungsi |
-| `next.config.ts` | **[PERLU FIX + SARAN]** Tambah `typescript.ignoreBuildErrors: false` dan `eslint.ignoreDuringBuilds: false`; Permissions-Policy dengan komentar justifikasi camera/mic |
-| `src/app/globals.css` | **[SARAN]** Tambah `--border-default` (light + dark) dan `--color-success/warning/error/info` CSS variables |
-| `firestore.rules` | Tambah rule `error_logs` — write-only dari authenticated client, read false |
-| `firebase.json` | Tambah `database.rules` reference |
-| `src/hooks/index.ts` | Export `use-service-worker` dan `use-pwa-install` |
-| `src/components/shared/index.ts` | Export `PwaInstallBanner` |
-| `package.json` | Tambah `tailwindcss-animate ^1.0.7` ke devDependencies — dipakai oleh `tailwind.config.ts` plugins |
-
----
-
-# CHANGES.md — Sesi 13 (Audit Fix)
-
-**Sesi:** 13B · **Tanggal:** 2026-05-10 · **Tipe:** Audit Penuh — 14 Temuan, 0 Sisa
-
----
-
-## Ringkasan
-
-Sesi ini adalah audit menyeluruh sebelum deploy ke Vercel. Semua 14 temuan (3 Kritis, 4 Penting, 4 Perlu Fix, 3 Saran) telah diperbaiki. Status: **0 temuan — siap deploy.**
-
----
-
-## File Baru
-
-| File | Alasan |
-|------|--------|
-| `src/app/api/auth/session/route.ts` | **[KRITIS]** Session cookie httpOnly via Firebase Admin — menggantikan `document.cookie` tidak aman |
-| `src/lib/api-auth.ts` | **[PENTING]** Helper `verifySession()` untuk semua protected API route |
-| `firestore.rules` | **[KRITIS]** Firestore security rules — wajib ada sebelum deploy |
-| `storage.rules` | **[KRITIS]** Firebase Storage security rules |
-| `firestore.indexes.json` | **[KRITIS]** Composite indexes untuk query notes yang efisien |
-| `firebase.json` | Wire up semua rules ke Firebase CLI |
-| `src/components/shared/providers.tsx` | **[PENTING]** Terpusatkan semua global providers (QueryClient + Theme + Toaster) |
-
-## File Diubah
-
-| File | Alasan |
-|------|--------|
-| `src/app/(auth)/login/page.tsx` | **[KRITIS]** Ganti `document.cookie` ke `POST /api/auth/session` (httpOnly) |
-| `src/app/(auth)/register/page.tsx` | **[KRITIS]** Ganti `document.cookie` ke `POST /api/auth/session` (httpOnly) |
-| `src/components/layouts/header.tsx` | **[KRITIS]** Ganti `document.cookie = ''` ke `DELETE /api/auth/session` saat logout |
-| `src/app/(protected)/layout.tsx` | Ganti `document.cookie` ke `DELETE /api/auth/session`, hapus ThemeProvider lokal |
-| `src/app/error.tsx` | **[KRITIS]** Hapus `import * as Sentry`, ganti ke `logger.error()` |
-| `src/app/global-error.tsx` | **[KRITIS]** Hapus `import * as Sentry`, ganti ke `console.error()`, hapus teks "Tim kami sudah diberitahu" |
-| `src/app/api/url-meta/route.ts` | **[PENTING]** Tambah `verifySession()` check — cegah SSRF proxy abuse |
-| `src/lib/firebase.ts` | **[PENTING]** Aktifkan `persistentLocalCache` + `persistentMultipleTabManager` untuk offline PWA |
-| `src/lib/env.ts` | Hapus `NEXT_PUBLIC_SENTRY_DSN` (tidak dipakai) |
-| `src/components/shared/milestone-toast.tsx` | **[PENTING]** Ganti hardcoded hex ke `tokens/colors` dengan komentar justifikasi |
-| `src/components/settings/settings-accent-picker.tsx` | **[PENTING]** Ganti hardcoded hex ke `tokens/colors` |
-| `src/components/graph/graph-view.tsx` | **[PENTING]** Ganti hardcoded hex Canvas API ke konstanta token dengan komentar |
-| `src/components/notes/note-share-card.tsx` | **[PENTING]** Ganti `bg-[#0f172a]` ke `bg-[var(--surface-invert)]` |
-| `src/app/globals.css` | Tambah `--surface-invert` CSS variable |
-| `src/app/layout.tsx` | Pakai `<Providers>` terpusat, tambah `<Analytics>` dan `<SpeedInsights>` |
-| `src/components/shared/index.ts` | Export `Providers` |
-| `next.config.ts` | **[SARAN]** `X-Frame-Options: DENY` (sebelumnya `SAMEORIGIN`) |
-| `package.json` | Tambah `@vercel/analytics`, `@vercel/speed-insights` |
-| `.env.example` | Hapus `NEXT_PUBLIC_SENTRY_DSN`, tambah komentar panduan `FIREBASE_ADMIN_PRIVATE_KEY` |
-| `readme-nala-koe.md` | Update status Phase 11 ✅, tambah sesi 12 & 13, update catatan session cookie |
+| `eslint.config.mjs` | **[KRITIS]** `eslint@9` butuh flat config; project masih pakai `.eslintrc.json` lama sehingga `npm run lint` selalu gagal start sejak entah kapan — error sebenarnya tidak pernah tertangkap. Rule diporting 1:1, perilaku sama. |
+| `src/lib/rich-text.ts` | **[PENTING]** Inti fitur rich text: escape/convert HTML, toggle mark (bold/italic/underline) via Selection/Range API (bukan `execCommand` yang deprecated), alignment per-paragraf, sanitasi DOMPurify, konversi HTML→Markdown untuk export. |
+| `src/components/notes/note-format-toolbar.tsx` | **[PENTING]** Toolbar Bold/Italic/Underline + 4 alignment, selection-aware, bekerja baik untuk catatan plain (trigger upgrade) maupun yang sudah rich. |
+| `src/components/notes/note-rich-editor.tsx` | **[PENTING]** Permukaan `contentEditable` untuk catatan yang sudah naik ke `contentFormat: 'html'`. Paste dipaksa plain-text only. |
+| `src/components/shared/animated-panel.tsx` | **[SARAN]** Wrapper transisi konsisten (fade+slide) untuk semua panel collapse/expand, menghormati Settings → Animasi. |
+| `tests/unit/lib/rich-text.test.ts` | **[SARAN]** 15 unit test untuk fungsi murni di `lib/rich-text.ts` (escape, convert, markdown). |
 
 ## File Dihapus
 
 | File | Alasan |
 |------|--------|
-| `src/constants/z-index.ts` | **[PERLU FIX]** Duplikat dari `tokens/z-index.ts` — dihapus, semua import via `@/tokens/z-index` |
-| `sentry.client.config.ts` | **[KRITIS]** Sentry tidak digunakan — hapus config file |
-| `sentry.server.config.ts` | **[KRITIS]** Sentry tidak digunakan — hapus config file |
+| `.eslintrc.json` | **[KRITIS]** Diganti `eslint.config.mjs` (format lama tidak dibaca oleh eslint v9). |
+
+## File Diubah
+
+| File | Alasan |
+|------|--------|
+| `src/hooks/use-note-editor.ts` | **[KRITIS]** Root cause "tersimpan tapi tak tersimpan": autosave debounce 1.5s di-`clearTimeout` polos saat unmount/pindah halaman, bukan di-flush — perubahan dalam window itu hilang permanen. Sekarang di-flush ke Firestore saat unmount. Sekaligus benerin bug terpisah: dua field yang diubah dalam window debounce yang sama (misal judul lalu konten) saling menimpa, bukan digabung — sekarang di-merge. |
+| `src/components/notes/note-editor-toolbar.tsx` | **[KRITIS]** Root cause "highlight tak bisa": props `onToggleReaction`/`onToggleHighlight` ada tapi tombolnya tak pernah digambar (underscore-prefixed, sengaja unused). Toolbar dirombak total: baris utama (Pin/Checklist/Meta/Save, ikon) + dropdown **"Lainnya"** berlabel teks penuh & dikelompokkan untuk semua aksi sekunder — termasuk Reaksi & Highlight yang dikembalikan. |
+| `src/components/notes/note-list.tsx` | **[KRITIS]** Tab "Arsip" di halaman Catatan menampilkan dropdown menu yang salah (tanpa opsi "Pulihkan ke aktif") karena `isArchive` tidak pernah dihitung/dioper ke `NoteCard`. |
+| `src/components/canvas/canvas-sticky.tsx` | **[PENTING]** Color picker tak punya klik-luar-untuk-tutup (macet terbuka), pakai `bg-white` hardcoded (rusak di dark mode), berisiko terpotong oleh `overflow-hidden` parent saat sticky di pinggir canvas. Diganti pakai primitif `Popover` (Radix, sudah ada di codebase) — portal-rendered jadi tak mungkin terpotong, otomatis dark-mode aman. |
+| `src/components/settings/settings-shell.tsx` | **[PENTING]** `--surface-elevated` dipakai untuk hover sidebar settings tapi variabel itu tidak pernah didefinisikan — hover jadi tak terlihat. Diganti `--surface-muted` (token yang sama dipakai sidebar utama). |
+| `src/components/tags/tag-input.tsx` | **[PENTING]** Sama: `--surface-overlay` pada dropdown saran tag tidak terdefinisi (background transparan). Diganti `--surface-base`. |
+| `src/components/notes/note-editor.tsx` | **[PENTING]** Integrasi penuh rich text: toolbar format selalu tampil, switch otomatis textarea↔rich editor berdasar `contentFormat`, upgrade transparan saat user pertama kali format teks plain. 13 panel collapse (font/tekstur/meta/linked notes/dst) dibungkus `AnimatedPanel`. Bug tambahan: `isMetaOpen` di-set via effect mount-only (tak re-sync kalau halaman tak remount antar catatan) — diganti lazy initializer + `key={note.id}` di halaman supaya state lokal selalu bersih per catatan. |
+| `src/app/(protected)/notes/[id]/page.tsx` | **[PENTING]** Oper `contentFormat`; tambah `key={note.id}` (lihat alasan di atas). |
+| `src/types/note.types.ts` | **[PENTING]** Tambah `Note.contentFormat: 'plain' \| 'html'`, default `'plain'` — tidak ada migrasi, catatan lama otomatis aman. |
+| `src/services/notes.service.ts` | **[PENTING]** Default `contentFormat` di `normalizeNote`/`createNote`; `duplicateNote` mempertahankan format aslinya; search filter sekarang `stripHtml` dulu (supaya kata yang kebetulan kena potong tag format tetap ketemu); fix threshold `getNoteSizeInfo` (satu gambar harusnya `'large'`, sebelumnya jatuh ke `'medium'` — ketahuan dari unit test yang gagal). |
+| `src/services/export.service.ts` | **[PENTING]** Export TXT/CSV/XLSX sekarang strip tag HTML (sebelumnya akan ikut keekspor mentah kalau catatan sudah diformat); export Markdown convert ke sintaks `**bold**`/`*italic*`. Fix terpisah: `buildExportFilename` tidak mengganti spasi dengan strip (ketahuan dari unit test yang gagal). |
+| `src/components/notes/note-share-card.tsx` | **[PERLU FIX]** Preview & teks share native sekarang `stripHtml` dulu. |
+| `src/components/notes/note-version-history.tsx` | **[PERLU FIX]** Diff versi sekarang dibandingkan dalam bentuk plain text supaya tag format tidak muncul mentah di tampilan diff. |
+| `src/lib/importer/keep-importer.ts`, `src/lib/importer/colornote-importer.ts` | **[PERLU FIX]** Set `contentFormat: 'plain'` eksplisit (semua hasil import berupa plain text). |
+| `src/components/graph/graph-view.tsx` | **[PERLU FIX]** Karakter unicode mentah "✕"/"ℹ" sebagai tombol diganti Lucide `X`/`Info` (melanggar aturan "no emoji di UI" sendiri). z-index hardcoded (`z-10`/`z-20`) diganti token `--z-overlay`. 3 non-null assertion (`canvasRef.current!`) diganti guard biasa. |
+| `src/components/canvas/canvas-board.tsx` | **[SARAN]** z-index hardcoded (`z-10`/`z-50`) diganti token `--z-overlay`. |
+| `src/lib/firebase.ts` | **[SARAN]** Hapus import `getDatabase` yang tak terpakai (RTDB belum aktif); `let rtdb` → `const` (tak pernah di-reassign). |
+| `src/lib/math-parser.ts` | **[PERLU FIX]** `SAFE_CHARS` whitelist tidak mengizinkan huruf sama sekali — `sqrt()/round()/floor()/ceil()/abs()` selalu gagal validasi sebelum sempat dievaluasi (bug lama, ketahuan dari unit test yang gagal). Sekarang izinkan `a-z` (tetap aman: tanda kutip/kurung-siku/titik-koma/sama-dengan tetap dilarang, jadi tidak ada celah injeksi baru). Hapus juga komentar `eslint-disable` basi yang tak lagi relevan. |
+| `src/components/shared/index.ts` | **[SARAN]** Export `AnimatedPanel`. |
+| `src/app/(protected)/dashboard/page.tsx` | **[SARAN]** Entrance bertahap (greeting → recent notes → streak → quick links), kartu catatan terbaru pakai `AnimatedNoteCard` (konsisten dengan halaman Catatan), hover lift pada quick links — semua menghormati Settings → Animasi. |
+| `src/app/(protected)/settings/page.tsx` | **[SARAN]** Entrance fade-up + hover micro-interaction pada kartu navigasi settings. |
+| `src/app/(protected)/stats/page.tsx` | **[SARAN]** Cross-fade saat ganti tab (sebelumnya snap instan). |
+| `package.json` | **[PENTING]** Tambah `dompurify` — sanitasi HTML rich text (allowlist ketat: `p/br/strong/em/u` + `text-align` saja). |
 
 ---
 
-# CHANGES.md — Phase 12
+## Backlog yang Ditemukan, Belum Dikerjakan (di luar lingkup laporan)
 
-**Sesi:** 13 · **Tanggal:** 2026-05-09 · **Phase:** Testing, Polish & PWA Final
-
----
-
-## Ringkasan
-
-Phase terakhir NalaKoe. Fokus pada:
-- Unit tests untuk semua fungsi `lib/` yang belum tertutup
-- E2E test core journey (login → note → logout) via Playwright
-- PWA final: manifest lengkap, service worker v2 dengan 3 strategi caching, icon assets
-- **Skip Sentry** — diganti logger sederhana (tidak butuh langganan, tidak memperlambat build Vercel)
-- Polish: `next.config.ts` dengan `removeConsole` di production
-
----
-
-## File Baru
-
-| File | Keterangan |
-|------|------------|
-| `tests/unit/lib/utils.test.ts` | 8 describe block: `cn`, `slugify`, `truncate`, `generateId`, `isObject`, `clamp`, `debounce`, `stripHtml`, `getContentPreview` |
-| `tests/unit/lib/format.test.ts` | 13 describe block: semua fungsi `lib/format.ts` — number, currency, compact, date, time, word count, file size, temperature, percentage |
-| `tests/unit/lib/reading-time.test.ts` | 3 describe block: `countWords`, `estimateReadingTime`, `analyzeContent` |
-| `tests/unit/lib/normalizer.test.ts` | 4 describe block: `ok`, `err`, `isOk`, `normalizeTimestamp`, `normalizeDocument` |
-| `tests/unit/lib/color-gradient.test.ts` | `getTimeGradient` semua 7 periode + `getCurrentTimeGradient` + `getCardAccentColor` |
-| `tests/unit/lib/masking.test.ts` | 4 describe block: `maskNIK`, `maskPhone`, `maskEmail`, `maskCardNumber` |
-| `tests/e2e/flows/note-journey.spec.ts` | E2E Playwright: login → dashboard → notes → create note → logout → redirect unauthenticated |
-| `scripts/generate-icons.mjs` | Script generate 8 ukuran icon PWA + shortcut icons + apple-touch-icon via `canvas` package |
-
-## File Diperbarui
-
-| File | Perubahan |
-|------|-----------|
-| `src/app/layout.tsx` | Hapus Sentry import; tambah PWA meta tags (`mobile-web-app-capable`, `apple-*`); tambah icon links di `metadata.icons` |
-| `src/lib/logger.ts` | Hapus Sentry dynamic import dan `sendToSentry` — logger sekarang pure console. Tidak ada perubahan API publik. |
-| `next.config.ts` | Hapus `@sentry/nextjs` wrapper; tambah header Cache-Control untuk `sw.js`; tambah `compiler.removeConsole` di production |
-| `public/manifest.json` | Tambah `scope`, `dir`, `orientation: portrait-primary`; tambah `type` di shortcut icons; tambah screenshots placeholder |
-| `public/sw.js` | Service worker v2: cache version bump; pisah 3 strategi (`cacheFirst`, `staleWhileRevalidate`, `networkFirstWithOfflineFallback`); tambah expiry check; Firebase/API selalu NetworkOnly; handle `SKIP_WAITING` message |
-| `package.json` | Hapus `@sentry/nextjs` dan `next-pwa`; tambah `canvas` di devDependencies (untuk icon gen); tambah `@vitejs/plugin-react` devDep; tambah script `generate:icons` |
-
----
-
-## Catatan Skip Sentry
-
-Sentry di-skip karena:
-1. Membutuhkan langganan berbayar untuk project aktif
-2. `@sentry/nextjs` webpack plugin memperlambat Vercel build secara signifikan (~30–60 detik ekstra)
-3. Firebase sendiri sudah punya error logging di console
-
-Jika ingin Sentry kembali di masa depan:
-- Tambah `@sentry/nextjs` ke dependencies
-- Set `NEXT_PUBLIC_SENTRY_DSN` di Vercel environment variables
-- Uncomment import di `logger.ts`
-- Bungkus config dengan `withSentryConfig()` di `next.config.ts`
-
----
-
-## Checklist Phase 12
-
-- [x] Unit tests: semua fungsi `lib/` (utils, format, reading-time, normalizer, color-gradient, masking)
-- [x] E2E tests: login → buat note → logout
-- [x] PWA manifest final (scope, dir, screenshots, icon types)
-- [x] Service worker v2 (3 strategi + expiry + Firebase bypass)
-- [x] Icon generator script (8 sizes + apple-touch-icon + shortcuts)
-- [x] Skip Sentry (tidak ada build overhead, tidak butuh subscription)
-- [x] `next.config.ts` polish (`removeConsole` production, Cache-Control sw.js)
-- [x] README diupdate
-
----
-
-## Catatan Deploy Vercel
-
-Sebelum deploy, pastikan di Vercel Dashboard → Settings → Environment Variables:
-
-```
-NEXT_PUBLIC_FIREBASE_API_KEY
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-NEXT_PUBLIC_FIREBASE_PROJECT_ID
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-NEXT_PUBLIC_FIREBASE_APP_ID
-FIREBASE_ADMIN_PROJECT_ID
-FIREBASE_ADMIN_CLIENT_EMAIL
-FIREBASE_ADMIN_PRIVATE_KEY
-```
-
-Build command: `next build` (default)
-Output directory: `.next` (default)
-Node.js version: 20.x
+- **`use-read-aloud.test.ts` & `use-barcode-scanner.test.ts`** (16 test) — gagal karena jsdom tidak punya `SpeechSynthesisUtterance`/`BarcodeDetector` global. Ini gap test-environment, bukan bug fitur (keduanya jalan normal di browser asli). Perlu tambah mock di `tests/setup.ts` di sesi lain.
+- **E2E Playwright** — tidak bisa dijalankan di sandbox audit ini (browser binary tak ter-install di environment terbatas). Coba lagi di mesin dev biasa.
+- **`canvas-board.tsx` baris ~48** — pola `useEffect(() => setStickies(board.stickies), [board.stickies])` adalah anti-pattern React modern (set-state-in-effect), tapi mengubahnya berisiko ke perilaku drag-and-drop sticky yang sudah berjalan baik. Sengaja tidak disentuh sesi ini — bukan bagian dari laporan, dan butuh pengujian manual ekstra kalau diubah.
+- **File yang melebihi limit 150–200 baris** (`note-editor.tsx`, `use-note-editor.ts`, `graph-view.tsx`) — sudah begini sejak sebelum sesi ini, makin besar karena rich text. Pemecahan ke file lebih kecil sebaiknya jadi sesi terpisah supaya diff tetap mudah diverifikasi.

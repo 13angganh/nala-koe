@@ -101,6 +101,7 @@ function keepNoteToNote(keepNote: KeepNote, userId: string): Note {
     userId,
     title: keepNote.title ?? '',
     content: plainContent,
+    contentFormat: 'plain',
     blocks,
     mood: null,
     tags,

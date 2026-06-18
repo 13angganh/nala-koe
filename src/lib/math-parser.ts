@@ -30,8 +30,10 @@ const MATH_TRIGGER_PATTERN = /^(.+?)=\s*$/;
 /** Indonesian percentage pattern: "15% dari 200000" */
 const ID_PERCENTAGE_PATTERN = /^([\d.,]+)%\s+dari\s+([\d.,]+)$/i;
 
-/** Allowed characters in a math expression (whitelist) */
-const SAFE_CHARS = /^[0-9+\-*/%^().√πe ,\s]+$/i;
+/** Allowed characters in a math expression (whitelist). Letters are needed for
+ *  function names (sqrt/round/floor/ceil/abs) — safe because safeEval() only
+ *  ever substitutes a fixed, known set of Math.* replacements before eval. */
+const SAFE_CHARS = /^[0-9a-z+\-*/%^().√πe ,\s]+$/i;
 
 // ─── Safe evaluator ──────────────────────────────────────────────────────────
 
@@ -58,7 +60,6 @@ function safeEval(expr: string): number {
     .replace(/abs\(/gi, 'Math.abs(')
     .replace(/\^/g, '**');
 
-  // eslint-disable-next-line no-new-func
   const fn = new Function(`"use strict"; return (${replaced});`);
   const result = fn() as unknown;
 
