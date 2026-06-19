@@ -121,12 +121,17 @@ export function useNoteEditor(noteId: string) {
     saveMutation.mutate({
       title: activeNote.title,
       content: activeNote.content,
+      contentFormat: activeNote.contentFormat,
       blocks: activeNote.blocks,
       mood: activeNote.mood,
       tags: activeNote.tags,
       language: activeNote.language,
       weather: activeNote.weather,
       location: activeNote.location,
+      fontWeight: activeNote.fontWeight,
+      texture: activeNote.texture,
+      linkedNoteIds: activeNote.linkedNoteIds,
+      isPinned: activeNote.isPinned,
     });
   }, [activeNote, saveMutation]);
 

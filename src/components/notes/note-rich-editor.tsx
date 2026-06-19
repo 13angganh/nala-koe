@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type RefObject } from 'react';
+import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react';
 import { cn } from '@/lib/utils';
 import { sanitizeRichHtml } from '@/lib/rich-text';
 
@@ -12,28 +12,62 @@ interface NoteRichEditorProps {
   className?: string;
 }
 
+/** Returns true when the editor div contains no visible text. */
+function isEditorEmpty(el: HTMLDivElement): boolean {
+  return el.textContent?.trim() === '';
+}
+
 /**
  * contentEditable surface for notes already upgraded to contentFormat 'html'.
- * Deliberately does NOT use document.execCommand for formatting — all format
- * actions live in NoteFormatToolbar / lib/rich-text.ts and mutate the DOM
- * directly via the Selection/Range API. execCommand('insertText', ...) is
- * still used for paste only, a distinct, well-supported, non-deprecated part
- * of that API used purely to keep the native undo stack intact.
+ *
+ * Key design decisions:
+ * - No dangerouslySetInnerHTML: we set innerHTML imperatively via useLayoutEffect
+ *   on mount and only when a genuinely-new external content change arrives.
+ *   This prevents React from clobbering the user's live DOM edits on every re-render.
+ * - lastEmitted tracks what we most recently called onChange with (what we told
+ *   the parent the content is). When the parent hands the same content back to us,
+ *   we know it's our own output echoing back — no DOM reset needed.
+ * - We compare sanitized versions when deciding if an external update landed, so
+ *   harmless whitespace differences don't trigger a spurious DOM reset + cursor jump.
+ * - Placeholder is driven by a data-empty attribute updated on every input, so it
+ *   works correctly even when the DOM contains an empty <p><br></p>.
  */
 export function NoteRichEditor({ content, onChange, editableRef, placeholder, className }: NoteRichEditorProps) {
-  const lastEmitted = useRef(content);
-  const [initialHtml] = useState(() => (typeof window !== 'undefined' ? sanitizeRichHtml(content) : content));
+  const lastEmitted = useRef<string | null>(null);
 
-  // If the note is swapped out from under us (navigating between notes) or an
-  // external update lands (e.g. version restore), resync the DOM from props
-  // without clobbering the user's own typing.
+  // ── Initial mount: set innerHTML synchronously before first paint ─────────
+  useLayoutEffect(() => {
+    const el = editableRef.current;
+    if (!el) return;
+    const sanitized = sanitizeRichHtml(content);
+    el.innerHTML = sanitized;
+    lastEmitted.current = sanitized;
+    el.dataset.empty = isEditorEmpty(el) ? 'true' : 'false';
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // intentionally runs only on mount
+
+  // ── External content updates (version restore, note swap via key) ─────────
+  // Runs only when content prop changes; skips our own emitted-echo updates.
   useEffect(() => {
     const el = editableRef.current;
     if (!el) return;
-    if (content !== lastEmitted.current && content !== el.innerHTML) {
-      el.innerHTML = sanitizeRichHtml(content);
-      lastEmitted.current = content;
+
+    const sanitized = sanitizeRichHtml(content);
+
+    // Our own output echoing back — skip.
+    if (sanitized === lastEmitted.current) return;
+
+    // Format toolbar already applied this content directly to the DOM.
+    // Just sync lastEmitted so future comparisons are correct.
+    if (sanitized === sanitizeRichHtml(el.innerHTML)) {
+      lastEmitted.current = sanitized;
+      return;
     }
+
+    // Genuinely new content from an external source — overwrite the DOM.
+    el.innerHTML = sanitized;
+    lastEmitted.current = sanitized;
+    el.dataset.empty = isEditorEmpty(el) ? 'true' : 'false';
   }, [content, editableRef]);
 
   function handleInput() {
@@ -41,6 +75,7 @@ export function NoteRichEditor({ content, onChange, editableRef, placeholder, cl
     if (!el) return;
     const html = sanitizeRichHtml(el.innerHTML);
     lastEmitted.current = html;
+    el.dataset.empty = isEditorEmpty(el) ? 'true' : 'false';
     onChange(html);
   }
 
@@ -70,12 +105,15 @@ export function NoteRichEditor({ content, onChange, editableRef, placeholder, cl
       onInput={handleInput}
       onPaste={handlePaste}
       data-placeholder={placeholder}
-      dangerouslySetInnerHTML={{ __html: initialHtml }}
+      data-empty="false"
       className={cn(
         'w-full min-h-[240px] outline-none border-none',
         'text-sm text-[var(--text-primary)] leading-relaxed',
         '[&_p]:min-h-[1.5em]',
-        'empty:before:content-[attr(data-placeholder)] empty:before:text-[var(--text-tertiary)]',
+        // Placeholder: shown when data-empty="true" attribute is set.
+        // Uses attr() so the text comes from the data-placeholder prop.
+        'data-[empty=true]:before:content-[attr(data-placeholder)]',
+        'before:text-[var(--text-tertiary)] before:pointer-events-none',
         className
       )}
     />

@@ -87,7 +87,11 @@ export function NoteFormatToolbar({
       if (!root || !(root instanceof HTMLDivElement)) return;
       const changed = toggleInlineMark(root, mark);
       if (changed) {
-        onContentChange(sanitizeRichHtml(root.innerHTML), 'html');
+        // Read the final sanitized HTML from the DOM and notify parent.
+        // NoteRichEditor will compare this against its lastEmitted to avoid
+        // resetting the DOM (since we already mutated it in-place above).
+        const sanitized = sanitizeRichHtml(root.innerHTML);
+        onContentChange(sanitized, 'html');
         recomputeActiveState();
       }
     },
@@ -107,7 +111,8 @@ export function NoteFormatToolbar({
       if (!root || !(root instanceof HTMLDivElement)) return;
       const changed = setBlockAlign(root, align);
       if (changed) {
-        onContentChange(sanitizeRichHtml(root.innerHTML), 'html');
+        const sanitized = sanitizeRichHtml(root.innerHTML);
+        onContentChange(sanitized, 'html');
         recomputeActiveState();
       }
     },

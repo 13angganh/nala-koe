@@ -207,12 +207,20 @@ function unwrapSubRange(range: Range, mark: InlineMark): void {
  * than one paragraph, so we never end up with an inline tag wrapping a
  * block-level element.
  * Returns true if a change was applied.
+ *
+ * NOTE: Preserves the selection after applying so the user can continue
+ * typing styled text without having to re-click into the editor.
  */
 export function toggleInlineMark(root: HTMLElement, mark: InlineMark): boolean {
   const selection = window.getSelection();
   if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return false;
   const range = selection.getRangeAt(0);
   if (!root.contains(range.commonAncestorContainer)) return false;
+
+  // Snapshot the boundary nodes/offsets BEFORE we mutate the DOM,
+  // so we can restore the selection to the same visible span afterward.
+  const savedStart = { container: range.startContainer, offset: range.startOffset };
+  const savedEnd   = { container: range.endContainer,   offset: range.endOffset };
 
   const active = isMarkActive(root, mark);
   const startBlock = getBlockAncestor(range.startContainer, root);
@@ -243,7 +251,19 @@ export function toggleInlineMark(root: HTMLElement, mark: InlineMark): boolean {
     });
   }
 
-  selection.removeAllRanges();
+  // Restore selection so the user can see what's formatted and keep typing.
+  try {
+    const restored = document.createRange();
+    restored.setStart(savedStart.container, savedStart.offset);
+    restored.setEnd(savedEnd.container, savedEnd.offset);
+    selection.removeAllRanges();
+    selection.addRange(restored);
+  } catch {
+    // If the boundary nodes were removed by the DOM mutation (edge case in
+    // complex selections), just clear the selection gracefully.
+    selection.removeAllRanges();
+  }
+
   return true;
 }
 
