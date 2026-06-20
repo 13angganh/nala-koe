@@ -2,7 +2,7 @@
 
 > *Nala* (Jawa/Sanskerta: pikiran, hati nurani) + *Koe* (milikku) — catatan pribadimu yang hidup dan bernapas.
 
-**v1.0.1** · Next.js 16 · React 19 · Firebase · PWA
+**v1.1.1** · Next.js 16 · React 19 · Firebase · PWA
 
 ---
 
@@ -186,6 +186,7 @@ Komponen yang lebih besar dipecah ke sub-komponen atau hooks terpisah.
 | 34 | **PWA** | Service Worker v2, manifest, installable, offline fallback |
 | 35 | **Offline Persistence** | Firestore offline cache |
 | 36 | **Dark Mode** | Otomatis via CSS variables + Tailwind class |
+| 37 | **Hide/Unhide Section & Block** | Sembunyikan mood/tag/cuaca/lokasi atau block (checklist/tabel/kalkulasi/link preview) dari tampilan catatan tanpa menghapus data — untuk catatan panjang |
 
 ---
 
@@ -229,9 +230,64 @@ Firestore indexes: `firestore.indexes.json`
 Firestore rules: `firestore.rules`  
 Firebase config: `firebase.json`
 
+### Firebase RTDB (belum aktif)
+
+RTDB **belum diaktifkan** — `src/lib/firebase.ts` mengekspor `rtdb` sebagai `null` (placeholder), dan `firebase.json` tidak menyertakan entry `database`. `database.rules.json` sudah tersedia (dengan UID whitelist) untuk saat dibutuhkan. Langkah aktivasi jika diperlukan di masa depan:
+
+1. Tambahkan `databaseURL` ke `firebaseConfig` di `src/lib/firebase.ts`, lalu inisialisasi `rtdb = getDatabase(app)` di dalam `initFirebase()` dan ekspor.
+2. Tambahkan `NEXT_PUBLIC_FIREBASE_DATABASE_URL: z.string().url()` ke `src/lib/env.ts`.
+3. Tambahkan `NEXT_PUBLIC_FIREBASE_DATABASE_URL=https://your-project-default-rtdb.firebaseio.com` ke `.env.local`.
+4. Re-aktifkan di `firebase.json`: `"database": { "rules": "database.rules.json" }`.
+5. Deploy rules: `firebase deploy --only database`.
+
 ---
 
 ## Changelog
+
+> **README.md adalah satu-satunya sumber kebenaran untuk dokumentasi project ini.** Tidak ada file `.md` lain di repo (CHANGES.md, readme-nala-koe.md, RTDB_ACTIVATION.md, dll. dari sesi-sesi sebelumnya sudah dihapus/digabung ke sini). Setiap perubahan, fix, patch, atau update — sekecil apa pun — dicatat sebagai entry baru di bagian ini, paling atas, dengan format `### vX.Y.Z — tanggal (Sesi N)`. Jangan membuat file dokumentasi terpisah lagi; tambahkan ke README.md ini saja.
+
+### v1.1.1 — 20 Jun 2026 (Sesi 18)
+**Konsistensi brand logo · Konsolidasi dokumentasi**
+
+- **fix(brand):** logo di sidebar, mobile nav drawer, halaman login, dan halaman register — sebelumnya lingkaran dengan garis silang yang tidak merepresentasikan apa pun dan tidak konsisten dengan identitas brand lain di aplikasi. Diganti ke monogram **"N" dengan garis bawah aksen biru**, persis sama dengan desain app icon resmi (lihat `scripts/generate-icons.mjs` — latar `#0f172a`, teks putih, underline `--accent`). Sekarang logo di dalam aplikasi dan logo saat PWA di-install adalah satu identitas visual yang sama.
+- **refactor(brand):** komponen baru `src/components/shared/nalakoe-logo.tsx` (`NalaKoeLogo`) — satu sumber kebenaran untuk brand mark, dipakai di ke-4 lokasi. Latar container menggunakan warna fixed `#0f172a` (bukan token tema `--surface-invert`) agar kontras selalu terjamin di light maupun dark mode.
+- **chore(docs):** `RTDB_ACTIVATION.md` dihapus — isinya digabung ke bagian [Deployment](#deployment) di README ini. README.md sekarang satu-satunya file dokumentasi di project; semua `.md` lain yang pernah dibuat di sesi-sesi sebelumnya (CHANGES.md, readme-nala-koe.md) sudah tidak ada.
+
+Files: `src/components/shared/nalakoe-logo.tsx` (baru), `src/components/layouts/sidebar.tsx`, `src/components/layouts/mobile-nav.tsx`, `src/app/(auth)/login/page.tsx`, `src/app/(auth)/register/page.tsx`, `README.md`
+
+---
+
+### v1.1.0 — 20 Jun 2026 (Sesi 17)
+**Fitur baru: hide/unhide section & block · Bug fix kritis: tag tidak tersimpan · Optimasi performa editor**
+
+**Bug kritis — tag (dan field lain) hilang akibat race condition save:**
+- **fix(save):** `saveMutation`'s `onSuccess` sebelumnya memanggil `invalidateQueries({ queryKey: [NOTES_QUERY_KEY] })` tanpa filter — ini meng-invalidate **juga** query detail catatan yang sedang aktif diedit, memicu refetch dari Firestore yang **menimpa** state lokal (termasuk tag yang baru diketik tapi masih dalam jendela debounce 1500ms, belum sempat tersimpan). Sekarang invalidation memakai `predicate` yang **mengecualikan** query note yang sedang aktif diedit.
+- **fix(save):** sebagai pengaman tambahan, `queryFn` di `useNoteEditor` sekarang menggabungkan (`merge`) `pendingInputRef` (perubahan lokal yang belum tersimpan) ke atas data hasil refetch apa pun — sehingga edit yang sedang berjalan tidak pernah hilang meski ada refetch dari sumber lain (window refocus, dll).
+
+**Fitur baru — Hide/Unhide (Tampilkan/Sembunyikan) untuk semua fitur catatan:**
+- **feat(editor):** setiap section (Mood, Tag, Cuaca & Lokasi) dan setiap block (Checklist, Tabel, Kalkulasi, Pratinjau Tautan) kini punya tombol mata (👁) terpisah dari tombol hapus — klik untuk menyembunyikan section/block dari tampilan catatan **tanpa menghapus datanya**. Section/block yang disembunyikan kolaps jadi satu baris placeholder bergaris putus-putus yang bisa diklik untuk ditampilkan lagi.
+- **feat(types):** field baru `Note.hiddenSections: NoteSectionKey[]` (untuk section) dan `NoteContentBlock.isHidden?: boolean` (untuk block) — keduanya backward-compatible (default kosong/`false` untuk catatan lama).
+- Komponen baru: `note-visibility-toggle.tsx` (`NoteVisibilityToggle`, `NoteHiddenCollapsedRow`), `note-meta-panel.tsx` (extract dari NoteEditor), `note-blocks-renderer.tsx` (extract dari NoteEditor).
+
+**Optimasi performa editor — mengatasi delay/lag saat mengetik:**
+- **perf(editor):** `analyzeContent()` (word count) dan `detectLanguage()` sebelumnya berjalan **sinkron pada setiap keystroke**, melakukan full-string scan sebelum textarea sempat re-render — ini sumber utama lag. Sekarang `content` di-update segera ke state, sementara word count & deteksi bahasa di-debounce terpisah (400ms) sehingga tidak memblokir ketikan.
+- **perf(editor):** `useNotes({status:'active'})` di `NoteEditor` sebelumnya fetch **seluruh daftar catatan aktif** setiap kali halaman edit dibuka (untuk panel "Catatan terhubung" yang defaultnya tertutup), dan meng-overwrite store dashboard global sebagai side effect. Sekarang lazy-loaded — hanya fetch saat panel benar-benar dibuka, dan tidak lagi menyentuh store global (`syncToStore: false`).
+- **perf(editor):** 12 `useState` boolean terpisah untuk toggle panel (font, texture, linked notes, dst) — masing-masing dipasangkan inline arrow function baru di setiap render — digabung jadi satu state object + satu `togglePanel()` callback stabil. `NoteEditorToolbar` sekarang dibungkus `React.memo` dan benar-benar efektif karena propsnya stabil.
+- **perf(editor):** `checklistBlocks.flatMap(JSON.parse)` dan `stripHtml(content)` di-memoize via `useMemo` — sebelumnya dihitung ulang di setiap render (setiap keystroke).
+- **refactor:** `note-editor.tsx` dipecah jadi `note-meta-panel.tsx` dan `note-blocks-renderer.tsx`, masing-masing dibungkus `React.memo`, agar perubahan title/content tidak memicu re-render seluruh panel meta dan blocks.
+
+**Perbaikan kualitas kode (non-breaking, dari audit React Compiler):**
+- **fix:** `note-weather-badge.tsx` — ikon cuaca dinamis kini dirender via `createElement` eksplisit (sebelumnya `<Icon />` dari variable di-flag sebagai pola tidak aman oleh React Compiler)
+- **fix:** `tag-cloud-visual.tsx` — `Math.random()` di render body diganti seeded deterministic shuffle (sebelumnya urutan tag cloud berubah acak setiap re-render, bukan hanya saat data berubah)
+- **fix:** `note-scheduled.tsx` — `Date.now()` di default `useState` dipindah ke lazy initializer; `handlePreset` dikonversi ke `useCallback`
+- **fix:** `note-math-block.tsx` — evaluasi ekspresi matematika direfactor dari `useEffect`+`setState` ke `useMemo` (derived value murni) — bonus: mengurangi 1 render ekstra per keystroke di blok kalkulasi
+- **fix:** `command-palette.tsx` — reset index seleksi saat query berubah direfactor dari `useEffect` ke pola resmi React "adjust state during render" — mengurangi 1 render ekstra per ketikan di pencarian
+- **fix:** `note-barcode-scanner.tsx`, `use-tags.ts` — dependency array `useCallback` disesuaikan agar match dengan inferensi React Compiler
+- **chore:** bersihkan 3 `eslint-disable` directive yang sudah tidak relevan (`layout.tsx`, `note-texture-picker.tsx`, `milestone-toast.tsx`) dan duplikasi comment yang salah tempat di `use-stats.ts`
+
+Files: `src/hooks/use-note-editor.ts`, `src/hooks/use-notes.ts`, `src/components/notes/note-editor.tsx`, `src/components/notes/note-editor-toolbar.tsx`, `src/components/notes/note-meta-panel.tsx` (baru), `src/components/notes/note-blocks-renderer.tsx` (baru), `src/components/notes/note-visibility-toggle.tsx` (baru), `src/components/notes/note-weather-badge.tsx`, `src/components/notes/note-math-block.tsx`, `src/components/notes/note-scheduled.tsx`, `src/components/notes/note-barcode-scanner.tsx`, `src/components/stats/tag-cloud-visual.tsx`, `src/components/shared/command-palette.tsx`, `src/hooks/use-tags.ts`, `src/types/note.types.ts`, `src/services/notes.service.ts`, `src/lib/importer/*.ts`
+
+---
 
 ### v1.0.1 — 19 Jun 2026 (Sesi 16)
 **Bug fixes: editor rich text**

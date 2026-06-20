@@ -39,7 +39,7 @@ export function NoteBarcodeScanner({
     void navigator.clipboard.writeText(result.rawValue).then(() => {
       toast.success('Disalin ke clipboard');
     });
-  }, [result?.rawValue]);
+  }, [result]);
 
   if (!isSupported) {
     return (

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Calculator, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { parseMath, isMathExpression } from '@/lib/math-parser';
@@ -23,31 +23,24 @@ export function NoteMathBlock({
   className,
 }: NoteMathBlockProps) {
   const [localExpr, setLocalExpr] = useState(expression);
-  const [result, setResult] = useState<string | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Evaluate whenever expression changes
-  useEffect(() => {
+  // result/errorMsg are pure derivations of localExpr — no async work, no
+  // external side effect — so they're computed directly via useMemo rather
+  // than via useEffect+setState. That previous pattern caused parseMath()
+  // to run, then a state update, then a SECOND render just to reflect the
+  // result — an extra render on every keystroke for no benefit. useMemo
+  // computes the value during the same render that localExpr changed.
+  const { result, errorMsg } = useMemo(() => {
     const trimmed = localExpr.trim();
-    if (!trimmed) {
-      setResult(null);
-      setErrorMsg(null);
-      return;
-    }
+    if (!trimmed) return { result: null, errorMsg: null };
 
     if (isMathExpression(trimmed) || trimmed.endsWith('=')) {
       const outcome = parseMath(trimmed);
-      if (outcome.ok) {
-        setResult(outcome.value.formatted);
-        setErrorMsg(null);
-      } else {
-        setResult(null);
-        setErrorMsg(outcome.error.error);
-      }
-    } else {
-      setResult(null);
-      setErrorMsg(null);
+      return outcome.ok
+        ? { result: outcome.value.formatted, errorMsg: null }
+        : { result: null, errorMsg: outcome.error.error };
     }
+    return { result: null, errorMsg: null };
   }, [localExpr]);
 
   const handleChange = useCallback(

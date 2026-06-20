@@ -46,6 +46,8 @@ export default function NotePage() {
     // Phase 8
     handleReactionChange,
     handleHighlightsChange,
+    handleToggleSectionVisibility,
+    handleToggleBlockVisibility,
     // Phase 9
     handleScheduledChange,
   } = useNoteEditor(noteId);
@@ -171,6 +173,9 @@ export default function NotePage() {
         isScheduled={note.isScheduled}
         scheduledAt={note.scheduledAt}
         reaction={note.reaction}
+        hiddenSections={note.hiddenSections}
+        onToggleSectionVisibility={handleToggleSectionVisibility}
+        onToggleBlockVisibility={handleToggleBlockVisibility}
         className="flex-1 min-h-0"
         {...(note.highlights != null ? { highlights: note.highlights } : {})}
         {...(sizeInfo != null ? { sizeInfo } : {})}

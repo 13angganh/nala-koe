@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import {
   Pin, PinOff, Save, CheckSquare, SlidersHorizontal, Table2,
   Calculator, Link2, Type, Layers, ScanBarcode, Volume2,
@@ -107,7 +108,7 @@ function MoreItem({
   );
 }
 
-export function NoteEditorToolbar({
+function NoteEditorToolbarImpl({
   isPinned, isSaving, isDirty, wordCount, readingTimeMinutes,
   onTogglePin, onSave, onInsertChecklist,
   onToggleMeta, isMetaOpen = false,
@@ -291,3 +292,12 @@ export function NoteEditorToolbar({
     </div>
   );
 }
+
+/**
+ * Memoized: this toolbar re-renders on every NoteEditor render otherwise
+ * (every keystroke in title/content), even though most of its props are
+ * stable panel-toggle callbacks. Pairs with note-editor.tsx's togglePanel
+ * refactor, which made those callbacks stable across renders so memo here
+ * actually has an effect.
+ */
+export const NoteEditorToolbar = memo(NoteEditorToolbarImpl);

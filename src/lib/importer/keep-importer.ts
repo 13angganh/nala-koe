@@ -121,6 +121,7 @@ function keepNoteToNote(keepNote: KeepNote, userId: string): Note {
     reaction: null,
     linkedNoteIds: [],
     highlights: [],
+    hiddenSections: [],
     wordCount,
     createdAt,
     updatedAt,

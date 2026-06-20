@@ -14,6 +14,7 @@ import { registerWithEmail, loginWithGoogle } from '@/services/auth.service';
 import { registerSchema, type RegisterInput } from '@/schemas/auth.schema';
 import { ROUTES } from '@/constants/routes';
 import { auth } from '@/lib/firebase';
+import { NalaKoeLogo } from '@/components/shared/nalakoe-logo';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -65,11 +66,8 @@ export default function RegisterPage() {
     <div className="flex min-h-dvh items-center justify-center bg-[var(--surface-base)] px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--accent)] text-white">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M12 3C7 3 3 7 3 12s4 9 9 9 9-4 9-9-4-9-9-9z" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-              <path d="M8 12h8M12 8v8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
+          <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-[#0f172a] text-white">
+            <NalaKoeLogo size={24} />
           </div>
           <h1 className="text-2xl font-semibold text-[var(--text-primary)]">Buat akunmu</h1>
           <p className="mt-1.5 text-sm text-[var(--text-secondary)]">Mulai catat pikiran dan nuraniku hari ini</p>

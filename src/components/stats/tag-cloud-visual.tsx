@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Tag } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -27,8 +28,47 @@ function tagOpacity(count: number, max: number): number {
   return 0.4 + (count / max) * 0.6;
 }
 
+/**
+ * Deterministic shuffle (mulberry32 PRNG seeded from the tag list itself) —
+ * gives the cloud a "natural", non-sorted layout without calling
+ * Math.random() during render. Math.random() in the render body is an
+ * impure call: every re-render (not just every data change) would reshuffle
+ * the cloud, making tags visibly jump around whenever any unrelated parent
+ * state updates. Seeding from the data means the same tag set always
+ * shuffles to the same order, and only changes when the tags themselves do.
+ */
+function seededShuffle<T>(items: T[], seed: number): T[] {
+  let state = seed || 1;
+  const next = () => {
+    state = (state * 1103515245 + 12345) & 0x7fffffff;
+    return state / 0x7fffffff;
+  };
+  const result = [...items];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(next() * (i + 1));
+    const a = result[i];
+    const b = result[j];
+    if (a === undefined || b === undefined) continue;
+    result[i] = b;
+    result[j] = a;
+  }
+  return result;
+}
+
+function seedFromTags(tags: { tag: string; count: number }[]): number {
+  const joined = tags.map((t) => `${t.tag}:${t.count}`).join('|');
+  let hash = 0;
+  for (let i = 0; i < joined.length; i++) {
+    hash = (hash * 31 + joined.charCodeAt(i)) & 0x7fffffff;
+  }
+  return hash;
+}
+
 export function TagCloudVisual({ tags, isLoading }: TagCloudVisualProps) {
   const router = useRouter();
+
+  const max = tags[0]?.count ?? 1;
+  const shuffled = useMemo(() => seededShuffle(tags, seedFromTags(tags)), [tags]);
 
   if (isLoading) {
     return (
@@ -47,11 +87,6 @@ export function TagCloudVisual({ tags, isLoading }: TagCloudVisualProps) {
       />
     );
   }
-
-  const max = tags[0]?.count ?? 1;
-
-  // Shuffle tags so the cloud looks natural (not sorted by size)
-  const shuffled = [...tags].sort(() => Math.random() - 0.5);
 
   function handleTagClick(tag: string) {
     router.push(`${ROUTES.NOTES}?tag=${encodeURIComponent(tag)}`);

@@ -40,13 +40,13 @@ export function useTags(): UseTagsReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [user?.uid]);
+  }, [user]);
 
   const fetchTagCloud = useCallback(async () => {
     if (!user?.uid) return;
     const result = await getTagCloud(user.uid);
     if (result.data) setTagCloud(result.data);
-  }, [user?.uid]);
+  }, [user]);
 
   const searchSuggestions = useCallback(
     async (query: string) => {
@@ -62,7 +62,7 @@ export function useTags(): UseTagsReturn {
         if (result.data) setSuggestions(result.data);
       }, 200);
     },
-    [user?.uid]
+    [user]
   );
 
   useEffect(() => {

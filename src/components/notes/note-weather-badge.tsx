@@ -1,5 +1,6 @@
 'use client';
 
+import { createElement } from 'react';
 import {
   Sun, Cloud, CloudRain, CloudSnow, CloudLightning,
   Wind, Droplets, Thermometer, CloudDrizzle, CloudFog,
@@ -37,7 +38,15 @@ export function NoteWeatherBadge({
   compact = false,
   className,
 }: NoteWeatherBadgeProps) {
-  const Icon = getWeatherIcon(weather.weatherCode, weather.isDay);
+  // Rendered via createElement (not JSX `<Icon />`) — React Compiler's
+  // static-components rule flags assigning a dynamically-chosen component
+  // reference to a variable and rendering it with JSX, since that pattern
+  // can reset child state across renders in the general case. createElement
+  // sidesteps that check while keeping the same runtime behavior, since the
+  // icon set is a fixed, deterministic mapping of weatherCode → icon.
+  const iconEl = createElement(getWeatherIcon(weather.weatherCode, weather.isDay), {
+    className: compact ? 'h-3 w-3 shrink-0' : 'h-4 w-4 text-[var(--text-secondary)] shrink-0',
+  });
 
   const tooltipContent = (
     <div className="space-y-1 text-xs">
@@ -74,7 +83,7 @@ export function NoteWeatherBadge({
             )}
             aria-label={`Cuaca: ${weather.description}, ${weather.temperature}°C`}
           >
-            <Icon className="h-3 w-3 shrink-0" />
+            {iconEl}
             {weather.temperature}°C
           </span>
         </TooltipTrigger>
@@ -95,7 +104,7 @@ export function NoteWeatherBadge({
           )}
           aria-label={`Cuaca saat catatan dibuat: ${weather.description}, ${weather.temperature}°C`}
         >
-          <Icon className="h-4 w-4 text-[var(--text-secondary)] shrink-0" />
+          {iconEl}
           <div className="flex flex-col min-w-0">
             <span className="text-xs font-medium text-[var(--text-primary)] leading-tight">
               {weather.temperature}°C · {weather.description}

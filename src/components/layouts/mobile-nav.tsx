@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { SidebarNav } from './sidebar-nav';
 import { ROUTES } from '@/constants/routes';
+import { NalaKoeLogo } from '@/components/shared/nalakoe-logo';
 
 interface MobileNavProps {
   open: boolean;
@@ -21,11 +22,8 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
               onClick={onClose}
               className="flex items-center gap-2.5"
             >
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--accent)] text-white shrink-0">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M12 3C7 3 3 7 3 12s4 9 9 9 9-4 9-9-4-9-9-9z" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-                  <path d="M8 12h8M12 8v8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                </svg>
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#0f172a] text-white shrink-0">
+                <NalaKoeLogo size={16} />
               </div>
               NalaKoe
             </Link>

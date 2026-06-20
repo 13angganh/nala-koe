@@ -19,27 +19,42 @@ import type { NoteFilters, CreateNoteInput } from '@/types/note.types';
 
 export const NOTES_QUERY_KEY = 'notes';
 
-export function useNotes(filters: NoteFilters = {}) {
+export interface UseNotesOptions {
+  /** Skip the query entirely until this is true. Default true — set to false to lazy-load (e.g. only fetch when a picker panel is opened). */
+  enabled?: boolean;
+  /**
+   * Whether this query's result should overwrite the global notes-list
+   * store (used by the dashboard / notes list page). Default true.
+   * Set to false when this hook is used purely as a local data source
+   * (e.g. populating a "linked notes" picker inside the note editor) so
+   * unrelated pages' list state isn't clobbered as a side effect of
+   * opening a note for editing.
+   */
+  syncToStore?: boolean;
+}
+
+export function useNotes(filters: NoteFilters = {}, options: UseNotesOptions = {}) {
   const { user } = useAuthStore();
   const { setNotes, setListLoading } = useNotesStore();
+  const { enabled = true, syncToStore = true } = options;
 
   return useQuery({
     queryKey: [NOTES_QUERY_KEY, user?.uid, filters],
     queryFn: async () => {
-      setListLoading(true);
+      if (syncToStore) setListLoading(true);
       try {
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: enabled: !!user?.uid
         const result = await getNotes(user!.uid, filters); // reason: safe — enabled: !!user?.uid prevents execution when user is null
         if (isOk(result)) {
-          setNotes(result.data);
+          if (syncToStore) setNotes(result.data);
           return result.data;
         }
         throw new Error(result.error.message);
       } finally {
-        setListLoading(false);
+        if (syncToStore) setListLoading(false);
       }
     },
-    enabled: !!user?.uid,
+    enabled: !!user?.uid && enabled,
     staleTime: 30_000,
   });
 }

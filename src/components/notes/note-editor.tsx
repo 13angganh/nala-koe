@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
-import { MapPin, CloudSun, Loader2, X } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { X } from 'lucide-react';
 import { useKeyboard } from '@/hooks/use-keyboard';
 import { useGeolocation } from '@/hooks/use-geolocation';
 import { useWeather } from '@/hooks/use-weather';
@@ -13,13 +13,11 @@ import { NoteFormatToolbar } from './note-format-toolbar';
 import { NoteRichEditor } from './note-rich-editor';
 import { NoteEditorToolbar } from './note-editor-toolbar';
 import { AnimatedPanel } from '@/components/shared/animated-panel';
-import { NoteChecklist } from './note-checklist';
 import { NoteChecklistProgress } from './note-checklist-progress';
-import { NoteMoodPicker } from './note-mood-picker';
-import { NoteWeatherBadge } from './note-weather-badge';
-import { NoteTable, deserializeTable, serializeTable } from './note-table';
-import { NoteMathBlock } from './note-math-block';
-import { NoteUrlPreview } from './note-url-preview';
+import { NoteMetaPanel } from './note-meta-panel';
+import { serializeTable } from './note-table';
+import type { deserializeTable } from './note-table';
+import { NoteBlocksRenderer } from './note-blocks-renderer';
 import { NoteFontPicker, fontWeightClass } from './note-font-picker';
 import { NoteTexturePicker, textureClass } from './note-texture-picker';
 import { NoteLinkedNotes } from './note-linked-notes';
@@ -33,11 +31,10 @@ import { NoteReactionBar } from './note-reaction-bar';
 import { NoteHighlightMarker } from './note-highlight-marker';
 import { NoteScheduled } from './note-scheduled';
 import { NoteShareCard } from './note-share-card';
-import { TagInput } from '@/components/tags/tag-input';
 import { Button } from '@/components/ui/button';
 import { useTags } from '@/hooks/use-tags';
 import type { ChecklistItem } from './note-checklist';
-import type { NoteContentBlock, NoteLocation, NoteReaction, NoteHighlight } from '@/types/note.types';
+import type { NoteContentBlock, NoteLocation, NoteReaction, NoteHighlight, NoteSectionKey } from '@/types/note.types';
 import type { MoodId } from '@/types/mood.types';
 import type { WeatherSnapshot } from '@/types/api.types';
 import type { NoteFontWeight, NoteTexture } from '@/types/settings.types';
@@ -98,6 +95,10 @@ interface NoteEditorProps {
   isScheduled?: boolean;
   scheduledAt?: string | null;
   onScheduledChange?: (isScheduled: boolean, scheduledAt: string | null) => void;
+  // Phase 16: hide/unhide
+  hiddenSections?: NoteSectionKey[];
+  onToggleSectionVisibility?: (section: NoteSectionKey) => void;
+  onToggleBlockVisibility?: (blockId: string) => void;
   className?: string;
 }
 
@@ -153,6 +154,11 @@ function UrlPromptBar({
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
+// Stable module-level no-op so optional toggle-handler props always have a
+// consistent function identity, even when the caller doesn't pass one —
+// avoids defeating memoization on the panels that receive these as props.
+const noop = () => {};
+
 export function NoteEditor({
   noteId,
   title,
@@ -202,32 +208,85 @@ export function NoteEditor({
   isScheduled = false,
   scheduledAt = null,
   onScheduledChange,
+  hiddenSections = [],
+  onToggleSectionVisibility,
+  onToggleBlockVisibility,
   className,
 }: NoteEditorProps) {
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const contentRef = useRef<HTMLTextAreaElement | HTMLDivElement>(null);
 
   // Panel visibility
+  // Single state object + one stable toggle callback for all simple
+  // open/closed editor panels, instead of 12 separate useState calls each
+  // paired with its own inline `() => setX(v => !v)` passed straight into
+  // NoteEditorToolbar. Inline arrow functions are a new identity on every
+  // render, which defeats any memoization on the toolbar (it always sees
+  // "changed" props and re-renders). togglePanel below is stable across
+  // renders via useCallback, so the toolbar can be memoized effectively.
   const [isMetaOpen, setIsMetaOpen] = useState(() => Boolean(mood || tags.length > 0 || weather || location));
-  const [isFontOpen, setIsFontOpen] = useState(false);
-  const [isTextureOpen, setIsTextureOpen] = useState(false);
-  const [isLinkedNotesOpen, setIsLinkedNotesOpen] = useState(false);
-  const [isBarcodeOpen, setIsBarcodeOpen] = useState(false);
-  const [isReadAloudOpen, setIsReadAloudOpen] = useState(false);
+  const [panels, setPanels] = useState({
+    font: false,
+    texture: false,
+    linkedNotes: false,
+    barcode: false,
+    readAloud: false,
+    timeCapsule: false,
+    secret: false,
+    versionHistory: false,
+    reaction: false,
+    highlight: false,
+    scheduled: false,
+  });
+  const togglePanel = useCallback((key: keyof typeof panels) => {
+    setPanels((prev) => ({ ...prev, [key]: !prev[key] }));
+  }, []);
+  const isFontOpen = panels.font;
+  const isTextureOpen = panels.texture;
+  const isLinkedNotesOpen = panels.linkedNotes;
+  const isBarcodeOpen = panels.barcode;
+  const isReadAloudOpen = panels.readAloud;
+  const isTimeCapsuleOpen = panels.timeCapsule;
+  const isSecretOpen = panels.secret;
+  const isVersionHistoryOpen = panels.versionHistory;
+  const isReactionOpen = panels.reaction;
+  const isHighlightOpen = panels.highlight;
+  const isScheduledOpen = panels.scheduled;
+
   const [showUrlPrompt, setShowUrlPrompt] = useState(false);
-  const [isTimeCapsuleOpen, setIsTimeCapsuleOpen] = useState(false);
-  const [isSecretOpen, setIsSecretOpen] = useState(false);
-  const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false);
   const [isSecretUnlocked, setIsSecretUnlocked] = useState(!isSecret);
-  const [isReactionOpen, setIsReactionOpen] = useState(false);
-  const [isHighlightOpen, setIsHighlightOpen] = useState(false);
-  const [isScheduledOpen, setIsScheduledOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
+
+  // Stable toggle/open callbacks — declared after their corresponding
+  // useState calls so the setters they close over are already initialized.
+  const toggleMeta = useCallback(() => setIsMetaOpen((v) => !v), []);
+  const toggleFontPanel = useCallback(() => togglePanel('font'), [togglePanel]);
+  const toggleTexturePanel = useCallback(() => togglePanel('texture'), [togglePanel]);
+  const toggleLinkedNotesPanel = useCallback(() => togglePanel('linkedNotes'), [togglePanel]);
+  const toggleBarcodePanel = useCallback(() => togglePanel('barcode'), [togglePanel]);
+  const toggleReadAloudPanel = useCallback(() => togglePanel('readAloud'), [togglePanel]);
+  const toggleTimeCapsulePanel = useCallback(() => togglePanel('timeCapsule'), [togglePanel]);
+  const toggleSecretPanel = useCallback(() => togglePanel('secret'), [togglePanel]);
+  const toggleVersionHistoryPanel = useCallback(() => togglePanel('versionHistory'), [togglePanel]);
+  const toggleReactionPanel = useCallback(() => togglePanel('reaction'), [togglePanel]);
+  const toggleHighlightPanel = useCallback(() => togglePanel('highlight'), [togglePanel]);
+  const toggleScheduledPanel = useCallback(() => togglePanel('scheduled'), [togglePanel]);
+  const openUrlPrompt = useCallback(() => setShowUrlPrompt(true), []);
+  const openSharePanel = useCallback(() => setIsShareOpen(true), []);
 
   const { suggestions, searchSuggestions } = useTags();
   const { requestLocation, isRequesting: isRequestingLocation } = useGeolocation();
   const { fetchWeather, isFetching: isFetchingWeather } = useWeather();
-  const { data: allNotes = [], isLoading: isLoadingNotes } = useNotes({ status: 'active' });
+  // Lazy-loaded: only fetched once the user actually opens the "Catatan
+  // terhubung" panel — opening a note for editing shouldn't pay the cost of
+  // fetching the entire active-notes list every time. `syncToStore: false`
+  // keeps this local to the picker so it doesn't clobber the dashboard's
+  // notes-list store as a side effect of editing an unrelated note.
+  const activeNotesFilter = useMemo(() => ({ status: 'active' as const }), []);
+  const { data: allNotes = [], isLoading: isLoadingNotes } = useNotes(activeNotesFilter, {
+    enabled: isLinkedNotesOpen ?? false,
+    syncToStore: false,
+  });
 
   // ── Auto-resize textareas ─────────────────────────────────────────────────
 
@@ -304,7 +363,7 @@ export function NoteEditor({
 
   // ── Location + Weather ────────────────────────────────────────────────────
 
-  async function handleRequestLocation() {
+  const handleRequestLocation = useCallback(async () => {
     const loc = await requestLocation();
     if (loc) {
       onLocationChange(loc);
@@ -313,7 +372,17 @@ export function NoteEditor({
         if (snap) onWeatherChange(snap);
       }
     }
-  }
+  }, [requestLocation, onLocationChange, weather, fetchWeather, onWeatherChange]);
+
+  const handleFetchWeatherForLocation = useCallback(async () => {
+    if (!location) return;
+    const snap = await fetchWeather(location.latitude, location.longitude);
+    if (snap) onWeatherChange(snap);
+  }, [location, fetchWeather, onWeatherChange]);
+
+  // void-wrapped, stable: NoteMetaPanel expects sync () => void callbacks.
+  const onRequestLocationClick = useCallback(() => { void handleRequestLocation(); }, [handleRequestLocation]);
+  const onFetchWeatherClick = useCallback(() => { void handleFetchWeatherForLocation(); }, [handleFetchWeatherForLocation]);
 
   // ── Barcode ───────────────────────────────────────────────────────────────
 
@@ -321,20 +390,32 @@ export function NoteEditor({
     (value: string, format: string) => {
       const insert = `[Barcode ${format.replace(/_/g, ' ')}: ${value}]`;
       onContentChange(appendPlainLine(content, contentFormat, insert), contentFormat);
-      setIsBarcodeOpen(false);
+      setPanels((prev) => ({ ...prev, barcode: false }));
     },
     [content, contentFormat, onContentChange]
   );
 
   // ── Derived ───────────────────────────────────────────────────────────────
+  // Memoized: blocks.flatMap + JSON.parse and stripHtml(content) are both
+  // non-trivial passes that were previously re-run on every single render
+  // (i.e. every keystroke, since content updates on every keystroke). Now
+  // they only recompute when their actual source data changes.
 
-  const checklistBlocks = blocks.filter((b) => b.type === 'checklist');
-  const allChecklistItems = checklistBlocks.flatMap((b) => {
-    try { return JSON.parse(b.content) as ChecklistItem[]; } catch { return []; }
-  });
-  const plainText = stripHtml(content);
-  const textureCls = textureClass(texture);
-  const fontCls = fontWeightClass(fontWeight);
+  const allChecklistItems = useMemo(() => {
+    return blocks
+      .filter((b) => b.type === 'checklist')
+      .flatMap((b) => {
+        try { return JSON.parse(b.content) as ChecklistItem[]; } catch { return []; }
+      });
+  }, [blocks]);
+
+  // plainText feeds NoteReadAloud, which is only rendered inside its own
+  // collapsed AnimatedPanel — but we still avoid recomputing it on every
+  // keystroke by memoizing on content.
+  const plainText = useMemo(() => stripHtml(content), [content]);
+
+  const textureCls = useMemo(() => textureClass(texture), [texture]);
+  const fontCls = useMemo(() => fontWeightClass(fontWeight), [fontWeight]);
 
   return (
     <div className={cn('flex flex-col h-full', className)}>
@@ -350,38 +431,38 @@ export function NoteEditor({
         onInsertChecklist={handleInsertChecklist}
         onInsertTable={onInsertTable}
         onInsertMath={onInsertMath}
-        onInsertUrlPreview={() => setShowUrlPrompt(true)}
-        onToggleMeta={() => setIsMetaOpen((v) => !v)}
+        onInsertUrlPreview={openUrlPrompt}
+        onToggleMeta={toggleMeta}
         isMetaOpen={isMetaOpen ?? false}
-        onToggleFont={() => setIsFontOpen((v) => !v)}
+        onToggleFont={toggleFontPanel}
         isFontOpen={isFontOpen ?? false}
-        onToggleTexture={() => setIsTextureOpen((v) => !v)}
+        onToggleTexture={toggleTexturePanel}
         isTextureOpen={isTextureOpen ?? false}
-        onToggleLinkedNotes={() => setIsLinkedNotesOpen((v) => !v)}
+        onToggleLinkedNotes={toggleLinkedNotesPanel}
         isLinkedNotesOpen={isLinkedNotesOpen ?? false}
-        onToggleBarcode={() => setIsBarcodeOpen((v) => !v)}
+        onToggleBarcode={toggleBarcodePanel}
         isBarcodeOpen={isBarcodeOpen ?? false}
-        onToggleReadAloud={() => setIsReadAloudOpen((v) => !v)}
+        onToggleReadAloud={toggleReadAloudPanel}
         isReadAloudOpen={isReadAloudOpen ?? false}
-        onToggleTimeCapsule={() => setIsTimeCapsuleOpen((v) => !v)}
+        onToggleTimeCapsule={toggleTimeCapsulePanel}
         isTimeCapsuleOpen={isTimeCapsuleOpen ?? false}
         isTimeCapsuleActive={isTimeCapsule}
-        onToggleSecret={() => setIsSecretOpen((v) => !v)}
+        onToggleSecret={toggleSecretPanel}
         isSecretOpen={isSecretOpen ?? false}
         isSecretActive={isSecret}
-        onToggleVersionHistory={() => setIsVersionHistoryOpen((v) => !v)}
+        onToggleVersionHistory={toggleVersionHistoryPanel}
         isVersionHistoryOpen={isVersionHistoryOpen ?? false}
         // Phase 8
-        onToggleReaction={() => setIsReactionOpen((v) => !v)}
+        onToggleReaction={toggleReactionPanel}
         isReactionOpen={isReactionOpen ?? false}
         isReactionActive={!!reaction}
-        onToggleHighlight={() => setIsHighlightOpen((v) => !v)}
+        onToggleHighlight={toggleHighlightPanel}
         isHighlightOpen={isHighlightOpen ?? false}
         // Phase 9
-        {...(onScheduledChange ? { onToggleScheduled: () => setIsScheduledOpen((v) => !v) } : {})}
+        {...(onScheduledChange ? { onToggleScheduled: toggleScheduledPanel } : {})}
         isScheduledOpen={isScheduledOpen ?? false}
         isScheduledActive={isScheduled}
-        onShare={() => setIsShareOpen(true)}
+        onShare={openSharePanel}
       />
 
       {/* Scrollable editor body */}
@@ -422,53 +503,25 @@ export function NoteEditor({
 
           {/* Meta panel */}
           <AnimatedPanel show={isMetaOpen ?? false}>
-            <section aria-label="Metadata catatan" className="rounded-xl border border-[var(--border)] bg-[var(--surface-subtle)] p-4 space-y-4">
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-[var(--text-secondary)]">Mood</p>
-                <NoteMoodPicker value={mood} onChange={onMoodChange} />
-              </div>
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-[var(--text-secondary)]">Tag</p>
-                <TagInput value={tags} onChange={onTagsChange} suggestions={suggestions} onSearchChange={(q) => void searchSuggestions(q)} />
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                {location ? (
-                  <div className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface-base)] px-2.5 py-1.5">
-                    <MapPin className="h-3.5 w-3.5 text-[var(--text-tertiary)] shrink-0" />
-                    <span className="text-xs text-[var(--text-secondary)] max-w-[160px] truncate">
-                      {location.placeName ?? `${location.latitude.toFixed(3)}, ${location.longitude.toFixed(3)}`}
-                    </span>
-                    <button type="button" onClick={() => { onLocationChange(null); onWeatherChange(null); }} aria-label="Hapus lokasi" className="ml-1 text-[var(--text-tertiary)] hover:text-[var(--error)] outline-none focus-visible:ring-1 rounded">
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                ) : (
-                  <Button variant="outline" size="sm" onClick={() => void handleRequestLocation()} disabled={isRequestingLocation || isFetchingWeather} className="h-7 text-xs gap-1.5">
-                    {isRequestingLocation || isFetchingWeather ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MapPin className="h-3.5 w-3.5" />}
-                    {isRequestingLocation ? 'Mencari lokasi…' : isFetchingWeather ? 'Mengambil cuaca…' : 'Tambah lokasi'}
-                  </Button>
-                )}
-                {weather && (
-                  <div className="flex items-center gap-1.5">
-                    <NoteWeatherBadge weather={weather} compact />
-                    <button type="button" onClick={() => onWeatherChange(null)} aria-label="Hapus cuaca" className="text-[var(--text-tertiary)] hover:text-[var(--error)] outline-none focus-visible:ring-1 rounded">
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                )}
-                {!weather && location && (
-                  <Button variant="ghost" size="sm" onClick={async () => { const snap = await fetchWeather(location.latitude, location.longitude); if (snap) onWeatherChange(snap); }} disabled={isFetchingWeather} className="h-7 text-xs gap-1.5">
-                    {isFetchingWeather ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CloudSun className="h-3.5 w-3.5" />}
-                    Tambah cuaca
-                  </Button>
-                )}
-              </div>
-              {language && (
-                <p className="text-xs text-[var(--text-tertiary)]">
-                  Bahasa terdeteksi: <span className="font-medium">{language.toUpperCase()}</span>
-                </p>
-              )}
-            </section>
+            <NoteMetaPanel
+              mood={mood}
+              onMoodChange={onMoodChange}
+              tags={tags}
+              onTagsChange={onTagsChange}
+              tagSuggestions={suggestions}
+              onTagSearchChange={(q) => void searchSuggestions(q)}
+              weather={weather}
+              onWeatherChange={onWeatherChange}
+              location={location}
+              onLocationChange={onLocationChange}
+              onRequestLocation={onRequestLocationClick}
+              isRequestingLocation={isRequestingLocation}
+              isFetchingWeather={isFetchingWeather}
+              onFetchWeatherForLocation={onFetchWeatherClick}
+              language={language}
+              hiddenSections={hiddenSections}
+              onToggleSection={onToggleSectionVisibility ?? noop}
+            />
           </AnimatedPanel>
 
           {/* Linked notes panel */}
@@ -506,7 +559,7 @@ export function NoteEditor({
               <NoteTimeCapsuleLock
                 isTimeCapsule={isTimeCapsule}
                 timeCapsuleUnlockAt={timeCapsuleUnlockAt}
-                onTimeCapsuleChange={onTimeCapsuleChange ?? (() => {})}
+                onTimeCapsuleChange={onTimeCapsuleChange ?? noop}
               />
             </section>
           </AnimatedPanel>
@@ -518,7 +571,7 @@ export function NoteEditor({
                 noteId={noteId}
                 isSecret={isSecret}
                 isUnlocked={isSecretUnlocked}
-                onSecretChange={onSecretChange ?? (() => {})}
+                onSecretChange={onSecretChange ?? noop}
                 onUnlock={() => setIsSecretUnlocked(true)}
                 onLock={() => setIsSecretUnlocked(false)}
               />
@@ -576,7 +629,7 @@ export function NoteEditor({
               <NoteScheduled
                 isScheduled={isScheduled}
                 scheduledAt={scheduledAt ?? null}
-                onChange={onScheduledChange ?? (() => {})}
+                onChange={onScheduledChange ?? noop}
               />
             </section>
           </AnimatedPanel>
@@ -585,60 +638,16 @@ export function NoteEditor({
           {allChecklistItems.length > 0 && <NoteChecklistProgress items={allChecklistItems} />}
 
           {/* All blocks */}
-          {blocks.map((block) => {
-            if (block.type === 'checklist') {
-              let items: ChecklistItem[] = [];
-              try { items = JSON.parse(block.content) as ChecklistItem[]; } catch { /* skip */ }
-              return (
-                <div key={block.id} className="space-y-2">
-                  <NoteChecklist items={items} onChange={(updated) => handleChecklistChange(block.id, updated)} />
-                </div>
-              );
-            }
+          <NoteBlocksRenderer
+            blocks={blocks}
+            onChecklistChange={handleChecklistChange}
+            onTableChange={handleTableChange}
+            onMathChange={handleMathChange}
+            onUrlPreviewFetched={handleUrlPreviewFetched}
+            onRemoveBlock={handleRemoveBlock}
+            onToggleBlockVisibility={onToggleBlockVisibility ?? noop}
+          />
 
-            if (block.type === 'table') {
-              return (
-                <div key={block.id} className="space-y-1">
-                  <NoteTable data={deserializeTable(block.content)} onChange={(data) => handleTableChange(block.id, data)} />
-                  <button type="button" onClick={() => handleRemoveBlock(block.id)} aria-label="Hapus tabel" className="text-xs text-[var(--text-tertiary)] hover:text-[var(--error)] outline-none focus-visible:ring-1 rounded">
-                    Hapus tabel
-                  </button>
-                </div>
-              );
-            }
-
-            if (block.type === 'math') {
-              return (
-                <div key={block.id} className="space-y-1">
-                  <NoteMathBlock expression={block.content} onChange={(expr) => handleMathChange(block.id, expr)} />
-                  <button type="button" onClick={() => handleRemoveBlock(block.id)} aria-label="Hapus kalkulasi" className="text-xs text-[var(--text-tertiary)] hover:text-[var(--error)] outline-none focus-visible:ring-1 rounded">
-                    Hapus kalkulasi
-                  </button>
-                </div>
-              );
-            }
-
-            if (block.type === 'url-preview') {
-              let previewData: UrlPreviewData | null = null;
-              let rawUrl = '';
-              try {
-                const parsed = JSON.parse(block.content) as { url: string; meta: UrlPreviewData['meta']; cachedAt: string | null };
-                rawUrl = parsed.url;
-                if (parsed.meta) previewData = { url: parsed.url, meta: parsed.meta, cachedAt: parsed.cachedAt ?? new Date().toISOString() };
-              } catch { /* skip */ }
-              return (
-                <NoteUrlPreview
-                  key={block.id}
-                  previewData={previewData}
-                  rawUrl={rawUrl}
-                  onPreviewFetched={(data) => handleUrlPreviewFetched(block.id, data)}
-                  onRemove={() => handleRemoveBlock(block.id)}
-                />
-              );
-            }
-
-            return null;
-          })}
 
           {/* URL prompt */}
           <AnimatedPanel show={showUrlPrompt}>
@@ -713,6 +722,7 @@ export function NoteEditor({
           reaction: null,
           linkedNoteIds: [],
           highlights: [],
+          hiddenSections,
           wordCount,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
