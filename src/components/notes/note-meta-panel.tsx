@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { TagInput } from '@/components/tags/tag-input';
 import { NoteMoodPicker } from './note-mood-picker';
 import { NoteWeatherBadge } from './note-weather-badge';
-import { NoteVisibilityToggle, NoteHiddenCollapsedRow } from './note-visibility-toggle';
+import { NoteSectionHeader, NoteHiddenCollapsedRow } from './note-visibility-toggle';
 import type { MoodId } from '@/types/mood.types';
 import type { WeatherSnapshot } from '@/types/api.types';
 import type { NoteLocation, NoteSectionKey } from '@/types/note.types';
@@ -37,11 +37,12 @@ interface NoteMetaPanelProps {
  * this panel only needs to re-render when its own slice of note data
  * changes, not on every keystroke in the title/content editor.
  *
- * Each sub-section (mood, tags, weather+location) carries its own
- * NoteVisibilityToggle so the user can hide it from the note's visible
- * layout — without clearing the underlying value — when the note is long
- * and they want a shorter view. A hidden section collapses to a single
- * dashed placeholder row.
+ * Each sub-section (mood, tags, weather+location) carries the same
+ * NoteSectionHeader (label left, eye toggle right) used identically across
+ * the whole editor, so the user can hide it from the note's visible layout
+ * — without clearing the underlying value — when the note is long and they
+ * want a shorter view. A hidden section collapses to a single dashed
+ * placeholder row, same component as hidden content blocks.
  */
 function NoteMetaPanelImpl({
   mood,
@@ -70,10 +71,7 @@ function NoteMetaPanelImpl({
     <section aria-label="Metadata catatan" className="rounded-xl border border-[var(--border)] bg-[var(--surface-subtle)] p-4 space-y-4">
       {/* Mood */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <p className="text-xs font-medium text-[var(--text-secondary)]">Mood</p>
-          <NoteVisibilityToggle isHidden={isMoodHidden} onToggle={() => onToggleSection('mood')} label="mood" />
-        </div>
+        <NoteSectionHeader label="Mood" isHidden={isMoodHidden} onToggleVisibility={() => onToggleSection('mood')} />
         {isMoodHidden ? (
           <NoteHiddenCollapsedRow label="Mood" onToggle={() => onToggleSection('mood')} />
         ) : (
@@ -83,10 +81,7 @@ function NoteMetaPanelImpl({
 
       {/* Tags */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <p className="text-xs font-medium text-[var(--text-secondary)]">Tag</p>
-          <NoteVisibilityToggle isHidden={isTagsHidden} onToggle={() => onToggleSection('tags')} label="tag" />
-        </div>
+        <NoteSectionHeader label="Tag" isHidden={isTagsHidden} onToggleVisibility={() => onToggleSection('tags')} />
         {isTagsHidden ? (
           <NoteHiddenCollapsedRow label="Tag" onToggle={() => onToggleSection('tags')} />
         ) : (
@@ -97,10 +92,7 @@ function NoteMetaPanelImpl({
       {/* Weather + Location */}
       <div className="space-y-2">
         {(weather || location) && (
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-medium text-[var(--text-secondary)]">Cuaca &amp; Lokasi</p>
-            <NoteVisibilityToggle isHidden={isWeatherHidden} onToggle={() => onToggleSection('weather')} label="cuaca dan lokasi" />
-          </div>
+          <NoteSectionHeader label="Cuaca & Lokasi" isHidden={isWeatherHidden} onToggleVisibility={() => onToggleSection('weather')} />
         )}
         {isWeatherHidden && (weather || location) ? (
           <NoteHiddenCollapsedRow label="Cuaca & lokasi" onToggle={() => onToggleSection('weather')} />

@@ -401,9 +401,14 @@ export function NoteEditor({
   // (i.e. every keystroke, since content updates on every keystroke). Now
   // they only recompute when their actual source data changes.
 
+  // Hidden checklist blocks must be excluded here too — otherwise the
+  // progress bar at the bottom of the editor would still count items from a
+  // checklist the user just hid, making the "hide" action look broken (the
+  // block itself disappears from view, but its item count keeps showing
+  // elsewhere). isHidden defaults to false for legacy blocks with no flag.
   const allChecklistItems = useMemo(() => {
     return blocks
-      .filter((b) => b.type === 'checklist')
+      .filter((b) => b.type === 'checklist' && !(b.isHidden ?? false))
       .flatMap((b) => {
         try { return JSON.parse(b.content) as ChecklistItem[]; } catch { return []; }
       });

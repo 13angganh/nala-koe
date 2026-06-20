@@ -93,11 +93,15 @@ export function useNoteEditor(noteId: string) {
   const scheduleAutoSave = useCallback(
     (input: UpdateNoteInput) => {
       pendingInputRef.current = { ...pendingInputRef.current, ...input };
+      // eslint-disable-next-line no-console -- temporary debug instrumentation, see README Sesi 19
+      console.log('[DEBUG tags] scheduleAutoSave merged pending ->', JSON.stringify(pendingInputRef.current));
       if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
       autoSaveTimer.current = setTimeout(() => {
         const merged = pendingInputRef.current;
         pendingInputRef.current = {};
         autoSaveTimer.current = null;
+        // eslint-disable-next-line no-console -- temporary debug instrumentation, see README Sesi 19
+        console.log('[DEBUG tags] firing saveMutation.mutate with ->', JSON.stringify(merged));
         saveMutation.mutate(merged);
       }, AUTO_SAVE_DELAY);
     },
@@ -195,6 +199,8 @@ export function useNoteEditor(noteId: string) {
 
   const handleTagsChange = useCallback(
     (tags: string[]) => {
+      // eslint-disable-next-line no-console -- temporary debug instrumentation, see README Sesi 19
+      console.log('[DEBUG tags] handleTagsChange called with:', tags);
       updateActiveNote({ tags });
       setIsDirty(true);
       scheduleAutoSave({ tags });

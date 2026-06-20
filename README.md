@@ -2,7 +2,7 @@
 
 > *Nala* (Jawa/Sanskerta: pikiran, hati nurani) + *Koe* (milikku) — catatan pribadimu yang hidup dan bernapas.
 
-**v1.1.1** · Next.js 16 · React 19 · Firebase · PWA
+**v1.1.3** · Next.js 16 · React 19 · Firebase · PWA
 
 ---
 
@@ -245,6 +245,62 @@ RTDB **belum diaktifkan** — `src/lib/firebase.ts` mengekspor `rtdb` sebagai `n
 ## Changelog
 
 > **README.md adalah satu-satunya sumber kebenaran untuk dokumentasi project ini.** Tidak ada file `.md` lain di repo (CHANGES.md, readme-nala-koe.md, RTDB_ACTIVATION.md, dll. dari sesi-sesi sebelumnya sudah dihapus/digabung ke sini). Setiap perubahan, fix, patch, atau update — sekecil apa pun — dicatat sebagai entry baru di bagian ini, paling atas, dengan format `### vX.Y.Z — tanggal (Sesi N)`. Jangan membuat file dokumentasi terpisah lagi; tambahkan ke README.md ini saja.
+
+### v1.1.3 — 20 Jun 2026 (Sesi 20)
+**Kemungkinan root cause bug tag ditemukan: Firestore rules tidak ter-deploy dengan benar · Write verification · Index scheduled notes diperbaiki**
+
+**Temuan dari analisis Firebase Console (screenshot user):**
+
+- `error_logs` collection menunjukkan entry nyata: `context: "notes.version.save.failed"`, `message: "Missing or insufficient permissions"` — FirebaseError dari Security Rules yang menolak write ke subcollection `notes/{noteId}/versions`. Field `tags` pada dokumen note terkonfirmasi tersimpan sebagai `(array)` kosong `[]` di Firestore (bukan `null` — jadi tipe data sudah benar, tapi datanya memang kosong).
+
+**fix(deploy): `firebase.json` mereferensikan `database.rules.json` (RTDB) padahal RTDB belum diaktifkan di project.** Ini berpotensi membuat `firebase deploy` gagal total — termasuk gagal mendeploy `firestore.rules` yang benar — sehingga rules versi lama (kemungkinan tanpa block `match /versions/{versionId}`, atau lebih ketat untuk field tertentu) yang masih aktif di Firebase Console, tidak sinkron dengan `firestore.rules` di kode. Entry `"database"` dihapus dari `firebase.json` sampai RTDB benar-benar diaktifkan (lihat [Deployment](#deployment) untuk langkah aktivasi).
+
+**fix(reliability): `saveVersion()` sekarang hanya dipanggil saat title/content/blocks berubah** (bukan di setiap auto-save tags/mood/weather/dll). Version history secara semantik memang untuk melacak perubahan tulisan, bukan metadata kecil — sekaligus mengurangi titik kegagalan karena setiap save tags sebelumnya ikut memicu read+write ke subcollection `versions` yang terbukti gagal permission di production.
+
+**feat(reliability): write verification setelah save tags/mood.** `updateNote()` sekarang membaca ulang dokumen segera setelah `updateDoc()` dan membandingkan dengan data yang dikirim. Ini mengatasi kemungkinan race condition di mana `updateDoc()` resolve dari local optimistic cache (Firestore offline persistence aktif dengan `persistentMultipleTabManager`) sebelum write benar-benar terkonfirmasi/ditolak oleh server — sebelumnya kegagalan semacam ini bisa membuat promise tetap resolve sukses padahal data di server tidak berubah, tanpa toast error apa pun ke user. Sekarang jika verifikasi gagal, muncul toast error eksplisit "Tag gagal tersimpan" alih-alih kegagalan senyap.
+
+**fix(index): composite index untuk `getScheduledNotes()` query salah urutan field** (`error_logs` menunjukkan `stats.scheduled.failed` — "query requires an index"). Index lama punya field `isPinned` yang tidak dipakai query ini dan urutan field tidak cocok kombinasi `where('userId') + where('isScheduled') + where('status') + orderBy('scheduledAt')`. Index baru ditambahkan dengan urutan field yang persis sesuai.
+
+**Langkah yang perlu dilakukan secara manual (tidak bisa dilakukan dari sini):**
+
+Jalankan dari terminal dengan Firebase CLI ter-autentikasi ke project `nala-koe`:
+```bash
+firebase deploy --only firestore:rules,firestore:indexes
+```
+Ini akan memastikan `firestore.rules` dan `firestore.indexes.json` versi terbaru di repo benar-benar aktif di Firebase Console — bukan hanya tersimpan di kode. Setelah deploy, coba lagi tambah tag pada catatan; jika instrumentasi debug (Console browser, F12) menunjukkan `[DEBUG tags] write verification read-back` dengan `foundTags` yang cocok dengan `sentTags`, berarti root cause sudah teratasi.
+
+Files: `firebase.json`, `firestore.indexes.json`, `src/services/notes.service.ts`
+
+---
+
+### v1.1.2 — 20 Jun 2026 (Sesi 19)
+**Fix: checklist tersembunyi masih muncul di progress bar · Konsistensi total hide/unhide & hapus di semua block · Instrumentasi debug untuk bug tag**
+
+**Bug nyata ditemukan & diperbaiki:**
+
+- **fix(checklist):** ketika sebuah block checklist disembunyikan (hide), item-itemnya **masih ikut dihitung** di `NoteChecklistProgress` (progress bar) — block-nya hilang dari tampilan utama tapi jumlah item & persentase di progress bar tetap menampilkan data dari checklist yang disembunyikan. Akar masalah: `allChecklistItems` di `note-editor.tsx` melakukan filter `b.type === 'checklist'` tanpa mengecualikan `b.isHidden`. Sekarang dikecualikan dengan benar.
+- **fix(url-preview):** block Pratinjau Tautan **memang sudah** punya toggle hide/unhide di kode (tidak pernah benar-benar hilang), tapi penempatannya tidak konsisten — tombol hapus (X) ada di **dalam** kartu preview sebagai overlay hover-only yang nyaris tak terlihat, sementara toggle mata ditaruh terpisah di baris berbeda. Ini akar dari keluhan "inkonsistensi" — checklist tidak punya tombol hapus sama sekali, table/math pakai teks "Hapus X", url-preview pakai ikon X hover-only — empat pola berbeda untuk satu fitur yang sama.
+
+**Redesign total: satu pola untuk semua block & section**
+
+- **refactor(editor):** komponen baru `NoteBlockHeader` (di `note-visibility-toggle.tsx`) — header standar untuk SEMUA block (Checklist/Tabel/Kalkulasi/Pratinjau Tautan): label di kiri, ikon mata + ikon tong sampah di kanan, **selalu terlihat** (tidak ada lagi yang hover-only), **selalu di posisi yang sama**, **selalu ikon yang sama**. Checklist sekarang punya tombol hapus untuk pertama kalinya. `NoteUrlPreview` dapat prop baru `hideRemoveButton` untuk menonaktifkan tombol X internalnya tanpa mengganggu alur fetch preview (perbaikan dari kesalahan saya sendiri di percobaan pertama yang sempat memakai prop `readOnly` — itu salah, karena ikut menyembunyikan tombol "Pratinjau" yang masih dibutuhkan).
+- **refactor(editor):** komponen baru `NoteSectionHeader` untuk section meta (Mood/Tag/Cuaca & Lokasi) — visual identik dengan `NoteBlockHeader` (tanpa ikon hapus, karena section bukan block yang bisa dihapus). Section dan block sekarang terlihat sebagai SATU fitur yang konsisten, bukan dua pola berbeda.
+
+**Tentang bug tag yang dilaporkan belum teratasi:**
+
+Saya melakukan audit menyeluruh dengan automated testing (bukan cuma membaca kode) terhadap seluruh jalur data tag: `TagInput` → `NoteMetaPanel` → `NoteEditor` → `useNoteEditor` hook → `updateNote` Firestore service, termasuk simulasi race condition timing dan pemeriksaan internal `@tanstack/react-query`'s `useMutation` source code. Semua jalur **lulus** test otomatis dengan hasil benar — `tags` selalu sampai dengan utuh ke `updateDoc()` baik dipanggil sendiri maupun bersamaan dengan perubahan mood.
+
+Karena saya tidak bisa mereproduksi bug ini di sandbox (tidak ada akses ke Firestore project Anda / browser nyata), saya menambahkan **instrumentasi debug sementara** (`console.log('[DEBUG tags] ...')`) di 4 titik kritis:
+1. `TagInput.addTag()` — saat tag diketik & Enter ditekan
+2. `useNoteEditor.handleTagsChange()` — saat diterima dari UI
+3. `useNoteEditor.scheduleAutoSave()` — saat di-merge ke antrian simpan
+4. `notes.service.updateNote()` — persis sebelum dikirim ke Firestore
+
+**Cara pakai:** buka DevTools Console (F12) di browser saat reproduce bug — ketik tag lalu Enter. Baris log mana yang **tidak muncul**, atau muncul dengan data yang salah, akan langsung menunjukkan di titik mana persisnya tag hilang. Mohon kirimkan screenshot/copy console log tersebut agar saya bisa memperbaiki dengan tepat sasaran, bukan menebak. Log ini akan dihapus begitu root cause ditemukan dan diperbaiki.
+
+Files: `src/components/notes/note-editor.tsx`, `src/components/notes/note-visibility-toggle.tsx`, `src/components/notes/note-blocks-renderer.tsx`, `src/components/notes/note-meta-panel.tsx`, `src/components/notes/note-url-preview.tsx`, `src/hooks/use-note-editor.ts` (debug log), `src/services/notes.service.ts` (debug log), `src/components/tags/tag-input.tsx` (debug log)
+
+---
 
 ### v1.1.1 — 20 Jun 2026 (Sesi 18)
 **Konsistensi brand logo · Konsolidasi dokumentasi**

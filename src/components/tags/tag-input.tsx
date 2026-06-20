@@ -41,7 +41,13 @@ export function TagInput({
 
   function addTag(tag: string) {
     const clean = tag.trim().toLowerCase().replace(/\s+/g, '-');
-    if (!clean || value.includes(clean) || value.length >= maxTags) return;
+    // eslint-disable-next-line no-console -- temporary debug instrumentation, see README Sesi 19
+    console.log('[DEBUG tags] addTag() called, raw:', tag, 'clean:', clean, 'current value:', value, 'maxTags:', maxTags);
+    if (!clean || value.includes(clean) || value.length >= maxTags) {
+      // eslint-disable-next-line no-console -- temporary debug instrumentation, see README Sesi 19
+      console.log('[DEBUG tags] addTag() BLOCKED by guard');
+      return;
+    }
     onChange([...value, clean]);
     setInputValue('');
     setShowSuggestions(false);

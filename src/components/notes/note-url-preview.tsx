@@ -23,7 +23,16 @@ interface NoteUrlPreviewProps {
   rawUrl: string;
   onPreviewFetched: (data: UrlPreviewData) => void;
   onRemove: () => void;
-  readOnly?: boolean;
+  /**
+   * Hides this component's own internal delete (X) buttons across all three
+   * render states (unfetched/error/preview-card). Use when the parent
+   * already renders its own delete control elsewhere (e.g.
+   * NoteBlockHeader's trash icon in note-blocks-renderer.tsx) so there's
+   * exactly one delete affordance per block, not two competing ones.
+   * Does NOT affect fetch/retry behavior — "Pratinjau" and "Coba lagi"
+   * still render and work normally.
+   */
+  hideRemoveButton?: boolean;
   className?: string;
 }
 
@@ -44,7 +53,7 @@ export function NoteUrlPreview({
   rawUrl,
   onPreviewFetched,
   onRemove,
-  readOnly = false,
+  hideRemoveButton = false,
   className,
 }: NoteUrlPreviewProps) {
   const { fetchMeta, isFetching, error } = useUrlMeta();
@@ -65,7 +74,7 @@ export function NoteUrlPreview({
   const hasImage = !imgError && !!meta?.image;
 
   // ── Unfetched state ──────────────────────────────────────────────────────
-  if (!previewData && !readOnly) {
+  if (!previewData) {
     return (
       <div
         className={cn(
@@ -91,7 +100,7 @@ export function NoteUrlPreview({
           )}
           {isFetching ? 'Memuat…' : 'Pratinjau'}
         </Button>
-        {!readOnly && (
+        {!hideRemoveButton && (
           <button
             type="button"
             onClick={onRemove}
@@ -125,7 +134,7 @@ export function NoteUrlPreview({
         <Button variant="ghost" size="sm" onClick={() => void handleFetch()} className="h-6 text-xs">
           Coba lagi
         </Button>
-        {!readOnly && (
+        {!hideRemoveButton && (
           <button type="button" onClick={onRemove} aria-label="Hapus link" className="p-1 hover:text-[var(--error)] rounded outline-none focus-visible:ring-1 focus-visible:ring-[var(--error)]">
             <X className="h-3 w-3" />
           </button>
@@ -147,7 +156,7 @@ export function NoteUrlPreview({
       )}
     >
       {/* Remove button */}
-      {!readOnly && (
+      {!hideRemoveButton && (
         <button
           type="button"
           onClick={onRemove}

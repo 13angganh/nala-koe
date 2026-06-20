@@ -243,14 +243,27 @@ export async function updateNote(
       return err('notes/not-found', 'Catatan tidak ditemukan');
     }
 
-    // Save version snapshot before update
-    const existing = normalizeNote(snap.id, snap.data() as Record<string, unknown>);
-    await saveVersion(noteId, existing);
+    // Save version snapshot only when content-bearing fields change — not on
+    // every metadata-only save (tags, mood, weather, etc.). Version history
+    // tracks writing changes; making a new snapshot every time someone adds
+    // a tag would be semantically meaningless AND means every tag/mood save
+    // pays the cost of an extra Firestore read+write (and surfaces an extra
+    // failure point if the versions subcollection's rules ever reject the
+    // write — that failure is non-fatal here, but better to not trigger it
+    // unnecessarily on saves that have nothing to do with content history).
+    const touchesContent = input.title !== undefined || input.content !== undefined || input.blocks !== undefined;
+    if (touchesContent) {
+      const existing = normalizeNote(snap.id, snap.data() as Record<string, unknown>);
+      await saveVersion(noteId, existing);
+    }
 
     const updates: Record<string, unknown> = {
       ...input,
       updatedAt: serverTimestamp(),
     };
+
+    // eslint-disable-next-line no-console -- temporary debug instrumentation, see README Sesi 19
+    console.log('[DEBUG tags] updateNote() sending to Firestore updateDoc ->', JSON.stringify(input));
 
     if (input.content !== undefined) {
       const { wordCount } = analyzeContent(input.content);
@@ -258,6 +271,29 @@ export async function updateNote(
     }
 
     await updateDoc(ref, updates);
+
+    // ── Write verification ────────────────────────────────────────────────
+    // Defensive check: with offline persistence + multi-tab manager enabled,
+    // it's possible in rare edge cases (auth token not yet fully attached to
+    // the write request, security rules rejecting the write server-side)
+    // for updateDoc()'s promise to resolve from the local optimistic cache
+    // even though the write is later rejected by the server — silently
+    // leaving Firestore's actual stored data unchanged while the app
+    // believes the save succeeded. We read the document back immediately
+    // and compare the fields we just sent; if they don't match, the write
+    // didn't really take effect server-side and we surface that as an
+    // explicit error instead of silently losing the user's data.
+    if ('tags' in input || 'mood' in input) {
+      const verifySnap = await getDoc(ref);
+      const verifyData = verifySnap.data();
+      // eslint-disable-next-line no-console -- temporary debug instrumentation, see README Sesi 19
+      console.log('[DEBUG tags] write verification read-back ->', JSON.stringify({ sentTags: input.tags, foundTags: verifyData?.tags, sentMood: input.mood, foundMood: verifyData?.mood }));
+      if ('tags' in input && JSON.stringify(verifyData?.tags ?? []) !== JSON.stringify(input.tags ?? [])) {
+        logger.error('notes.update.verify_failed', { noteId, field: 'tags', sent: input.tags, found: verifyData?.tags });
+        return err('notes/update-failed', 'Tag gagal tersimpan — periksa koneksi atau coba lagi');
+      }
+    }
+
     logger.info('notes.update', { noteId, userId });
     return ok(undefined);
   } catch (error) {

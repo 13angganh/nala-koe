@@ -5,7 +5,7 @@ import { NoteChecklist, type ChecklistItem } from './note-checklist';
 import { NoteTable, deserializeTable } from './note-table';
 import { NoteMathBlock } from './note-math-block';
 import { NoteUrlPreview, type UrlPreviewData } from './note-url-preview';
-import { NoteVisibilityToggle, NoteHiddenCollapsedRow } from './note-visibility-toggle';
+import { NoteBlockHeader, NoteHiddenCollapsedRow } from './note-visibility-toggle';
 import type { NoteContentBlock } from '@/types/note.types';
 
 const BLOCK_LABEL: Record<string, string> = {
@@ -31,11 +31,15 @@ interface NoteBlocksRendererProps {
  * within the project's line-count target and so this list only re-renders
  * when `blocks` itself changes — not on every title/content keystroke.
  *
- * Each block carries a NoteVisibilityToggle next to its delete action: the
- * user can collapse a block out of the note's visible layout (data stays
- * intact, e.g. table cells, checklist items) without deleting it — useful
- * for shortening a long note. A hidden block collapses to a single dashed
- * placeholder row that restores it on click.
+ * EVERY block type renders the exact same NoteBlockHeader (label + eye
+ * toggle + trash, always visible, always in that order) above its content.
+ * This was previously inconsistent — checklist had no delete button at all,
+ * url-preview's delete button was a hover-only X buried inside the card
+ * with no eye toggle next to it, table/math had a text-link "Hapus X" with
+ * the toggle as an afterthought. Block-specific delete UI (the hover-X
+ * inside NoteUrlPreview, etc.) is suppressed via the readOnly prop, so
+ * there's exactly ONE way to hide and ONE way to delete each block, always
+ * in the same place.
  */
 function NoteBlocksRendererImpl({
   blocks,
@@ -66,10 +70,13 @@ function NoteBlocksRendererImpl({
           let items: ChecklistItem[] = [];
           try { items = JSON.parse(block.content) as ChecklistItem[]; } catch { /* skip */ }
           return (
-            <div key={block.id} className="space-y-2">
-              <div className="flex items-center justify-end gap-1">
-                <NoteVisibilityToggle isHidden={false} onToggle={() => onToggleBlockVisibility(block.id)} label="checklist" />
-              </div>
+            <div key={block.id} className="space-y-1.5">
+              <NoteBlockHeader
+                label={label}
+                isHidden={false}
+                onToggleVisibility={() => onToggleBlockVisibility(block.id)}
+                onDelete={() => onRemoveBlock(block.id)}
+              />
               <NoteChecklist items={items} onChange={(updated) => onChecklistChange(block.id, updated)} />
             </div>
           );
@@ -77,38 +84,28 @@ function NoteBlocksRendererImpl({
 
         if (block.type === 'table') {
           return (
-            <div key={block.id} className="space-y-1">
+            <div key={block.id} className="space-y-1.5">
+              <NoteBlockHeader
+                label={label}
+                isHidden={false}
+                onToggleVisibility={() => onToggleBlockVisibility(block.id)}
+                onDelete={() => onRemoveBlock(block.id)}
+              />
               <NoteTable data={deserializeTable(block.content)} onChange={(data) => onTableChange(block.id, data)} />
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => onRemoveBlock(block.id)}
-                  aria-label="Hapus tabel"
-                  className="text-xs text-[var(--text-tertiary)] hover:text-[var(--error)] outline-none focus-visible:ring-1 rounded"
-                >
-                  Hapus tabel
-                </button>
-                <NoteVisibilityToggle isHidden={false} onToggle={() => onToggleBlockVisibility(block.id)} label="tabel" />
-              </div>
             </div>
           );
         }
 
         if (block.type === 'math') {
           return (
-            <div key={block.id} className="space-y-1">
+            <div key={block.id} className="space-y-1.5">
+              <NoteBlockHeader
+                label={label}
+                isHidden={false}
+                onToggleVisibility={() => onToggleBlockVisibility(block.id)}
+                onDelete={() => onRemoveBlock(block.id)}
+              />
               <NoteMathBlock expression={block.content} onChange={(expr) => onMathChange(block.id, expr)} />
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => onRemoveBlock(block.id)}
-                  aria-label="Hapus kalkulasi"
-                  className="text-xs text-[var(--text-tertiary)] hover:text-[var(--error)] outline-none focus-visible:ring-1 rounded"
-                >
-                  Hapus kalkulasi
-                </button>
-                <NoteVisibilityToggle isHidden={false} onToggle={() => onToggleBlockVisibility(block.id)} label="kalkulasi" />
-              </div>
             </div>
           );
         }
@@ -122,16 +119,24 @@ function NoteBlocksRendererImpl({
             if (parsed.meta) previewData = { url: parsed.url, meta: parsed.meta, cachedAt: parsed.cachedAt ?? new Date().toISOString() };
           } catch { /* skip */ }
           return (
-            <div key={block.id} className="space-y-1">
+            <div key={block.id} className="space-y-1.5">
+              <NoteBlockHeader
+                label={label}
+                isHidden={false}
+                onToggleVisibility={() => onToggleBlockVisibility(block.id)}
+                onDelete={() => onRemoveBlock(block.id)}
+              />
+              {/* hideRemoveButton suppresses NoteUrlPreview's own internal
+                  hover-X delete buttons — deletion now happens exclusively
+                  through the NoteBlockHeader trash icon above, like every
+                  other block type. Fetch/retry behavior is unaffected. */}
               <NoteUrlPreview
                 previewData={previewData}
                 rawUrl={rawUrl}
                 onPreviewFetched={(data) => onUrlPreviewFetched(block.id, data)}
                 onRemove={() => onRemoveBlock(block.id)}
+                hideRemoveButton
               />
-              <div className="flex justify-end">
-                <NoteVisibilityToggle isHidden={false} onToggle={() => onToggleBlockVisibility(block.id)} label="pratinjau tautan" />
-              </div>
             </div>
           );
         }

@@ -1,6 +1,6 @@
 'use client';
 
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface NoteVisibilityToggleProps {
@@ -39,6 +39,73 @@ export function NoteVisibilityToggle({ isHidden, onToggle, label, size = 'xs', c
     >
       <Icon className={size === 'xs' ? 'h-3.5 w-3.5' : 'h-4 w-4'} aria-hidden="true" />
     </button>
+  );
+}
+
+interface NoteBlockHeaderProps {
+  /** Block type label shown on the left, e.g. "Checklist", "Tabel". */
+  label: string;
+  isHidden: boolean;
+  onToggleVisibility: () => void;
+  onDelete: () => void;
+  /** aria-label suffix for the delete button, e.g. "Hapus tabel". Defaults to "Hapus {label}". */
+  deleteLabel?: string;
+}
+
+/**
+ * Standardized header row for every content block (checklist, table, math,
+ * url-preview) — label on the left, eye toggle + trash on the right, always
+ * visible (never hover-only), always in the same order, same icon set, same
+ * size. Every block type renders exactly this header, so hide/unhide and
+ * delete are never in a different place, a different icon, or missing
+ * entirely depending on which block you're looking at.
+ */
+export function NoteBlockHeader({ label, isHidden, onToggleVisibility, onDelete, deleteLabel }: NoteBlockHeaderProps) {
+  return (
+    <div className="flex items-center justify-between px-0.5">
+      <span className="text-xs font-medium text-[var(--text-tertiary)]">{label}</span>
+      <div className="flex items-center gap-0.5">
+        <NoteVisibilityToggle isHidden={isHidden} onToggle={onToggleVisibility} label={label} />
+        <button
+          type="button"
+          onClick={onDelete}
+          aria-label={deleteLabel ?? `Hapus ${label.toLowerCase()}`}
+          title={deleteLabel ?? `Hapus ${label.toLowerCase()}`}
+          className={cn(
+            'inline-flex items-center justify-center rounded-md outline-none transition-colors h-6 w-6',
+            'text-[var(--text-tertiary)] hover:bg-[var(--error-subtle)] hover:text-[var(--error)]',
+            'focus-visible:ring-1 focus-visible:ring-[var(--error)]'
+          )}
+        >
+          <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+interface NoteSectionHeaderProps {
+  label: string;
+  isHidden: boolean;
+  onToggleVisibility: () => void;
+}
+
+/**
+ * Header for meta sections (Mood, Tag, Cuaca & Lokasi) — visually identical
+ * to NoteBlockHeader's left label + right-aligned eye toggle, minus the
+ * trash icon (sections aren't deletable the way a table/checklist block
+ * is — clearing a mood or removing all tags is done through the section's
+ * own controls, not a block-level delete). Keeping label position, toggle
+ * position, icon, and size identical to NoteBlockHeader is what makes
+ * hide/unhide read as ONE consistent feature across the whole editor
+ * instead of a different pattern per area.
+ */
+export function NoteSectionHeader({ label, isHidden, onToggleVisibility }: NoteSectionHeaderProps) {
+  return (
+    <div className="flex items-center justify-between px-0.5">
+      <span className="text-xs font-medium text-[var(--text-tertiary)]">{label}</span>
+      <NoteVisibilityToggle isHidden={isHidden} onToggle={onToggleVisibility} label={label} />
+    </div>
   );
 }
 
