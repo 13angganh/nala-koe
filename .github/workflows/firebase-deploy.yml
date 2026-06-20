@@ -19,15 +19,15 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
 
       - name: Write service account key
-        run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > $HOME/service-account.json
+        run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/service-account.json
 
       - name: Deploy Firestore Rules & Indexes
         run: firebase deploy --only firestore:rules,firestore:indexes --project nala-koe
         env:
-          GOOGLE_APPLICATION_CREDENTIALS: $HOME/service-account.json
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/service-account.json
