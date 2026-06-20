@@ -16,10 +16,18 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Deploy Firestore Rules & Indexes
-        uses: w9jds/firebase-action@master
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          args: deploy --only firestore:rules,firestore:indexes
+          node-version: '20'
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Write service account key
+        run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > $HOME/service-account.json
+
+      - name: Deploy Firestore Rules & Indexes
+        run: firebase deploy --only firestore:rules,firestore:indexes --project nala-koe
         env:
-          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          PROJECT_ID: nala-koe
+          GOOGLE_APPLICATION_CREDENTIALS: $HOME/service-account.json
