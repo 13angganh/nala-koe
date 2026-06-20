@@ -1,0 +1,25 @@
+name: Firebase Deploy
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'firestore.rules'
+      - 'firestore.indexes.json'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Deploy Firestore Rules & Indexes
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only firestore:rules,firestore:indexes
+        env:
+          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          PROJECT_ID: nala-koe
