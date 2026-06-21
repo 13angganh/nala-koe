@@ -2,7 +2,7 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-//update			
+
     // ─── UID WHITELIST ────────────────────────────────────────────────────────
     // Hanya UID yang terdaftar di sini yang bisa mengakses data.
     // Tambah atau hapus UID sesuai kebutuhan.
@@ -164,5 +164,3 @@ service cloud.firestore {
     }
   }
 }
-// test
-// fix

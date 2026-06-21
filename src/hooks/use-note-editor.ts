@@ -1,11 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/auth.store';
 import { useNotesStore } from '@/stores/notes.store';
-import { getNoteById, updateNote } from '@/services/notes.service';
+import { subscribeToNote, updateNote } from '@/services/notes.service';
 import { isOk } from '@/lib/normalizer';
 import { analyzeContent, estimateReadingTime } from '@/lib/reading-time';
 import { detectLanguage } from '@/lib/language-detector';
@@ -32,28 +32,54 @@ export function useNoteEditor(noteId: string) {
   const pendingInputRef = useRef<UpdateNoteInput>({});
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [isDirty, setIsDirty] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
+  const isEnabled = !!user?.uid && !!noteId;
 
-  // Load note
-  const { isLoading, isError } = useQuery({
-    queryKey: [NOTES_QUERY_KEY, noteId, user?.uid],
-    queryFn: async () => {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: enabled: !!user?.uid
-      const result = await getNoteById(noteId, user!.uid);
-      if (!isOk(result)) throw new Error(result.error.message);
-      // Defensive guard: if a refetch lands while the user has unsaved edits
-      // still sitting in the auto-save debounce window (pendingInputRef),
-      // re-apply those edits on top of the freshly-fetched server data so
-      // they're never silently discarded. This matters for any path that
-      // can trigger a refetch of THIS query while the editor is open —
-      // window refocus, reconnect, manual invalidation elsewhere, etc.
-      const pending = pendingInputRef.current;
-      const merged = Object.keys(pending).length > 0 ? { ...result.data, ...pending } : result.data;
-      setActiveNote(merged);
-      return merged;
-    },
-    enabled: !!user?.uid && !!noteId,
-    staleTime: 60_000,
-  });
+  // Live subscription to the note while it's open for editing — replaces a
+  // one-shot getDoc() fetch. This is what actually fixes tags/mood/etc.
+  // appearing to "not save": with a one-shot fetch, any path that triggers
+  // a refetch of this note (invalidateQueries elsewhere, window refocus,
+  // tab visibility change) reads via getDoc(), which Firestore's JS SDK can
+  // return as a partial/stale snapshot immediately after a write is still
+  // settling (documented SDK behavior, firebase-js-sdk#6739) — overwriting
+  // local state with an incomplete picture of the document. A live
+  // onSnapshot() listener instead receives a fresh, complete callback each
+  // time the document actually changes (both the optimistic local write
+  // and, again, once the server confirms it), so the editor naturally
+  // converges on whatever Firestore really ends up storing.
+  //
+  // setIsLoading/setIsError are only ever called from inside the
+  // subscribeToNote callbacks below (onData/onError) — both genuinely async
+  // events arriving from an external system (Firestore), not synchronous
+  // calls in the effect body itself.
+  useEffect(() => {
+    if (!isEnabled) return;
+    const unsubscribe = subscribeToNote(
+      noteId,
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: isEnabled guards both user?.uid and noteId
+      user!.uid,
+      (note) => {
+        // Defensive guard: if a snapshot lands while the user has unsaved
+        // edits still sitting in the auto-save debounce window
+        // (pendingInputRef), re-apply those edits on top of the fresh
+        // server data so they're never silently discarded by an
+        // in-flight server round-trip for a DIFFERENT field.
+        const pending = pendingInputRef.current;
+        const merged = Object.keys(pending).length > 0 ? { ...note, ...pending } : note;
+        setActiveNote(merged);
+        setIsLoading(false);
+        setIsError(false);
+      },
+      (message) => {
+        toast.error(message);
+        setIsLoading(false);
+        setIsError(true);
+      }
+    );
+    return () => unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reason: intentionally re-subscribes only when noteId/user.uid/isEnabled change; setActiveNote is a stable Zustand setter
+  }, [noteId, user?.uid, isEnabled]);
 
   // Save mutation
   const saveMutation = useMutation({
@@ -67,22 +93,12 @@ export function useNoteEditor(noteId: string) {
       setSaving(false);
       setLastSavedAt(new Date());
       setIsDirty(false);
-      // IMPORTANT: We deliberately do NOT invalidate this note's own detail
-      // query ([NOTES_QUERY_KEY, noteId, user.uid]). Doing so would refetch
-      // from Firestore and call setActiveNote(), overwriting any local edit
-      // that's still sitting in the auto-save debounce window (not yet
-      // written) — silently reverting fields like tags that the user just
-      // typed. The active note is already the source of truth locally; we
-      // only need OTHER views (notes list, recent notes, stats, dashboards)
-      // to refetch so they reflect this save.
-      void qc.invalidateQueries({
-        queryKey: [NOTES_QUERY_KEY],
-        predicate: (query) => {
-          const [, key1, key2] = query.queryKey;
-          const isThisNoteDetail = key1 === noteId && key2 === user?.uid;
-          return !isThisNoteDetail;
-        },
-      });
+      // The currently-open note no longer needs a query invalidation to
+      // stay in sync — it's on a live onSnapshot() subscription (see the
+      // effect above) that picks up the confirmed write automatically.
+      // We still invalidate OTHER views (notes list, recent notes, stats,
+      // dashboards) so they reflect this save too.
+      void qc.invalidateQueries({ queryKey: [NOTES_QUERY_KEY] });
     },
     onError: (error: Error) => {
       setSaving(false);

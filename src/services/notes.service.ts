@@ -12,7 +12,9 @@ import {
   limit,
   serverTimestamp,
   Timestamp,
+  onSnapshot,
   type QueryConstraint,
+  type Unsubscribe,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { logger } from '@/lib/logger';
@@ -179,6 +181,52 @@ export async function getNoteById(
   }
 }
 
+/**
+ * Subscribes to live updates for a single note via onSnapshot, instead of a
+ * one-shot getDoc(). Used by useNoteEditor while a note is open for
+ * editing so the UI always reflects confirmed Firestore state — including
+ * the result of the app's OWN writes once they're acknowledged by the
+ * server, sidestepping the documented Firestore JS SDK behavior where a
+ * getDoc() issued immediately after a pending write can return only the
+ * just-written fields (firebase-js-sdk#6739) rather than the full merged
+ * document. onSnapshot's callback fires once for the optimistic local
+ * write and again when the server confirms it — by listening continuously
+ * rather than reading once, the editor naturally converges on whatever
+ * Firestore actually ends up storing, without a fragile manual read-back
+ * check.
+ *
+ * Calls onError with a user-facing message if the snapshot listener itself
+ * errors (e.g. permission-denied) — this is the most direct signal
+ * available that a write may be silently failing security rules.
+ */
+export function subscribeToNote(
+  noteId: string,
+  userId: string,
+  onData: (note: Note) => void,
+  onError: (message: string) => void
+): Unsubscribe {
+  const ref = doc(db, COLLECTION, noteId);
+  return onSnapshot(
+    ref,
+    (snap) => {
+      if (!snap.exists()) {
+        onError('Catatan tidak ditemukan');
+        return;
+      }
+      const data = snap.data() as Record<string, unknown>;
+      if (data.userId !== userId) {
+        onError('Tidak diizinkan mengakses catatan ini');
+        return;
+      }
+      onData(normalizeNote(snap.id, data));
+    },
+    (error) => {
+      logger.error('notes.subscribe.failed', { error, noteId });
+      onError('Gagal memuat pembaruan catatan — periksa koneksi');
+    }
+  );
+}
+
 export async function getNotes(
   userId: string,
   filters: NoteFilters = {}
@@ -272,27 +320,16 @@ export async function updateNote(
 
     await updateDoc(ref, updates);
 
-    // ── Write verification ────────────────────────────────────────────────
-    // Defensive check: with offline persistence + multi-tab manager enabled,
-    // it's possible in rare edge cases (auth token not yet fully attached to
-    // the write request, security rules rejecting the write server-side)
-    // for updateDoc()'s promise to resolve from the local optimistic cache
-    // even though the write is later rejected by the server — silently
-    // leaving Firestore's actual stored data unchanged while the app
-    // believes the save succeeded. We read the document back immediately
-    // and compare the fields we just sent; if they don't match, the write
-    // didn't really take effect server-side and we surface that as an
-    // explicit error instead of silently losing the user's data.
-    if ('tags' in input || 'mood' in input) {
-      const verifySnap = await getDoc(ref);
-      const verifyData = verifySnap.data();
-      // eslint-disable-next-line no-console -- temporary debug instrumentation, see README Sesi 19
-      console.log('[DEBUG tags] write verification read-back ->', JSON.stringify({ sentTags: input.tags, foundTags: verifyData?.tags, sentMood: input.mood, foundMood: verifyData?.mood }));
-      if ('tags' in input && JSON.stringify(verifyData?.tags ?? []) !== JSON.stringify(input.tags ?? [])) {
-        logger.error('notes.update.verify_failed', { noteId, field: 'tags', sent: input.tags, found: verifyData?.tags });
-        return err('notes/update-failed', 'Tag gagal tersimpan — periksa koneksi atau coba lagi');
-      }
-    }
+    // NOTE: A read-back verification was tried here in a previous session
+    // but removed — getDoc() called immediately after updateDoc() while a
+    // write is still pending can return ONLY the just-written fields
+    // (missing the rest of the document), a documented Firestore JS SDK
+    // behavior (see firebase-js-sdk#6739). That made the "verification"
+    // unreliable: it could report failure on a save that actually
+    // succeeded. The real fix for keeping the UI in sync with confirmed
+    // server state is a live onSnapshot() listener on the note while it's
+    // open for editing (see useNoteEditor) rather than a one-shot read
+    // immediately after write.
 
     logger.info('notes.update', { noteId, userId });
     return ok(undefined);

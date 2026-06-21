@@ -2,7 +2,7 @@
 
 > *Nala* (Jawa/Sanskerta: pikiran, hati nurani) + *Koe* (milikku) — catatan pribadimu yang hidup dan bernapas.
 
-**v1.1.3** · Next.js 16 · React 19 · Firebase · PWA
+**v1.2.0** · Next.js 16 · React 19 · Firebase · PWA
 
 ---
 
@@ -245,6 +245,31 @@ RTDB **belum diaktifkan** — `src/lib/firebase.ts` mengekspor `rtdb` sebagai `n
 ## Changelog
 
 > **README.md adalah satu-satunya sumber kebenaran untuk dokumentasi project ini.** Tidak ada file `.md` lain di repo (CHANGES.md, readme-nala-koe.md, RTDB_ACTIVATION.md, dll. dari sesi-sesi sebelumnya sudah dihapus/digabung ke sini). Setiap perubahan, fix, patch, atau update — sekecil apa pun — dicatat sebagai entry baru di bagian ini, paling atas, dengan format `### vX.Y.Z — tanggal (Sesi N)`. Jangan membuat file dokumentasi terpisah lagi; tambahkan ke README.md ini saja.
+
+### v1.2.0 — 20 Jun 2026 (Sesi 21)
+**Root cause bug tag akhirnya ditemukan & diperbaiki secara arsitektur (onSnapshot real-time) · Redesain total konsistensi hide/unhide & hapus di seluruh editor**
+
+**Bug tag — root cause sebenarnya ditemukan:**
+
+Pendekatan "write verification" (baca ulang dokumen setelah `updateDoc`) yang ditambahkan di v1.1.3 saya **cabut** — riset lebih lanjut menemukan ini justru pendekatan yang **tidak reliable**: Firestore JS SDK punya perilaku terdokumentasi ([firebase-js-sdk#6739](https://github.com/firebase/firebase-js-sdk/issues/6739)) di mana `getDoc()` yang dipanggil **segera setelah** sebuah write masih pending bisa mengembalikan **hanya field yang baru ditulis** — bukan dokumen lengkap — sehingga verifikasi semacam itu bisa salah menyimpulkan kegagalan pada save yang sebenarnya berhasil, atau sebaliknya.
+
+**fix(arsitektur): `useNoteEditor` sekarang pakai `onSnapshot` (live listener), bukan `getDoc` satu kali.** Sebelumnya, note yang sedang dibuka diambil sekali via `useQuery` + `getDoc()`, dan disinkronkan ulang lewat `invalidateQueries`. Pola one-shot-fetch ini punya kerentanan struktural terhadap race condition Firestore SDK di atas — setiap kali ada refetch (window refocus, invalidate dari mutasi lain, dll), ada risiko membaca snapshot yang belum settle. Dengan `onSnapshot`, `activeNote` di Zustand sekarang **terus tersambung** ke state Firestore yang sebenarnya — setiap perubahan dokumen (baik dari device ini maupun device lain) otomatis mendorong update lengkap dan terkini ke editor, bukan dibaca ulang secara manual yang rawan baca data parsial. Ini pola resmi yang direkomendasikan Firebase untuk use-case "editor real-time", dan menghilangkan seluruh kelas race condition yang sudah berulang kali muncul di sesi-sesi sebelumnya (v1.1.0, v1.1.3) — bukan ditambal lagi, tapi diganti pendekatannya dari akar.
+
+**Redesain total: konsistensi hide/unhide & hapus di seluruh note editor.**
+
+Audit ulang menemukan kode editor sebenarnya punya **tiga pola interaksi berbeda yang campur aduk** tanpa disadari di sesi-sesi sebelumnya:
+1. Toggle ✓ di menu "Lainnya" untuk **buka/tutup panel kontrol** (Font, Tekstur, Kapsul Waktu, dll.)
+2. Ikon mata 👁 untuk **hide/unhide data yang sudah ditampilkan** (Mood, Tag, block)
+3. **Catatan Terhubung, Reaksi, dan Highlight ternyata sama sekali tidak ikut pola hide/unhide** — field `linkedNotes`/`reaction`/`highlights` sudah ada di tipe `NoteSectionKey` sejak Sesi 17, tapi UI-nya tertinggal: ketiganya masih murni toggle buka/tutup panel seperti kategori 1, tanpa tombol mata sama sekali, dan section-nya hilang total dari tampilan begitu panel ditutup — inilah sumber laporan "ada yang centang/uncentang, ada yang klik/unklik, ada yang hide/unhide, ada yang cuma hapus".
+
+**fix(konsistensi):**
+- **Catatan Terhubung, Reaksi, dan Highlight** sekarang render otomatis di body catatan begitu ada datanya (sama seperti Mood/Tag), dengan `NoteSectionHeader` yang identik — bukan lagi disembunyikan di balik panel "buka/tutup" yang terpisah dari datanya sendiri.
+- Tombol di menu "Lainnya" untuk ketiga fitur ini sekarang: kalau section sedang di-hide → meng-unhide-kannya; kalau sedang visible → membuka picker untuk **menambah** data baru (tautkan catatan lain / lihat opsi reaksi). Dua aksi yang jelas berbeda, tidak lagi tercampur.
+- Font, Tekstur, Kapsul Waktu, Catatan Rahasia, Riwayat Versi, Jadwal, Pindai Barcode, Baca Keras — **tetap** sebagai panel buka/tutup murni (ini sudah benar sejak awal: ini adalah *pengaturan/aksi*, bukan data yang ditampilkan, jadi memang tidak punya — dan tidak butuh — toggle hide/unhide).
+
+Files: `src/hooks/use-note-editor.ts`, `src/services/notes.service.ts`, `src/components/notes/note-editor.tsx`
+
+---
 
 ### v1.1.3 — 20 Jun 2026 (Sesi 20)
 **Kemungkinan root cause bug tag ditemukan: Firestore rules tidak ter-deploy dengan benar · Write verification · Index scheduled notes diperbaiki**

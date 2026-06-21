@@ -20,6 +20,7 @@ import type { deserializeTable } from './note-table';
 import { NoteBlocksRenderer } from './note-blocks-renderer';
 import { NoteFontPicker, fontWeightClass } from './note-font-picker';
 import { NoteTexturePicker, textureClass } from './note-texture-picker';
+import { NoteSectionHeader, NoteHiddenCollapsedRow } from './note-visibility-toggle';
 import { NoteLinkedNotes } from './note-linked-notes';
 import { NoteBarcodeScanner } from './note-barcode-scanner';
 import { NoteReadAloud } from './note-read-aloud';
@@ -243,15 +244,22 @@ export function NoteEditor({
   }, []);
   const isFontOpen = panels.font;
   const isTextureOpen = panels.texture;
-  const isLinkedNotesOpen = panels.linkedNotes;
+  const isLinkedNotesPickerOpen = panels.linkedNotes;
   const isBarcodeOpen = panels.barcode;
   const isReadAloudOpen = panels.readAloud;
   const isTimeCapsuleOpen = panels.timeCapsule;
   const isSecretOpen = panels.secret;
   const isVersionHistoryOpen = panels.versionHistory;
-  const isReactionOpen = panels.reaction;
-  const isHighlightOpen = panels.highlight;
+  const isReactionPanelOpen = panels.reaction;
+  const isHighlightPanelOpen = panels.highlight;
   const isScheduledOpen = panels.scheduled;
+
+  // Derived hidden-state for the three data sections that now render
+  // inline (not behind an open/close panel toggle): Linked Notes, Reaction,
+  // Highlight. Same hiddenSections mechanism as Mood/Tags/Weather.
+  const isLinkedNotesHidden = hiddenSections.includes('linkedNotes');
+  const isReactionHidden = hiddenSections.includes('reaction');
+  const isHighlightsHidden = hiddenSections.includes('highlights');
 
   const [showUrlPrompt, setShowUrlPrompt] = useState(false);
   const [isSecretUnlocked, setIsSecretUnlocked] = useState(!isSecret);
@@ -274,6 +282,28 @@ export function NoteEditor({
   const openUrlPrompt = useCallback(() => setShowUrlPrompt(true), []);
   const openSharePanel = useCallback(() => setIsShareOpen(true), []);
 
+  // Combined entry points from the toolbar's "Lainnya" menu for the three
+  // sections that are now always-visible-with-data instead of
+  // open/close-panel-only: if the section is currently hidden, clicking
+  // "unhides" it (the natural expectation — the menu item said "Catatan
+  // terhubung" was active/checked, so clicking it should bring it back).
+  // Otherwise, it opens the underlying picker/panel for adding new data,
+  // same as before.
+  const handleToggleLinkedNotesEntry = useCallback(() => {
+    if (isLinkedNotesHidden) onToggleSectionVisibility?.('linkedNotes');
+    else toggleLinkedNotesPanel();
+  }, [isLinkedNotesHidden, onToggleSectionVisibility, toggleLinkedNotesPanel]);
+
+  const handleToggleReactionEntry = useCallback(() => {
+    if (isReactionHidden) onToggleSectionVisibility?.('reaction');
+    else toggleReactionPanel();
+  }, [isReactionHidden, onToggleSectionVisibility, toggleReactionPanel]);
+
+  const handleToggleHighlightEntry = useCallback(() => {
+    if (isHighlightsHidden) onToggleSectionVisibility?.('highlights');
+    else toggleHighlightPanel();
+  }, [isHighlightsHidden, onToggleSectionVisibility, toggleHighlightPanel]);
+
   const { suggestions, searchSuggestions } = useTags();
   const { requestLocation, isRequesting: isRequestingLocation } = useGeolocation();
   const { fetchWeather, isFetching: isFetchingWeather } = useWeather();
@@ -284,7 +314,7 @@ export function NoteEditor({
   // notes-list store as a side effect of editing an unrelated note.
   const activeNotesFilter = useMemo(() => ({ status: 'active' as const }), []);
   const { data: allNotes = [], isLoading: isLoadingNotes } = useNotes(activeNotesFilter, {
-    enabled: isLinkedNotesOpen ?? false,
+    enabled: isLinkedNotesPickerOpen || linkedNoteIds.length > 0,
     syncToStore: false,
   });
 
@@ -443,8 +473,8 @@ export function NoteEditor({
         isFontOpen={isFontOpen ?? false}
         onToggleTexture={toggleTexturePanel}
         isTextureOpen={isTextureOpen ?? false}
-        onToggleLinkedNotes={toggleLinkedNotesPanel}
-        isLinkedNotesOpen={isLinkedNotesOpen ?? false}
+        onToggleLinkedNotes={handleToggleLinkedNotesEntry}
+        isLinkedNotesOpen={isLinkedNotesPickerOpen || (linkedNoteIds.length > 0 && !isLinkedNotesHidden)}
         onToggleBarcode={toggleBarcodePanel}
         isBarcodeOpen={isBarcodeOpen ?? false}
         onToggleReadAloud={toggleReadAloudPanel}
@@ -458,11 +488,11 @@ export function NoteEditor({
         onToggleVersionHistory={toggleVersionHistoryPanel}
         isVersionHistoryOpen={isVersionHistoryOpen ?? false}
         // Phase 8
-        onToggleReaction={toggleReactionPanel}
-        isReactionOpen={isReactionOpen ?? false}
+        onToggleReaction={handleToggleReactionEntry}
+        isReactionOpen={isReactionPanelOpen || (!!reaction && !isReactionHidden)}
         isReactionActive={!!reaction}
-        onToggleHighlight={toggleHighlightPanel}
-        isHighlightOpen={isHighlightOpen ?? false}
+        onToggleHighlight={handleToggleHighlightEntry}
+        isHighlightOpen={isHighlightPanelOpen || (highlights.length > 0 && !isHighlightsHidden)}
         // Phase 9
         {...(onScheduledChange ? { onToggleScheduled: toggleScheduledPanel } : {})}
         isScheduledOpen={isScheduledOpen ?? false}
@@ -529,18 +559,29 @@ export function NoteEditor({
             />
           </AnimatedPanel>
 
-          {/* Linked notes panel */}
-          <AnimatedPanel show={isLinkedNotesOpen ?? false}>
-            <section aria-label="Catatan terhubung" className="rounded-xl border border-[var(--border)] bg-[var(--surface-subtle)] p-4">
-              <NoteLinkedNotes
-                linkedNoteIds={linkedNoteIds}
-                currentNoteId={noteId}
-                availableNotes={allNotes}
-                isLoadingNotes={isLoadingNotes}
-                onChange={onLinkedNotesChange}
-              />
-            </section>
-          </AnimatedPanel>
+          {/* Linked notes — always visible when there's data, not a toggle
+              panel, so it follows the same hide/unhide pattern as every
+              other data section (Mood, Tag, blocks) instead of requiring a
+              separate "open panel" step first. The picker for ADDING a link
+              still opens via its own internal "Tautkan" button inside
+              NoteLinkedNotes — that's a distinct action from hiding the
+              section's display. */}
+          {(linkedNoteIds.length > 0 || isLinkedNotesPickerOpen) && (
+            isLinkedNotesHidden ? (
+              <NoteHiddenCollapsedRow label="Catatan terhubung" onToggle={() => onToggleSectionVisibility?.('linkedNotes')} />
+            ) : (
+              <section aria-label="Catatan terhubung" className="rounded-xl border border-[var(--border)] bg-[var(--surface-subtle)] p-4 space-y-2">
+                <NoteSectionHeader label="Catatan terhubung" isHidden={false} onToggleVisibility={() => onToggleSectionVisibility?.('linkedNotes')} />
+                <NoteLinkedNotes
+                  linkedNoteIds={linkedNoteIds}
+                  currentNoteId={noteId}
+                  availableNotes={allNotes}
+                  isLoadingNotes={isLoadingNotes}
+                  onChange={onLinkedNotesChange}
+                />
+              </section>
+            )
+          )}
 
           {/* Barcode scanner panel */}
           <AnimatedPanel show={isBarcodeOpen ?? false}>
@@ -605,28 +646,41 @@ export function NoteEditor({
             </div>
           )}
 
-          {/* ── Phase 8: Reaction Bar ────────────────────────────── */}
-          <AnimatedPanel show={isReactionOpen ?? false}>
-            <section aria-label="Reaksi catatan">
-              <NoteReactionBar
-                noteId={noteId}
-                reaction={reaction ?? null}
-                {...(onReactionChange ? { onReactionChange } : {})}
-              />
-            </section>
-          </AnimatedPanel>
+          {/* ── Reaction — same pattern as Mood: a picker the user can always
+               reach via the toolbar's "Reaksi" entry, with its own
+               hide/unhide once a reaction exists or the panel was opened. */}
+          {(reaction || isReactionPanelOpen) && (
+            isReactionHidden ? (
+              <NoteHiddenCollapsedRow label="Reaksi" onToggle={() => onToggleSectionVisibility?.('reaction')} />
+            ) : (
+              <section aria-label="Reaksi catatan" className="space-y-2">
+                <NoteSectionHeader label="Reaksi" isHidden={false} onToggleVisibility={() => onToggleSectionVisibility?.('reaction')} />
+                <NoteReactionBar
+                  noteId={noteId}
+                  reaction={reaction ?? null}
+                  {...(onReactionChange ? { onReactionChange } : {})}
+                />
+              </section>
+            )
+          )}
 
-          {/* ── Phase 8: Highlight Marker ────────────────────────── */}
-          <AnimatedPanel show={Boolean(isHighlightOpen && content.trim())}>
-            <section aria-label="Highlight catatan">
-              <NoteHighlightMarker
-                noteId={noteId}
-                content={contentFormat === 'html' ? stripHtml(content) : content}
-                highlights={highlights}
-                {...(onHighlightsChange ? { onHighlightsChange } : {})}
-              />
-            </section>
-          </AnimatedPanel>
+          {/* ── Highlight — always visible once the note has highlights;
+               picker for ADDING new highlights opens via the toolbar. */}
+          {(highlights.length > 0 || isHighlightPanelOpen) && content.trim() && (
+            isHighlightsHidden ? (
+              <NoteHiddenCollapsedRow label="Highlight" onToggle={() => onToggleSectionVisibility?.('highlights')} />
+            ) : (
+              <section aria-label="Highlight catatan" className="space-y-2">
+                <NoteSectionHeader label="Highlight" isHidden={false} onToggleVisibility={() => onToggleSectionVisibility?.('highlights')} />
+                <NoteHighlightMarker
+                  noteId={noteId}
+                  content={contentFormat === 'html' ? stripHtml(content) : content}
+                  highlights={highlights}
+                  {...(onHighlightsChange ? { onHighlightsChange } : {})}
+                />
+              </section>
+            )
+          )}
 
           {/* ── Phase 9: Scheduled Note ───────────────────────── */}
           <AnimatedPanel show={Boolean(isScheduledOpen && onScheduledChange)}>
