@@ -6,7 +6,7 @@
 //   - Images: StaleWhileRevalidate, 7 days
 //   - Offline fallback: /offline
 
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = '1.2.1';
 const CACHE_STATIC = `nk-static-${CACHE_VERSION}`;
 const CACHE_PAGES = `nk-pages-${CACHE_VERSION}`;
 const CACHE_IMAGES = `nk-images-${CACHE_VERSION}`;
@@ -25,7 +25,18 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_STATIC).then((cache) => cache.addAll(STATIC_ASSETS))
   );
-  self.skipWaiting();
+  // No automatic self.skipWaiting() here — activation is deferred until the
+  // user explicitly confirms via the "Muat ulang" toast action (see
+  // use-service-worker.ts), which posts a SKIP_WAITING message. Activating
+  // immediately would let the new SW start intercepting fetches for a page
+  // whose already-loaded JS still expects the old version, risking
+  // mismatched runtime state mid-session.
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 // ─── Activate ─────────────────────────────────────────────────────────────────

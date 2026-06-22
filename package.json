@@ -1,9 +1,10 @@
 {
   "name": "nalakoe",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
+    "prebuild": "node scripts/inject-sw-version.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --max-warnings 0",

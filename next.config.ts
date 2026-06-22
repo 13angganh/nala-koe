@@ -1,5 +1,17 @@
 // next.config.ts — konfigurasi Next.js 16
 import type { NextConfig } from 'next';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
+// App version is read from package.json at build time and exposed as
+// NEXT_PUBLIC_APP_VERSION — this is the ONLY source of truth for the
+// version shown in Settings (src/app/(protected)/settings/page.tsx).
+// Previously that string was hardcoded ("Versi 1.0.0") and never updated
+// across multiple releases, so the UI kept showing 1.0.0 long after the
+// actual deployed version had moved on. Bumping package.json's "version"
+// field is now the only thing needed — the UI follows automatically on
+// the next build/deploy.
+const packageJson = JSON.parse(readFileSync(join(__dirname, 'package.json'), 'utf-8')) as { version: string };
 
 // ─── Security headers ───────────────────────────────────────────────────────
 
@@ -35,6 +47,10 @@ const securityHeaders = [
 
 const config: NextConfig = {
   reactStrictMode: true,
+
+  env: {
+    NEXT_PUBLIC_APP_VERSION: packageJson.version,
+  },
 
   // Next.js 16: eslint key removed — use CLI flag instead (no-op here, lint runs separately)
   typescript: { ignoreBuildErrors: false },

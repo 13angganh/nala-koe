@@ -114,7 +114,7 @@ export default function SettingsPage() {
           </Button>
         </section>
 
-        <p className="text-center text-sm text-[var(--text-tertiary)]">NalaKoe · Versi 1.0.0</p>
+        <p className="text-center text-sm text-[var(--text-tertiary)]">NalaKoe · Versi {process.env.NEXT_PUBLIC_APP_VERSION}</p>
       </motion.div>
     </SettingsShell>
   );

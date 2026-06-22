@@ -2,7 +2,7 @@
 
 > *Nala* (Jawa/Sanskerta: pikiran, hati nurani) + *Koe* (milikku) — catatan pribadimu yang hidup dan bernapas.
 
-**v1.2.0** · Next.js 16 · React 19 · Firebase · PWA
+**v1.2.1** · Next.js 16 · React 19 · Firebase · PWA
 
 ---
 
@@ -245,6 +245,27 @@ RTDB **belum diaktifkan** — `src/lib/firebase.ts` mengekspor `rtdb` sebagai `n
 ## Changelog
 
 > **README.md adalah satu-satunya sumber kebenaran untuk dokumentasi project ini.** Tidak ada file `.md` lain di repo (CHANGES.md, readme-nala-koe.md, RTDB_ACTIVATION.md, dll. dari sesi-sesi sebelumnya sudah dihapus/digabung ke sini). Setiap perubahan, fix, patch, atau update — sekecil apa pun — dicatat sebagai entry baru di bagian ini, paling atas, dengan format `### vX.Y.Z — tanggal (Sesi N)`. Jangan membuat file dokumentasi terpisah lagi; tambahkan ke README.md ini saja.
+
+### v1.2.1 — 21 Jun 2026 (Sesi 22)
+**Fix: versi di Pengaturan selalu tampil "1.0.0" · Fix: service worker tidak pernah update setelah deploy baru**
+
+Anda melaporkan bahwa meski Vercel berhasil deploy `update v1.2.0` (terbukti dari screenshot deployment history), halaman Pengaturan di aplikasi masih menampilkan **"Versi 1.0.0"** dan tidak ada perubahan yang terasa. Dua bug nyata ditemukan dan diperbaiki:
+
+**fix(settings): versi hardcoded — `"NalaKoe · Versi 1.0.0"` di Settings page adalah string literal** yang tidak pernah diubah meski `package.json` sudah di-bump berkali-kali ke 1.1.0 → 1.2.0. Sekarang dibaca dari `process.env.NEXT_PUBLIC_APP_VERSION` yang di-inject saat build dari `package.json`. Diverifikasi langsung: bundle JS statis mengandung `"Versi ","1.2.1"` — tidak hardcoded lagi.
+
+**fix(pwa): service worker tidak pernah mendeteksi update** — inilah alasan perubahan kode tidak sampai ke device yang sudah install PWA, bahkan setelah deploy Vercel berhasil:
+- `public/sw.js` punya `CACHE_VERSION = 'v1'` yang **hardcoded permanen** — file-nya tidak pernah berubah byte-per-byte antar deploy, sehingga browser tidak pernah mendeteksi ada service worker baru untuk di-install, dan terus melayani JS bundle lama via CacheFirst strategy tanpa batas.
+- Saat `updatefound` terdeteksi (kalau pun SW baru sempat ter-detect), kode hanya melakukan `console.warn(...)` — **tidak pernah benar-benar memberi tahu user**, apalagi mengaktifkan SW baru.
+
+**Yang diperbaiki:**
+- `scripts/inject-sw-version.mjs` — script baru yang **otomatis meng-update `CACHE_VERSION` di `sw.js`** sebelum setiap build dengan versi dari `package.json`. Dijalankan via `"prebuild"` hook di `package.json` (npm lifecycle, dieksekusi otomatis oleh `npm run build` termasuk di Vercel). Diverifikasi: setiap build menghasilkan output `[inject-sw-version] public/sw.js CACHE_VERSION -> 1.2.1`; setiap rilis baru otomatis menghasilkan file `sw.js` yang berbeda byte-nya → browser mendeteksi SW baru → cache lama (`nk-static-1.2.0`, dst) dihapus → JS bundle terbaru diambil dari network → app benar-benar update.
+- `src/hooks/use-service-worker.ts` — sekarang menampilkan **toast "Versi baru NalaKoe tersedia"** dengan tombol **"Muat ulang"** saat SW baru siap aktif, alih-alih log ke console. Reload terjadi sesudah user konfirmasi (bukan otomatis di tengah sesi yang bisa menyebabkan mismatch state). Juga mendeteksi update saat tab kembali ke foreground (`visibilitychange`).
+- `public/sw.js` — `self.skipWaiting()` dipindah dari `install` event (otomatis) ke `message` listener dengan type `SKIP_WAITING` — SW baru menunggu konfirmasi user via toast sebelum take over, bukan langsung memotong sesi yang sedang berjalan.
+- `src/lib/register-sw.ts` — **dihapus** (dead code — fungsi `registerServiceWorker` didefinisikan tapi tidak pernah dipanggil dari mana pun, hanya membingungkan).
+
+Files: `next.config.ts`, `package.json` (prebuild hook), `scripts/inject-sw-version.mjs` (baru), `public/sw.js`, `src/hooks/use-service-worker.ts`, `src/app/(protected)/settings/page.tsx`, `src/lib/register-sw.ts` (dihapus)
+
+---
 
 ### v1.2.0 — 20 Jun 2026 (Sesi 21)
 **Root cause bug tag akhirnya ditemukan & diperbaiki secara arsitektur (onSnapshot real-time) · Redesain total konsistensi hide/unhide & hapus di seluruh editor**
