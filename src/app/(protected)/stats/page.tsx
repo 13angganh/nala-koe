@@ -1,8 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { BarChart2, TrendingUp, Smile, Tag, CalendarClock, Flame } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { animation } from '@/tokens/animation';
+import { useSettingsStore } from '@/stores/settings.store';
 import {
   useWritingStats,
   useMoodInsights,
@@ -43,6 +46,7 @@ type WritingMode = 'notes' | 'words';
 export default function StatsPage() {
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [writingMode, setWritingMode] = useState<WritingMode>('notes');
+  const animationsEnabled = useSettingsStore((s) => s.preferences.enableAnimations ?? true);
 
   const { data: writingStats, isLoading: loadingWriting } = useWritingStats();
   const { data: moodInsights = [], isLoading: loadingMood } = useMoodInsights();
@@ -79,7 +83,19 @@ export default function StatsPage() {
         ))}
       </div>
 
-      <div className="space-y-6">
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={activeTab}
+          className="space-y-6"
+          {...(animationsEnabled
+            ? {
+                initial: animation.variants.fadeIn.initial,
+                animate: animation.variants.fadeIn.animate,
+                exit: animation.variants.fadeIn.exit,
+                transition: animation.variants.fadeIn.transition,
+              }
+            : {})}
+        >
         {activeTab === 'overview' && (
           <section aria-label="Ringkasan statistik">
             <StatsOverview stats={writingStats} isLoading={loadingWriting} />
@@ -194,7 +210,8 @@ export default function StatsPage() {
             <ScheduledNotesPanel notes={scheduledNotes} isLoading={loadingScheduled} />
           </section>
         )}
-      </div>
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }

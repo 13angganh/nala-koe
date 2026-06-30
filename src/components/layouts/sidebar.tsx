@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { ROUTES } from '@/constants/routes';
 import { useUiStore } from '@/stores/ui.store';
 import { SidebarNav } from './sidebar-nav';
+import { NalaKoeLogo } from '@/components/shared/nalakoe-logo';
 
 export function Sidebar() {
   const sidebarOpen = useUiStore((s) => s.sidebarOpen);
@@ -24,11 +25,8 @@ export function Sidebar() {
         href={ROUTES.DASHBOARD}
         className="flex h-14 shrink-0 items-center gap-2.5 border-b border-[var(--border)] px-4"
       >
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--accent)] text-white shrink-0">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M12 3C7 3 3 7 3 12s4 9 9 9 9-4 9-9-4-9-9-9z" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-            <path d="M8 12h8M12 8v8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-          </svg>
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#0f172a] text-white shrink-0">
+          <NalaKoeLogo size={16} />
         </div>
         <span className="font-semibold text-[var(--text-primary)] truncate">NalaKoe</span>
       </Link>

@@ -41,7 +41,13 @@ export function TagInput({
 
   function addTag(tag: string) {
     const clean = tag.trim().toLowerCase().replace(/\s+/g, '-');
-    if (!clean || value.includes(clean) || value.length >= maxTags) return;
+    // eslint-disable-next-line no-console -- temporary debug instrumentation, see README Sesi 19
+    console.log('[DEBUG tags] addTag() called, raw:', tag, 'clean:', clean, 'current value:', value, 'maxTags:', maxTags);
+    if (!clean || value.includes(clean) || value.length >= maxTags) {
+      // eslint-disable-next-line no-console -- temporary debug instrumentation, see README Sesi 19
+      console.log('[DEBUG tags] addTag() BLOCKED by guard');
+      return;
+    }
     onChange([...value, clean]);
     setInputValue('');
     setShowSuggestions(false);
@@ -151,7 +157,7 @@ export function TagInput({
           aria-label="Saran tag"
           className={cn(
             'absolute top-full left-0 right-0 z-[var(--z-dropdown)] mt-1',
-            'rounded-lg border border-[var(--border)] bg-[var(--surface-overlay)]',
+            'rounded-lg border border-[var(--border)] bg-[var(--surface-base)]',
             'shadow-[var(--shadow-md)] py-1 max-h-48 overflow-y-auto'
           )}
         >

@@ -19,7 +19,7 @@ import {
   Globe,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+import { cn, stripHtml } from '@/lib/utils';
 import { formatRelativeTime } from '@/lib/format';
 import { getCardAccentColor, getTimeGradient } from '@/lib/color-gradient';
 import { Button } from '@/components/ui/button';
@@ -76,7 +76,7 @@ interface CardPreviewProps {
 function CardPreview({ note, styleId, accentColor, gradient }: CardPreviewProps) {
   const moodOption = note.mood ? MOOD_MAP[note.mood] : null;
   const MoodIcon = moodOption ? (MOOD_ICONS[moodOption.icon] ?? MinusCircle) : null;
-  const preview = note.content.slice(0, 240);
+  const preview = stripHtml(note.content).slice(0, 240);
 
   const baseCard = 'relative overflow-hidden rounded-2xl p-6 w-full aspect-[4/3] flex flex-col gap-3 select-none';
 
@@ -244,7 +244,7 @@ export function NoteShareCard({ note, open, onClose }: NoteShareCardProps) {
           await navigator.share({ files: [file], title: note.title || 'Catatan NalaKoe' });
         } else {
           // Fallback: share text
-          await share({ title: note.title || 'Catatan NalaKoe', text: note.content.slice(0, 200) });
+          await share({ title: note.title || 'Catatan NalaKoe', text: stripHtml(note.content).slice(0, 200) });
         }
       } catch (err) {
         if (err instanceof Error && err.name !== 'AbortError') {
@@ -255,7 +255,7 @@ export function NoteShareCard({ note, open, onClose }: NoteShareCardProps) {
       }
     } else {
       // Desktop fallback — copy title + snippet
-      await share({ title: note.title || 'Catatan NalaKoe', text: note.content.slice(0, 200) });
+      await share({ title: note.title || 'Catatan NalaKoe', text: stripHtml(note.content).slice(0, 200) });
     }
   }, [canShare, note, share]);
 

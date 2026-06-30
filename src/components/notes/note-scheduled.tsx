@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { CalendarClock, X, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
@@ -20,7 +20,7 @@ const PRESETS = [
 ];
 
 function addHours(h: number): string {
-  return new Date(Date.now() + h * 3600_000).toISOString().slice(0, 16);
+  return new Date(Date.now() + h * 3600_000).toISOString();
 }
 
 function formatScheduledAt(iso: string): string {
@@ -40,16 +40,28 @@ function minDateTime(): string {
 }
 
 export function NoteScheduled({ isScheduled, scheduledAt, onChange }: NoteScheduledProps) {
-  const [customValue, setCustomValue] = useState<string>(
-    scheduledAt ? scheduledAt.slice(0, 16) : addHours(24)
+  // Lazy initializer: addHours(24) calls Date.now(), which must not run
+  // directly in the render body (React Compiler flags it as an impure call
+  // during render — it would also mean every render computes a fresh "now"
+  // even though we only want this as the ONE-TIME default for uncontrolled
+  // local state). The () => ... form only runs once, on mount.
+  const [customValue, setCustomValue] = useState<string>(() =>
+    scheduledAt ? scheduledAt.slice(0, 16) : addHours(24).slice(0, 16)
   );
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
 
-  function handlePreset(hours: number) {
-    const iso = new Date(Date.now() + hours * 3600_000).toISOString();
-    setCustomValue(iso.slice(0, 16));
-    onChange(true, iso);
-  }
+  // useCallback (rather than a plain function declaration) makes explicit
+  // that this is an event-handler-only function, never called during
+  // render — addHours()'s Date.now() call is safe here since it only runs
+  // in response to a user click.
+  const handlePreset = useCallback(
+    (hours: number) => {
+      const iso = addHours(hours);
+      setCustomValue(iso.slice(0, 16));
+      onChange(true, iso);
+    },
+    [onChange]
+  );
 
   function handleCustomChange(val: string) {
     setCustomValue(val);

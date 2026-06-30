@@ -62,7 +62,7 @@ export function SettingsShell({ children }: SettingsShellProps) {
                   'flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-colors',
                   active
                     ? 'bg-[var(--accent)] text-white font-medium'
-                    : 'text-[var(--text-secondary)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]'
+                    : 'text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]'
                 )}
               >
                 <Icon className="h-4 w-4 shrink-0" aria-hidden />

@@ -76,7 +76,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="id" suppressHydrationWarning>
       <head>
-        {/* eslint-disable-next-line react/no-danger -- required for no-flash theme init */}
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className={`${fontSans.variable} ${fontMono.variable} antialiased`}>

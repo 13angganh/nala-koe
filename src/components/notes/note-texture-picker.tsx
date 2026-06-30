@@ -113,7 +113,6 @@ export function NoteTexturePicker({ value, onChange, className }: NoteTexturePic
               viewBox="0 0 40 40"
               className="absolute inset-0 w-full h-full"
               aria-hidden="true"
-              // eslint-disable-next-line react/no-danger
               dangerouslySetInnerHTML={{ __html: tex.svgContent }}
             />
             {/* Label */}

@@ -59,6 +59,7 @@ export function NoteList({
   }
 
   const isTrash = status === 'trashed';
+  const isArchive = status === 'archived';
 
   return (
     <>
@@ -72,9 +73,10 @@ export function NoteList({
                 note={note}
                 onTrash={handleTrash}
                 isTrash={isTrash}
-                {...(isTrash ? { onRestore: (id: string) => restoreNote(id) } : {})}
+                isArchive={isArchive}
+                {...(isTrash || isArchive ? { onRestore: (id: string) => restoreNote(id) } : {})}
                 {...(isTrash ? { onDelete: handleDelete } : {})}
-                {...(!isTrash && onArchive ? { onArchive } : {})}
+                {...(!isTrash && !isArchive && onArchive ? { onArchive } : {})}
                 {...(!isTrash && onDuplicate ? { onDuplicate } : {})}
                 {...(!isTrash && onMerge ? { onMerge } : {})}
               />

@@ -8,9 +8,12 @@ import { useRecentNotes } from '@/hooks/use-notes';
 import { useCreateNote } from '@/hooks/use-notes';
 import { Button } from '@/components/ui/button';
 import { NoteCard } from '@/components/notes/note-card';
+import { AnimatedNoteCard } from '@/components/notes/animated-note-card';
 import { NoteCardSkeleton } from '@/components/notes/note-card-skeleton';
 import { ROUTES } from '@/constants/routes';
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { motion } from 'framer-motion';
+import { animation } from '@/tokens/animation';
 import { cn } from '@/lib/utils';
 import { StreakCard } from '@/components/notes/streak-card';
 import { useStreak } from '@/hooks/use-streak';
@@ -18,6 +21,7 @@ import { MilestoneToast } from '@/components/shared/milestone-toast';
 import { toast as sonnerToast } from 'sonner';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { useTrashNote, useArchiveNote } from '@/hooks/use-notes';
+import { useSettingsStore } from '@/stores/settings.store';
 
 const QUICK_LINKS = [
   { label: 'Canvas', description: 'Papan sticky note bebas', href: ROUTES.CANVAS, icon: Layout, color: 'bg-[var(--success-subtle)] text-[var(--success)]' },
@@ -29,6 +33,18 @@ export default function DashboardPage() {
   const router = useRouter();
   const { user } = useAuthStore();
   const firstName = user?.displayName?.split(' ')[0] ?? 'Kamu';
+  const animationsEnabled = useSettingsStore((s) => s.preferences.enableAnimations ?? true);
+  const reveal = useCallback(
+    (delay: number) =>
+      animationsEnabled
+        ? {
+            initial: animation.variants.slideUp.initial,
+            animate: animation.variants.slideUp.animate,
+            transition: { ...animation.variants.slideUp.transition, delay },
+          }
+        : {},
+    [animationsEnabled]
+  );
 
   const { data: recentNotes = [], isLoading } = useRecentNotes(4);
   const { data: streakData } = useStreak();
@@ -64,7 +80,10 @@ export default function DashboardPage() {
   return (
     <div className="p-6 md:p-8 max-w-4xl space-y-8">
       {/* Greeting */}
-      <div className="flex items-start justify-between gap-4">
+      <motion.div
+        {...reveal(0)}
+        className="flex items-start justify-between gap-4"
+      >
         <div>
           <h1 className="text-2xl font-semibold text-[var(--text-primary)]">
             Halo, {firstName}
@@ -82,10 +101,13 @@ export default function DashboardPage() {
           <Plus className="h-4 w-4" aria-hidden="true" />
           Catatan baru
         </Button>
-      </div>
+      </motion.div>
 
       {/* Recent notes */}
-      <section aria-labelledby="recent-notes-heading">
+      <motion.section
+        aria-labelledby="recent-notes-heading"
+        {...reveal(0.05)}
+      >
         <div className="flex items-center justify-between mb-3">
           <h2
             id="recent-notes-heading"
@@ -108,13 +130,14 @@ export default function DashboardPage() {
           </div>
         ) : recentNotes.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {recentNotes.map((note) => (
-              <NoteCard
-                key={note.id}
-                note={note}
-                onTrash={handleTrash}
-                onArchive={handleArchive}
-              />
+            {recentNotes.map((note, i) => (
+              <AnimatedNoteCard key={note.id} index={i} enabled={animationsEnabled}>
+                <NoteCard
+                  note={note}
+                  onTrash={handleTrash}
+                  onArchive={handleArchive}
+                />
+              </AnimatedNoteCard>
             ))}
           </div>
         ) : (
@@ -131,13 +154,18 @@ export default function DashboardPage() {
             </p>
           </div>
         )}
-      </section>
+      </motion.section>
 
       {/* Streak card */}
-      <StreakCard />
+      <motion.div {...reveal(0.1)}>
+        <StreakCard />
+      </motion.div>
 
       {/* Quick links */}
-      <section aria-labelledby="quick-links-heading">
+      <motion.section
+        aria-labelledby="quick-links-heading"
+        {...reveal(0.15)}
+      >
         <h2
           id="quick-links-heading"
           className="text-sm font-medium text-[var(--text-primary)] mb-3"
@@ -146,28 +174,32 @@ export default function DashboardPage() {
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {QUICK_LINKS.map(({ label, description, href, icon: Icon, color }) => (
-            <Link
+            <motion.div
               key={href}
-              href={href}
-              className={cn(
-                'group flex items-center gap-4 rounded-xl border border-[var(--border)] bg-[var(--surface-base)]',
-                'p-4 transition-all duration-100',
-                'hover:border-[var(--border-emphasis)] hover:shadow-[var(--shadow-sm)]'
-              )}
+              {...(animationsEnabled ? { whileHover: { y: -2 }, whileTap: { scale: 0.98 } } : {})}
             >
-              <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-lg', color)}>
-                <Icon className="h-4 w-4" aria-hidden="true" />
-              </div>
-              <div>
-                <p className="text-base font-medium text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors duration-100">
-                  {label}
-                </p>
-                <p className="text-sm text-[var(--text-tertiary)]">{description}</p>
-              </div>
-            </Link>
+              <Link
+                href={href}
+                className={cn(
+                  'group flex items-center gap-4 rounded-xl border border-[var(--border)] bg-[var(--surface-base)]',
+                  'p-4 transition-all duration-100',
+                  'hover:border-[var(--border-emphasis)] hover:shadow-[var(--shadow-sm)]'
+                )}
+              >
+                <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-lg', color)}>
+                  <Icon className="h-4 w-4" aria-hidden="true" />
+                </div>
+                <div>
+                  <p className="text-base font-medium text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors duration-100">
+                    {label}
+                  </p>
+                  <p className="text-sm text-[var(--text-tertiary)]">{description}</p>
+                </div>
+              </Link>
+            </motion.div>
           ))}
         </div>
-      </section>
+      </motion.section>
 
       <ConfirmDialog
         isOpen={!!pendingTrashId}

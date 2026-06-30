@@ -1,13 +1,19 @@
 'use client';
 
+import { memo } from 'react';
 import {
   Pin, PinOff, Save, CheckSquare, SlidersHorizontal, Table2,
   Calculator, Link2, Type, Layers, ScanBarcode, Volume2,
-  Timer, Lock, History, CalendarClock, Share2,
+  Timer, Lock, History, CalendarClock, Share2, MoreHorizontal,
+  Smile, Highlighter, Check,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
+  DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 import { NoteWordCount } from './note-word-count';
 
 export interface NoteEditorToolbarProps {
@@ -84,7 +90,25 @@ function ToolBtn({
   );
 }
 
-export function NoteEditorToolbar({
+/** One row of the "Lainnya" menu: icon + full text label + optional "Aktif" check. */
+function MoreItem({
+  onClick, icon: Icon, label, active,
+}: {
+  onClick: () => void;
+  icon: typeof Table2;
+  label: string;
+  active?: boolean;
+}) {
+  return (
+    <DropdownMenuItem onClick={onClick}>
+      <Icon className="h-4 w-4 text-[var(--text-tertiary)]" aria-hidden="true" />
+      <span className="flex-1">{label}</span>
+      {active && <Check className="h-3.5 w-3.5 text-[var(--accent)]" aria-hidden="true" />}
+    </DropdownMenuItem>
+  );
+}
+
+function NoteEditorToolbarImpl({
   isPinned, isSaving, isDirty, wordCount, readingTimeMinutes,
   onTogglePin, onSave, onInsertChecklist,
   onToggleMeta, isMetaOpen = false,
@@ -97,14 +121,20 @@ export function NoteEditorToolbar({
   isTimeCapsuleActive, onToggleTimeCapsule, isTimeCapsuleOpen = false,
   isSecretActive, onToggleSecret, isSecretOpen = false,
   onToggleVersionHistory, isVersionHistoryOpen = false,
-  onToggleReaction: _onToggleReaction,
-  isReactionOpen: _isReactionOpen = false,
-  isReactionActive: _isReactionActive = false,
-  onToggleHighlight: _onToggleHighlight,
-  isHighlightOpen: _isHighlightOpen = false,
+  onToggleReaction,
+  isReactionOpen = false,
+  isReactionActive = false,
+  onToggleHighlight,
+  isHighlightOpen = false,
   onToggleScheduled, isScheduledOpen = false, isScheduledActive,
   onShare, className,
 }: NoteEditorToolbarProps) {
+  const anyMoreItemOpen = [
+    isFontOpen, isTextureOpen, isLinkedNotesOpen, isBarcodeOpen, isReadAloudOpen,
+    isTimeCapsuleOpen, isSecretOpen, isVersionHistoryOpen, isReactionOpen,
+    isHighlightOpen, isScheduledOpen,
+  ].some(Boolean);
+
   return (
     <div
       className={cn(
@@ -114,9 +144,8 @@ export function NoteEditorToolbar({
       role="toolbar"
       aria-label="Toolbar editor"
     >
-      {/* ── Baris 1: Aksi utama & status ─────────────────────────────── */}
+      {/* ── Baris utama: aksi yang sering dipakai + status simpan ───────── */}
       <div className="flex items-center gap-0.5 px-2 py-1.5 border-b border-[var(--border)]/50 overflow-x-auto">
-        {/* Pin */}
         <ToolBtn onClick={onTogglePin} label={isPinned ? 'Lepas sematan' : 'Sematkan'} active={isPinned}>
           {isPinned
             ? <PinOff className="h-4.5 w-4.5 text-[var(--accent)]" />
@@ -125,35 +154,115 @@ export function NoteEditorToolbar({
 
         <div className="w-px h-5 bg-[var(--border)] mx-1 shrink-0" />
 
-        {/* Insert blocks */}
         <ToolBtn onClick={onInsertChecklist} label="Tambah checklist">
           <CheckSquare className="h-4.5 w-4.5" />
         </ToolBtn>
 
-        {onInsertTable && (
-          <ToolBtn onClick={onInsertTable ?? (() => {})} label="Tambah tabel">
-            <Table2 className="h-4.5 w-4.5" />
-          </ToolBtn>
-        )}
-        {onInsertMath && (
-          <ToolBtn onClick={onInsertMath ?? (() => {})} label="Kalkulasi">
-            <Calculator className="h-4.5 w-4.5" />
-          </ToolBtn>
-        )}
-        {onInsertUrlPreview && (
-          <ToolBtn onClick={onInsertUrlPreview ?? (() => {})} label="Link preview">
-            <Link2 className="h-4.5 w-4.5" />
-          </ToolBtn>
-        )}
-
-        <div className="w-px h-5 bg-[var(--border)] mx-1 shrink-0" />
-
-        {/* Meta toggle */}
         {onToggleMeta && (
-          <ToolBtn onClick={onToggleMeta ?? (() => {})} label="Mood & tag" active={isMetaOpen}>
+          <ToolBtn onClick={onToggleMeta} label="Mood & tag" active={isMetaOpen}>
             <SlidersHorizontal className="h-4.5 w-4.5" />
           </ToolBtn>
         )}
+
+        {/* ── "Lainnya" — semua aksi sekunder, berlabel teks penuh ──────── */}
+        <DropdownMenu>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Lainnya"
+                  aria-pressed={anyMoreItemOpen}
+                  className={cn(
+                    'h-9 w-9 rounded-lg shrink-0',
+                    anyMoreItemOpen && 'text-[var(--accent)] bg-[var(--accent-subtle)]'
+                  )}
+                >
+                  <MoreHorizontal className="h-4.5 w-4.5" />
+                </Button>
+              </DropdownMenuTrigger>
+            </TooltipTrigger>
+            <TooltipContent>Lainnya</TooltipContent>
+          </Tooltip>
+          <DropdownMenuContent align="start" className="w-64 p-0">
+            <div className="max-h-[60vh] overflow-y-auto p-1">
+              {(onInsertTable || onInsertMath || onInsertUrlPreview) && (
+                <>
+                  <DropdownMenuLabel>Sisipkan</DropdownMenuLabel>
+                  {onInsertTable && <MoreItem onClick={onInsertTable} icon={Table2} label="Tabel" />}
+                  {onInsertMath && <MoreItem onClick={onInsertMath} icon={Calculator} label="Kalkulasi" />}
+                  {onInsertUrlPreview && <MoreItem onClick={onInsertUrlPreview} icon={Link2} label="Link preview" />}
+                  <DropdownMenuSeparator />
+                </>
+              )}
+
+              {(onToggleFont || onToggleTexture) && (
+                <>
+                  <DropdownMenuLabel>Tampilan</DropdownMenuLabel>
+                  {onToggleFont && <MoreItem onClick={onToggleFont} icon={Type} label="Gaya font" active={isFontOpen} />}
+                  {onToggleTexture && <MoreItem onClick={onToggleTexture} icon={Layers} label="Tekstur" active={isTextureOpen} />}
+                  <DropdownMenuSeparator />
+                </>
+              )}
+
+              {(onToggleLinkedNotes || onToggleBarcode || onToggleReadAloud) && (
+                <>
+                  <DropdownMenuLabel>Catatan</DropdownMenuLabel>
+                  {onToggleLinkedNotes && <MoreItem onClick={onToggleLinkedNotes} icon={Link2} label="Catatan terhubung" active={isLinkedNotesOpen} />}
+                  {onToggleBarcode && <MoreItem onClick={onToggleBarcode} icon={ScanBarcode} label="Pindai barcode" active={isBarcodeOpen} />}
+                  {onToggleReadAloud && <MoreItem onClick={onToggleReadAloud} icon={Volume2} label="Baca keras" active={isReadAloudOpen} />}
+                  <DropdownMenuSeparator />
+                </>
+              )}
+
+              <DropdownMenuLabel>Interaksi</DropdownMenuLabel>
+              <MoreItem onClick={onToggleReaction} icon={Smile} label="Reaksi" active={isReactionOpen || isReactionActive} />
+              <MoreItem onClick={onToggleHighlight} icon={Highlighter} label="Highlight" active={isHighlightOpen} />
+
+              {(onToggleTimeCapsule || onToggleSecret || onToggleVersionHistory || onToggleScheduled) && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel>Lanjutan</DropdownMenuLabel>
+                  {onToggleTimeCapsule && (
+                    <MoreItem
+                      onClick={onToggleTimeCapsule}
+                      icon={Timer}
+                      label={isTimeCapsuleActive ? 'Kapsul waktu aktif' : 'Kapsul waktu'}
+                      active={Boolean(isTimeCapsuleOpen || isTimeCapsuleActive)}
+                    />
+                  )}
+                  {onToggleSecret && (
+                    <MoreItem
+                      onClick={onToggleSecret}
+                      icon={Lock}
+                      label={isSecretActive ? 'Terkunci (rahasia)' : 'Catatan rahasia'}
+                      active={Boolean(isSecretOpen || isSecretActive)}
+                    />
+                  )}
+                  {onToggleVersionHistory && (
+                    <MoreItem onClick={onToggleVersionHistory} icon={History} label="Riwayat versi" active={isVersionHistoryOpen} />
+                  )}
+                  {onToggleScheduled && (
+                    <MoreItem
+                      onClick={onToggleScheduled}
+                      icon={CalendarClock}
+                      label={isScheduledActive ? 'Terjadwal aktif' : 'Jadwalkan catatan'}
+                      active={Boolean(isScheduledOpen || isScheduledActive)}
+                    />
+                  )}
+                </>
+              )}
+
+              {onShare && (
+                <>
+                  <DropdownMenuSeparator />
+                  <MoreItem onClick={onShare} icon={Share2} label="Bagikan sebagai kartu" />
+                </>
+              )}
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         {/* Spacer + save status */}
         <div className="flex-1" />
@@ -180,85 +289,15 @@ export function NoteEditorToolbar({
           <Save className={cn('h-4.5 w-4.5', isDirty && 'text-[var(--accent)]')} />
         </ToolBtn>
       </div>
-
-      {/* ── Baris 2: Fitur lanjutan ────────────────────────────────────── */}
-      <div className="flex items-center gap-0.5 px-2 py-1 overflow-x-auto">
-        {onToggleFont && (
-          <ToolBtn onClick={onToggleFont ?? (() => {})} label="Gaya font" active={isFontOpen}>
-            <Type className="h-4.5 w-4.5" />
-          </ToolBtn>
-        )}
-        {onToggleTexture && (
-          <ToolBtn onClick={onToggleTexture ?? (() => {})} label="Tekstur" active={isTextureOpen}>
-            <Layers className="h-4.5 w-4.5" />
-          </ToolBtn>
-        )}
-        {onToggleLinkedNotes && (
-          <ToolBtn onClick={onToggleLinkedNotes ?? (() => {})} label="Catatan terhubung" active={isLinkedNotesOpen}>
-            <Link2 className="h-4.5 w-4.5" />
-          </ToolBtn>
-        )}
-        {onToggleBarcode && (
-          <ToolBtn onClick={onToggleBarcode ?? (() => {})} label="Pindai barcode" active={isBarcodeOpen}>
-            <ScanBarcode className="h-4.5 w-4.5" />
-          </ToolBtn>
-        )}
-        {onToggleReadAloud && (
-          <ToolBtn onClick={onToggleReadAloud ?? (() => {})} label="Baca keras" active={isReadAloudOpen}>
-            <Volume2 className="h-4.5 w-4.5" />
-          </ToolBtn>
-        )}
-
-        {(onToggleTimeCapsule || onToggleSecret || onToggleVersionHistory) && (
-          <div className="w-px h-5 bg-[var(--border)] mx-1 shrink-0" />
-        )}
-
-        {onToggleTimeCapsule && (
-          <ToolBtn
-            onClick={onToggleTimeCapsule ?? (() => {})}
-            label={isTimeCapsuleActive ? 'Kapsul waktu aktif' : 'Kapsul waktu'}
-            active={(isTimeCapsuleOpen || isTimeCapsuleActive) ?? false}
-          >
-            <Timer className="h-4.5 w-4.5" />
-          </ToolBtn>
-        )}
-        {onToggleSecret && (
-          <ToolBtn
-            onClick={onToggleSecret ?? (() => {})}
-            label={isSecretActive ? 'Terkunci (rahasia)' : 'Catatan rahasia'}
-            active={(isSecretOpen || isSecretActive) ?? false}
-          >
-            <Lock className="h-4.5 w-4.5" />
-          </ToolBtn>
-        )}
-        {onToggleVersionHistory && (
-          <ToolBtn onClick={onToggleVersionHistory ?? (() => {})} label="Riwayat versi" active={isVersionHistoryOpen}>
-            <History className="h-4.5 w-4.5" />
-          </ToolBtn>
-        )}
-
-        {onToggleScheduled && (
-          <>
-            <div className="w-px h-5 bg-[var(--border)] mx-1 shrink-0" />
-            <ToolBtn
-              onClick={onToggleScheduled ?? (() => {})}
-              label={isScheduledActive ? 'Terjadwal aktif' : 'Jadwalkan catatan'}
-              active={(isScheduledOpen || isScheduledActive) ?? false}
-            >
-              <CalendarClock className="h-4.5 w-4.5" />
-            </ToolBtn>
-          </>
-        )}
-
-        {onShare && (
-          <>
-            <div className="flex-1" />
-            <ToolBtn onClick={onShare ?? (() => {})} label="Bagikan sebagai kartu">
-              <Share2 className="h-4.5 w-4.5" />
-            </ToolBtn>
-          </>
-        )}
-      </div>
     </div>
   );
 }
+
+/**
+ * Memoized: this toolbar re-renders on every NoteEditor render otherwise
+ * (every keystroke in title/content), even though most of its props are
+ * stable panel-toggle callbacks. Pairs with note-editor.tsx's togglePanel
+ * refactor, which made those callbacks stable across renders so memo here
+ * actually has an effect.
+ */
+export const NoteEditorToolbar = memo(NoteEditorToolbarImpl);

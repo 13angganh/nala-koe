@@ -74,6 +74,16 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "userId",      "order": "ASCENDING" },
+        { "fieldPath": "isScheduled", "order": "ASCENDING" },
+        { "fieldPath": "status",      "order": "ASCENDING" },
+        { "fieldPath": "scheduledAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "notes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId",      "order": "ASCENDING" },
         { "fieldPath": "status",      "order": "ASCENDING" },
         { "fieldPath": "isPinned",    "order": "ASCENDING" },
         { "fieldPath": "isScheduled", "order": "ASCENDING" },

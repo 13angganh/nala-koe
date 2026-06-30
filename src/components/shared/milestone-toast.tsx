@@ -55,7 +55,6 @@ const MILESTONE_CONFIG: Record<
 function launchConfetti(canvas: HTMLCanvasElement, color: string) {
   const rawCtx = canvas.getContext('2d');
   if (!rawCtx) return;
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: rawCtx checked above, reassignment needed for draw() closure
   const ctx = rawCtx;
 
   const W = canvas.width;

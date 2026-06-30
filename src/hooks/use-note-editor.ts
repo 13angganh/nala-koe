@@ -1,45 +1,85 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/auth.store';
 import { useNotesStore } from '@/stores/notes.store';
-import { getNoteById, updateNote } from '@/services/notes.service';
+import { subscribeToNote, updateNote } from '@/services/notes.service';
 import { isOk } from '@/lib/normalizer';
-import { analyzeContent } from '@/lib/reading-time';
+import { analyzeContent, estimateReadingTime } from '@/lib/reading-time';
 import { detectLanguage } from '@/lib/language-detector';
-import type { UpdateNoteInput, NoteLocation, NoteContentBlock, NoteReaction, NoteHighlight } from '@/types/note.types';
+import type { UpdateNoteInput, NoteLocation, NoteContentBlock, NoteReaction, NoteHighlight, NoteSectionKey } from '@/types/note.types';
 import type { MoodId } from '@/types/mood.types';
 import type { WeatherSnapshot } from '@/types/api.types';
 import type { NoteFontWeight, NoteTexture } from '@/types/settings.types';
-import { generateId } from '@/lib/utils';
+import { generateId, stripHtml } from '@/lib/utils';
 import { createEmptyTable, serializeTable } from '@/components/notes/note-table';
 import { NOTES_QUERY_KEY } from './use-notes';
 
 const AUTO_SAVE_DELAY = 1500; // ms
+const CONTENT_ANALYSIS_DELAY = 400; // ms — debounce for word count + language detection
 
 export function useNoteEditor(noteId: string) {
   const { user } = useAuthStore();
   const { activeNote, setActiveNote, updateActiveNote, setSaving } = useNotesStore();
   const qc = useQueryClient();
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const analysisTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Accumulates field patches scheduled within the same debounce window so that
+  // e.g. a title edit followed by a content edit (both within 1.5s) are saved
+  // together instead of the later call silently overwriting/dropping the earlier one.
+  const pendingInputRef = useRef<UpdateNoteInput>({});
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [isDirty, setIsDirty] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
+  const isEnabled = !!user?.uid && !!noteId;
 
-  // Load note
-  const { isLoading, isError } = useQuery({
-    queryKey: [NOTES_QUERY_KEY, noteId, user?.uid],
-    queryFn: async () => {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: enabled: !!user?.uid
-      const result = await getNoteById(noteId, user!.uid);
-      if (!isOk(result)) throw new Error(result.error.message);
-      setActiveNote(result.data);
-      return result.data;
-    },
-    enabled: !!user?.uid && !!noteId,
-    staleTime: 60_000,
-  });
+  // Live subscription to the note while it's open for editing — replaces a
+  // one-shot getDoc() fetch. This is what actually fixes tags/mood/etc.
+  // appearing to "not save": with a one-shot fetch, any path that triggers
+  // a refetch of this note (invalidateQueries elsewhere, window refocus,
+  // tab visibility change) reads via getDoc(), which Firestore's JS SDK can
+  // return as a partial/stale snapshot immediately after a write is still
+  // settling (documented SDK behavior, firebase-js-sdk#6739) — overwriting
+  // local state with an incomplete picture of the document. A live
+  // onSnapshot() listener instead receives a fresh, complete callback each
+  // time the document actually changes (both the optimistic local write
+  // and, again, once the server confirms it), so the editor naturally
+  // converges on whatever Firestore really ends up storing.
+  //
+  // setIsLoading/setIsError are only ever called from inside the
+  // subscribeToNote callbacks below (onData/onError) — both genuinely async
+  // events arriving from an external system (Firestore), not synchronous
+  // calls in the effect body itself.
+  useEffect(() => {
+    if (!isEnabled) return;
+    const unsubscribe = subscribeToNote(
+      noteId,
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: isEnabled guards both user?.uid and noteId
+      user!.uid,
+      (note) => {
+        // Defensive guard: if a snapshot lands while the user has unsaved
+        // edits still sitting in the auto-save debounce window
+        // (pendingInputRef), re-apply those edits on top of the fresh
+        // server data so they're never silently discarded by an
+        // in-flight server round-trip for a DIFFERENT field.
+        const pending = pendingInputRef.current;
+        const merged = Object.keys(pending).length > 0 ? { ...note, ...pending } : note;
+        setActiveNote(merged);
+        setIsLoading(false);
+        setIsError(false);
+      },
+      (message) => {
+        toast.error(message);
+        setIsLoading(false);
+        setIsError(true);
+      }
+    );
+    return () => unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reason: intentionally re-subscribes only when noteId/user.uid/isEnabled change; setActiveNote is a stable Zustand setter
+  }, [noteId, user?.uid, isEnabled]);
 
   // Save mutation
   const saveMutation = useMutation({
@@ -53,6 +93,11 @@ export function useNoteEditor(noteId: string) {
       setSaving(false);
       setLastSavedAt(new Date());
       setIsDirty(false);
+      // The currently-open note no longer needs a query invalidation to
+      // stay in sync — it's on a live onSnapshot() subscription (see the
+      // effect above) that picks up the confirmed write automatically.
+      // We still invalidate OTHER views (notes list, recent notes, stats,
+      // dashboards) so they reflect this save too.
       void qc.invalidateQueries({ queryKey: [NOTES_QUERY_KEY] });
     },
     onError: (error: Error) => {
@@ -63,9 +108,17 @@ export function useNoteEditor(noteId: string) {
 
   const scheduleAutoSave = useCallback(
     (input: UpdateNoteInput) => {
+      pendingInputRef.current = { ...pendingInputRef.current, ...input };
+      // eslint-disable-next-line no-console -- temporary debug instrumentation, see README Sesi 19
+      console.log('[DEBUG tags] scheduleAutoSave merged pending ->', JSON.stringify(pendingInputRef.current));
       if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
       autoSaveTimer.current = setTimeout(() => {
-        saveMutation.mutate(input);
+        const merged = pendingInputRef.current;
+        pendingInputRef.current = {};
+        autoSaveTimer.current = null;
+        // eslint-disable-next-line no-console -- temporary debug instrumentation, see README Sesi 19
+        console.log('[DEBUG tags] firing saveMutation.mutate with ->', JSON.stringify(merged));
+        saveMutation.mutate(merged);
       }, AUTO_SAVE_DELAY);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -82,14 +135,31 @@ export function useNoteEditor(noteId: string) {
   );
 
   const handleContentChange = useCallback(
-    (content: string) => {
-      const { wordCount } = analyzeContent(content);
-      // Auto-detect language when content is long enough
-      const detection = detectLanguage(content);
-      const language = detection.confidence >= 0.5 ? detection.language : (activeNote?.language ?? null);
-      updateActiveNote({ content, wordCount, language });
+    (content: string, contentFormat?: 'plain' | 'html') => {
+      // Update content immediately so the textarea/editor never waits on
+      // analysis — analyzeContent() and detectLanguage() both do a full
+      // pass over the string, which gets expensive on longer notes and was
+      // previously running synchronously on every single keystroke,
+      // producing visible input lag.
+      const patch: UpdateNoteInput = { content };
+      if (contentFormat) patch.contentFormat = contentFormat;
+      updateActiveNote(patch);
       setIsDirty(true);
-      scheduleAutoSave({ content, wordCount, language });
+      scheduleAutoSave(patch);
+
+      // Word count + language detection are debounced separately (shorter
+      // window than auto-save) so they settle shortly after the user pauses
+      // typing, without blocking each keystroke.
+      if (analysisTimer.current) clearTimeout(analysisTimer.current);
+      analysisTimer.current = setTimeout(() => {
+        analysisTimer.current = null;
+        const { wordCount } = analyzeContent(content);
+        const detection = detectLanguage(stripHtml(content));
+        const language = detection.confidence >= 0.5 ? detection.language : (activeNote?.language ?? null);
+        const analysisPatch: UpdateNoteInput = { wordCount, language };
+        updateActiveNote(analysisPatch);
+        scheduleAutoSave(analysisPatch);
+      }, CONTENT_ANALYSIS_DELAY);
     },
     [updateActiveNote, scheduleAutoSave, activeNote?.language]
   );
@@ -106,15 +176,22 @@ export function useNoteEditor(noteId: string) {
   const handleManualSave = useCallback(() => {
     if (!activeNote) return;
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = null;
+    pendingInputRef.current = {};
     saveMutation.mutate({
       title: activeNote.title,
       content: activeNote.content,
+      contentFormat: activeNote.contentFormat,
       blocks: activeNote.blocks,
       mood: activeNote.mood,
       tags: activeNote.tags,
       language: activeNote.language,
       weather: activeNote.weather,
       location: activeNote.location,
+      fontWeight: activeNote.fontWeight,
+      texture: activeNote.texture,
+      linkedNoteIds: activeNote.linkedNoteIds,
+      isPinned: activeNote.isPinned,
     });
   }, [activeNote, saveMutation]);
 
@@ -138,6 +215,8 @@ export function useNoteEditor(noteId: string) {
 
   const handleTagsChange = useCallback(
     (tags: string[]) => {
+      // eslint-disable-next-line no-console -- temporary debug instrumentation, see README Sesi 19
+      console.log('[DEBUG tags] handleTagsChange called with:', tags);
       updateActiveNote({ tags });
       setIsDirty(true);
       scheduleAutoSave({ tags });
@@ -263,11 +342,34 @@ export function useNoteEditor(noteId: string) {
 
   useEffect(() => {
     return () => {
-      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+      if (autoSaveTimer.current) {
+        clearTimeout(autoSaveTimer.current);
+        autoSaveTimer.current = null;
+      }
+      if (analysisTimer.current) {
+        clearTimeout(analysisTimer.current);
+        analysisTimer.current = null;
+      }
+      const pending = pendingInputRef.current;
+      pendingInputRef.current = {};
+      if (Object.keys(pending).length > 0) {
+        // Fire-and-forget: the mutation runs against the query client, which
+        // outlives this component, so the patch still reaches Firestore even
+        // though we're navigating away right now.
+        saveMutation.mutate(pending);
+      }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reason: intentionally only runs on mount/unmount; saveMutation.mutate is stable
   }, []);
 
-  const { wordCount, readingTimeMinutes } = analyzeContent(activeNote?.content ?? '');
+  // wordCount/readingTimeMinutes are sourced from activeNote.wordCount, which
+  // is updated by the debounced analysis in handleContentChange (settles
+  // ~400ms after the user pauses typing) rather than recomputed from the
+  // raw content string on every render — recomputing here would mean a
+  // full word-count pass on every single keystroke purely to feed a toolbar
+  // badge display.
+  const wordCount = activeNote?.wordCount ?? 0;
+  const readingTimeMinutes = useMemo(() => estimateReadingTime(wordCount), [wordCount]);
 
   const handleReactionChange = useCallback(
     (reaction: NoteReaction | null) => {
@@ -276,6 +378,40 @@ export function useNoteEditor(noteId: string) {
       scheduleAutoSave({ reaction });
     },
     [updateActiveNote, scheduleAutoSave]
+  );
+
+  /**
+   * Toggle a section's visibility within the note view without touching its
+   * underlying data (mood/tags/weather/location/etc. stay set — only the
+   * display is collapsed). Used to let the user shorten a long note's
+   * vertical footprint while keeping every feature's data intact.
+   */
+  const handleToggleSectionVisibility = useCallback(
+    (section: NoteSectionKey) => {
+      if (!activeNote) return;
+      const current = activeNote.hiddenSections ?? [];
+      const hiddenSections = current.includes(section)
+        ? current.filter((s) => s !== section)
+        : [...current, section];
+      updateActiveNote({ hiddenSections });
+      setIsDirty(true);
+      scheduleAutoSave({ hiddenSections });
+    },
+    [activeNote, updateActiveNote, scheduleAutoSave]
+  );
+
+  /** Toggle a single content block's visibility (table/math/url-preview/checklist) without deleting it. */
+  const handleToggleBlockVisibility = useCallback(
+    (blockId: string) => {
+      if (!activeNote) return;
+      const blocks = activeNote.blocks.map((b) =>
+        b.id === blockId ? { ...b, isHidden: !b.isHidden } : b
+      );
+      updateActiveNote({ blocks });
+      setIsDirty(true);
+      scheduleAutoSave({ blocks });
+    },
+    [activeNote, updateActiveNote, scheduleAutoSave]
   );
 
   const handleHighlightsChange = useCallback(
@@ -326,6 +462,8 @@ export function useNoteEditor(noteId: string) {
     // Phase 8
     handleReactionChange,
     handleHighlightsChange,
+    handleToggleSectionVisibility,
+    handleToggleBlockVisibility,
     // Phase 9
     handleScheduledChange,
   };

@@ -12,12 +12,15 @@ import {
   limit,
   serverTimestamp,
   Timestamp,
+  onSnapshot,
   type QueryConstraint,
+  type Unsubscribe,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { logger } from '@/lib/logger';
 import { ok, err, normalizeDocument } from '@/lib/normalizer';
 import { analyzeContent } from '@/lib/reading-time';
+import { stripHtml } from '@/lib/utils';
 import type { ApiResult } from '@/types/api.types';
 import type {
   Note,
@@ -64,6 +67,7 @@ function normalizeNote(id: string, data: Record<string, unknown>): Note {
     userId: (normalized.userId as string) ?? '',
     title: (normalized.title as string) ?? '',
     content: (normalized.content as string) ?? '',
+    contentFormat: (normalized.contentFormat as Note['contentFormat']) ?? 'plain',
     blocks: (normalized.blocks as Note['blocks']) ?? [],
     mood: (normalized.mood as Note['mood']) ?? null,
     tags: (normalized.tags as string[]) ?? [],
@@ -83,6 +87,7 @@ function normalizeNote(id: string, data: Record<string, unknown>): Note {
     reaction: (normalized.reaction as Note['reaction']) ?? null,
     linkedNoteIds: (normalized.linkedNoteIds as string[]) ?? [],
     highlights: (normalized.highlights as Note['highlights']) ?? [],
+    hiddenSections: (normalized.hiddenSections as Note['hiddenSections']) ?? [],
     wordCount: (normalized.wordCount as number) ?? 0,
     createdAt: normalized.createdAt as string,
     updatedAt: normalized.updatedAt as string,
@@ -106,6 +111,7 @@ export async function createNote(
       userId,
       title: input.title ?? '',
       content: input.content ?? '',
+      contentFormat: input.contentFormat ?? 'plain',
       blocks: input.blocks ?? [],
       mood: input.mood ?? null,
       tags: input.tags ?? [],
@@ -125,6 +131,7 @@ export async function createNote(
       reaction: null,
       linkedNoteIds: input.linkedNoteIds ?? [],
       highlights: [],
+      hiddenSections: input.hiddenSections ?? [],
       wordCount,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -174,6 +181,52 @@ export async function getNoteById(
   }
 }
 
+/**
+ * Subscribes to live updates for a single note via onSnapshot, instead of a
+ * one-shot getDoc(). Used by useNoteEditor while a note is open for
+ * editing so the UI always reflects confirmed Firestore state — including
+ * the result of the app's OWN writes once they're acknowledged by the
+ * server, sidestepping the documented Firestore JS SDK behavior where a
+ * getDoc() issued immediately after a pending write can return only the
+ * just-written fields (firebase-js-sdk#6739) rather than the full merged
+ * document. onSnapshot's callback fires once for the optimistic local
+ * write and again when the server confirms it — by listening continuously
+ * rather than reading once, the editor naturally converges on whatever
+ * Firestore actually ends up storing, without a fragile manual read-back
+ * check.
+ *
+ * Calls onError with a user-facing message if the snapshot listener itself
+ * errors (e.g. permission-denied) — this is the most direct signal
+ * available that a write may be silently failing security rules.
+ */
+export function subscribeToNote(
+  noteId: string,
+  userId: string,
+  onData: (note: Note) => void,
+  onError: (message: string) => void
+): Unsubscribe {
+  const ref = doc(db, COLLECTION, noteId);
+  return onSnapshot(
+    ref,
+    (snap) => {
+      if (!snap.exists()) {
+        onError('Catatan tidak ditemukan');
+        return;
+      }
+      const data = snap.data() as Record<string, unknown>;
+      if (data.userId !== userId) {
+        onError('Tidak diizinkan mengakses catatan ini');
+        return;
+      }
+      onData(normalizeNote(snap.id, data));
+    },
+    (error) => {
+      logger.error('notes.subscribe.failed', { error, noteId });
+      onError('Gagal memuat pembaruan catatan — periksa koneksi');
+    }
+  );
+}
+
 export async function getNotes(
   userId: string,
   filters: NoteFilters = {}
@@ -207,7 +260,7 @@ export async function getNotes(
       notes = notes.filter(
         (n) =>
           n.title.toLowerCase().includes(term) ||
-          n.content.toLowerCase().includes(term)
+          stripHtml(n.content).toLowerCase().includes(term)
       );
     }
 
@@ -238,14 +291,27 @@ export async function updateNote(
       return err('notes/not-found', 'Catatan tidak ditemukan');
     }
 
-    // Save version snapshot before update
-    const existing = normalizeNote(snap.id, snap.data() as Record<string, unknown>);
-    await saveVersion(noteId, existing);
+    // Save version snapshot only when content-bearing fields change — not on
+    // every metadata-only save (tags, mood, weather, etc.). Version history
+    // tracks writing changes; making a new snapshot every time someone adds
+    // a tag would be semantically meaningless AND means every tag/mood save
+    // pays the cost of an extra Firestore read+write (and surfaces an extra
+    // failure point if the versions subcollection's rules ever reject the
+    // write — that failure is non-fatal here, but better to not trigger it
+    // unnecessarily on saves that have nothing to do with content history).
+    const touchesContent = input.title !== undefined || input.content !== undefined || input.blocks !== undefined;
+    if (touchesContent) {
+      const existing = normalizeNote(snap.id, snap.data() as Record<string, unknown>);
+      await saveVersion(noteId, existing);
+    }
 
     const updates: Record<string, unknown> = {
       ...input,
       updatedAt: serverTimestamp(),
     };
+
+    // eslint-disable-next-line no-console -- temporary debug instrumentation, see README Sesi 19
+    console.log('[DEBUG tags] updateNote() sending to Firestore updateDoc ->', JSON.stringify(input));
 
     if (input.content !== undefined) {
       const { wordCount } = analyzeContent(input.content);
@@ -253,6 +319,18 @@ export async function updateNote(
     }
 
     await updateDoc(ref, updates);
+
+    // NOTE: A read-back verification was tried here in a previous session
+    // but removed — getDoc() called immediately after updateDoc() while a
+    // write is still pending can return ONLY the just-written fields
+    // (missing the rest of the document), a documented Firestore JS SDK
+    // behavior (see firebase-js-sdk#6739). That made the "verification"
+    // unreliable: it could report failure on a save that actually
+    // succeeded. The real fix for keeping the UI in sync with confirmed
+    // server state is a live onSnapshot() listener on the note while it's
+    // open for editing (see useNoteEditor) rather than a one-shot read
+    // immediately after write.
+
     logger.info('notes.update', { noteId, userId });
     return ok(undefined);
   } catch (error) {
@@ -369,6 +447,7 @@ export async function duplicateNote(
       userId,
       title: `${original.title} (Salinan)`,
       content: original.content,
+      contentFormat: original.contentFormat,
       blocks: original.blocks.map((b) => ({ ...b, id: `${b.id}_copy` })),
       mood: original.mood,
       tags: original.tags,
@@ -388,6 +467,7 @@ export async function duplicateNote(
       reaction: null,
       linkedNoteIds: [],
       highlights: [],
+      hiddenSections: [],
       wordCount: original.wordCount,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -477,7 +557,7 @@ export function getNoteSizeInfo(note: Note): {
   const mediaEstimate = (hasImages ? 100_000 : 0) + (hasAudio ? 500_000 : 0);
   const totalBytes = textBytes + mediaEstimate;
   const label =
-    totalBytes > 200_000 ? 'large' : totalBytes > 20_000 ? 'medium' : 'small';
+    totalBytes >= 100_000 ? 'large' : totalBytes > 20_000 ? 'medium' : 'small';
   return { totalBytes, textBytes, hasImages, hasAudio, label };
 }
 

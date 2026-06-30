@@ -1,23 +1,26 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { MapPin, CloudSun, Loader2, X } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { X } from 'lucide-react';
 import { useKeyboard } from '@/hooks/use-keyboard';
 import { useGeolocation } from '@/hooks/use-geolocation';
 import { useWeather } from '@/hooks/use-weather';
 import { useNotes } from '@/hooks/use-notes';
 import { cn } from '@/lib/utils';
 import { generateId, stripHtml } from '@/lib/utils';
+import { appendPlainLine } from '@/lib/rich-text';
+import { NoteFormatToolbar } from './note-format-toolbar';
+import { NoteRichEditor } from './note-rich-editor';
 import { NoteEditorToolbar } from './note-editor-toolbar';
-import { NoteChecklist } from './note-checklist';
+import { AnimatedPanel } from '@/components/shared/animated-panel';
 import { NoteChecklistProgress } from './note-checklist-progress';
-import { NoteMoodPicker } from './note-mood-picker';
-import { NoteWeatherBadge } from './note-weather-badge';
-import { NoteTable, deserializeTable, serializeTable } from './note-table';
-import { NoteMathBlock } from './note-math-block';
-import { NoteUrlPreview } from './note-url-preview';
+import { NoteMetaPanel } from './note-meta-panel';
+import { serializeTable } from './note-table';
+import type { deserializeTable } from './note-table';
+import { NoteBlocksRenderer } from './note-blocks-renderer';
 import { NoteFontPicker, fontWeightClass } from './note-font-picker';
 import { NoteTexturePicker, textureClass } from './note-texture-picker';
+import { NoteSectionHeader, NoteHiddenCollapsedRow } from './note-visibility-toggle';
 import { NoteLinkedNotes } from './note-linked-notes';
 import { NoteBarcodeScanner } from './note-barcode-scanner';
 import { NoteReadAloud } from './note-read-aloud';
@@ -29,11 +32,10 @@ import { NoteReactionBar } from './note-reaction-bar';
 import { NoteHighlightMarker } from './note-highlight-marker';
 import { NoteScheduled } from './note-scheduled';
 import { NoteShareCard } from './note-share-card';
-import { TagInput } from '@/components/tags/tag-input';
 import { Button } from '@/components/ui/button';
 import { useTags } from '@/hooks/use-tags';
 import type { ChecklistItem } from './note-checklist';
-import type { NoteContentBlock, NoteLocation, NoteReaction, NoteHighlight } from '@/types/note.types';
+import type { NoteContentBlock, NoteLocation, NoteReaction, NoteHighlight, NoteSectionKey } from '@/types/note.types';
 import type { MoodId } from '@/types/mood.types';
 import type { WeatherSnapshot } from '@/types/api.types';
 import type { NoteFontWeight, NoteTexture } from '@/types/settings.types';
@@ -45,6 +47,7 @@ interface NoteEditorProps {
   noteId: string;
   title: string;
   content: string;
+  contentFormat: 'plain' | 'html';
   blocks: NoteContentBlock[];
   isPinned: boolean;
   isSaving: boolean;
@@ -60,7 +63,7 @@ interface NoteEditorProps {
   texture: NoteTexture;
   linkedNoteIds: string[];
   onTitleChange: (title: string) => void;
-  onContentChange: (content: string) => void;
+  onContentChange: (content: string, contentFormat?: 'plain' | 'html') => void;
   onBlocksChange: (blocks: NoteContentBlock[]) => void;
   onTogglePin: () => void;
   onSave: () => void;
@@ -93,6 +96,10 @@ interface NoteEditorProps {
   isScheduled?: boolean;
   scheduledAt?: string | null;
   onScheduledChange?: (isScheduled: boolean, scheduledAt: string | null) => void;
+  // Phase 16: hide/unhide
+  hiddenSections?: NoteSectionKey[];
+  onToggleSectionVisibility?: (section: NoteSectionKey) => void;
+  onToggleBlockVisibility?: (blockId: string) => void;
   className?: string;
 }
 
@@ -148,10 +155,16 @@ function UrlPromptBar({
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
+// Stable module-level no-op so optional toggle-handler props always have a
+// consistent function identity, even when the caller doesn't pass one —
+// avoids defeating memoization on the panels that receive these as props.
+const noop = () => {};
+
 export function NoteEditor({
   noteId,
   title,
   content,
+  contentFormat,
   blocks,
   isPinned,
   isSaving,
@@ -196,32 +209,129 @@ export function NoteEditor({
   isScheduled = false,
   scheduledAt = null,
   onScheduledChange,
+  hiddenSections = [],
+  onToggleSectionVisibility,
+  onToggleBlockVisibility,
   className,
 }: NoteEditorProps) {
   const titleRef = useRef<HTMLTextAreaElement>(null);
-  const contentRef = useRef<HTMLTextAreaElement>(null);
+  const contentRef = useRef<HTMLTextAreaElement | HTMLDivElement>(null);
 
   // Panel visibility
-  const [isMetaOpen, setIsMetaOpen] = useState(false);
-  const [isFontOpen, setIsFontOpen] = useState(false);
-  const [isTextureOpen, setIsTextureOpen] = useState(false);
-  const [isLinkedNotesOpen, setIsLinkedNotesOpen] = useState(false);
-  const [isBarcodeOpen, setIsBarcodeOpen] = useState(false);
-  const [isReadAloudOpen, setIsReadAloudOpen] = useState(false);
+  // Single state object + one stable toggle callback for all simple
+  // open/closed editor panels, instead of 12 separate useState calls each
+  // paired with its own inline `() => setX(v => !v)` passed straight into
+  // NoteEditorToolbar. Inline arrow functions are a new identity on every
+  // render, which defeats any memoization on the toolbar (it always sees
+  // "changed" props and re-renders). togglePanel below is stable across
+  // renders via useCallback, so the toolbar can be memoized effectively.
+  // isMetaOpen is a PURE DERIVED VALUE, not state — this is what makes it
+  // correctly react to onSnapshot's two-phase load (a stale/empty local
+  // cache snapshot, then the real data from the server) without any
+  // useEffect/set-state-in-effect pattern. metaManuallyOpened only matters
+  // when there's no data yet (lets the user open the panel to add their
+  // first mood/tag); the moment there's any data, the panel is open
+  // unconditionally — there is deliberately no way to "hide" Mood & Tag by
+  // closing this panel once data exists. To remove the section from view
+  // while keeping the data, use the per-field eye icon inside NoteMetaPanel
+  // (hiddenSections), not this panel's open/close toggle.
+  const hasMetaData = Boolean(mood || tags.length > 0 || weather || location);
+  const [metaManuallyOpened, setMetaManuallyOpened] = useState(false);
+  const isMetaOpen = hasMetaData || metaManuallyOpened;
+  const [panels, setPanels] = useState({
+    font: false,
+    texture: false,
+    linkedNotes: false,
+    barcode: false,
+    readAloud: false,
+    timeCapsule: false,
+    secret: false,
+    versionHistory: false,
+    reaction: false,
+    highlight: false,
+    scheduled: false,
+  });
+  const togglePanel = useCallback((key: keyof typeof panels) => {
+    setPanels((prev) => ({ ...prev, [key]: !prev[key] }));
+  }, []);
+  const isFontOpen = panels.font;
+  const isTextureOpen = panels.texture;
+  const isLinkedNotesPickerOpen = panels.linkedNotes;
+  const isBarcodeOpen = panels.barcode;
+  const isReadAloudOpen = panels.readAloud;
+  const isTimeCapsuleOpen = panels.timeCapsule;
+  const isSecretOpen = panels.secret;
+  const isVersionHistoryOpen = panels.versionHistory;
+  const isReactionPanelOpen = panels.reaction;
+  const isHighlightPanelOpen = panels.highlight;
+  const isScheduledOpen = panels.scheduled;
+
+  // Derived hidden-state for the three data sections that now render
+  // inline (not behind an open/close panel toggle): Linked Notes, Reaction,
+  // Highlight. Same hiddenSections mechanism as Mood/Tags/Weather.
+  const isLinkedNotesHidden = hiddenSections.includes('linkedNotes');
+  const isReactionHidden = hiddenSections.includes('reaction');
+  const isHighlightsHidden = hiddenSections.includes('highlights');
+
   const [showUrlPrompt, setShowUrlPrompt] = useState(false);
-  const [isTimeCapsuleOpen, setIsTimeCapsuleOpen] = useState(false);
-  const [isSecretOpen, setIsSecretOpen] = useState(false);
-  const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false);
   const [isSecretUnlocked, setIsSecretUnlocked] = useState(!isSecret);
-  const [isReactionOpen, setIsReactionOpen] = useState(false);
-  const [isHighlightOpen, setIsHighlightOpen] = useState(false);
-  const [isScheduledOpen, setIsScheduledOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
+
+  // Stable toggle/open callbacks — declared after their corresponding
+  // useState calls so the setters they close over are already initialized.
+  // Toggling "Mood & tag" in the toolbar: if there's already data, the
+  // panel is always open (see isMetaOpen above) — toggling here only
+  // matters to open it for the FIRST time when there's no data yet.
+  const toggleMeta = useCallback(() => setMetaManuallyOpened((v) => !v), []);
+  const toggleFontPanel = useCallback(() => togglePanel('font'), [togglePanel]);
+  const toggleTexturePanel = useCallback(() => togglePanel('texture'), [togglePanel]);
+  const toggleLinkedNotesPanel = useCallback(() => togglePanel('linkedNotes'), [togglePanel]);
+  const toggleBarcodePanel = useCallback(() => togglePanel('barcode'), [togglePanel]);
+  const toggleReadAloudPanel = useCallback(() => togglePanel('readAloud'), [togglePanel]);
+  const toggleTimeCapsulePanel = useCallback(() => togglePanel('timeCapsule'), [togglePanel]);
+  const toggleSecretPanel = useCallback(() => togglePanel('secret'), [togglePanel]);
+  const toggleVersionHistoryPanel = useCallback(() => togglePanel('versionHistory'), [togglePanel]);
+  const toggleReactionPanel = useCallback(() => togglePanel('reaction'), [togglePanel]);
+  const toggleHighlightPanel = useCallback(() => togglePanel('highlight'), [togglePanel]);
+  const toggleScheduledPanel = useCallback(() => togglePanel('scheduled'), [togglePanel]);
+  const openUrlPrompt = useCallback(() => setShowUrlPrompt(true), []);
+  const openSharePanel = useCallback(() => setIsShareOpen(true), []);
+
+  // Combined entry points from the toolbar's "Lainnya" menu for the three
+  // sections that are now always-visible-with-data instead of
+  // open/close-panel-only: if the section is currently hidden, clicking
+  // "unhides" it (the natural expectation — the menu item said "Catatan
+  // terhubung" was active/checked, so clicking it should bring it back).
+  // Otherwise, it opens the underlying picker/panel for adding new data,
+  // same as before.
+  const handleToggleLinkedNotesEntry = useCallback(() => {
+    if (isLinkedNotesHidden) onToggleSectionVisibility?.('linkedNotes');
+    else toggleLinkedNotesPanel();
+  }, [isLinkedNotesHidden, onToggleSectionVisibility, toggleLinkedNotesPanel]);
+
+  const handleToggleReactionEntry = useCallback(() => {
+    if (isReactionHidden) onToggleSectionVisibility?.('reaction');
+    else toggleReactionPanel();
+  }, [isReactionHidden, onToggleSectionVisibility, toggleReactionPanel]);
+
+  const handleToggleHighlightEntry = useCallback(() => {
+    if (isHighlightsHidden) onToggleSectionVisibility?.('highlights');
+    else toggleHighlightPanel();
+  }, [isHighlightsHidden, onToggleSectionVisibility, toggleHighlightPanel]);
 
   const { suggestions, searchSuggestions } = useTags();
   const { requestLocation, isRequesting: isRequestingLocation } = useGeolocation();
   const { fetchWeather, isFetching: isFetchingWeather } = useWeather();
-  const { data: allNotes = [], isLoading: isLoadingNotes } = useNotes({ status: 'active' });
+  // Lazy-loaded: only fetched once the user actually opens the "Catatan
+  // terhubung" panel — opening a note for editing shouldn't pay the cost of
+  // fetching the entire active-notes list every time. `syncToStore: false`
+  // keeps this local to the picker so it doesn't clobber the dashboard's
+  // notes-list store as a side effect of editing an unrelated note.
+  const activeNotesFilter = useMemo(() => ({ status: 'active' as const }), []);
+  const { data: allNotes = [], isLoading: isLoadingNotes } = useNotes(activeNotesFilter, {
+    enabled: isLinkedNotesPickerOpen || linkedNoteIds.length > 0,
+    syncToStore: false,
+  });
 
   // ── Auto-resize textareas ─────────────────────────────────────────────────
 
@@ -232,14 +342,13 @@ export function NoteEditor({
   }
 
   useEffect(() => { autoResize(titleRef.current); }, [title]);
-  useEffect(() => { autoResize(contentRef.current); }, [content]);
+  useEffect(() => {
+    if (contentFormat === 'plain' && contentRef.current instanceof HTMLTextAreaElement) {
+      autoResize(contentRef.current);
+    }
+  }, [content, contentFormat]);
   useKeyboard([{ key: 's', modifiers: ['meta'], onKeyDown: onSave }]);
   useEffect(() => { if (!title && titleRef.current) titleRef.current.focus(); }, [title]);
-
-  useEffect(() => {
-    if (mood || tags.length > 0 || weather || location) setIsMetaOpen(true);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // ── Checklist ─────────────────────────────────────────────────────────────
 
@@ -299,7 +408,7 @@ export function NoteEditor({
 
   // ── Location + Weather ────────────────────────────────────────────────────
 
-  async function handleRequestLocation() {
+  const handleRequestLocation = useCallback(async () => {
     const loc = await requestLocation();
     if (loc) {
       onLocationChange(loc);
@@ -308,28 +417,55 @@ export function NoteEditor({
         if (snap) onWeatherChange(snap);
       }
     }
-  }
+  }, [requestLocation, onLocationChange, weather, fetchWeather, onWeatherChange]);
+
+  const handleFetchWeatherForLocation = useCallback(async () => {
+    if (!location) return;
+    const snap = await fetchWeather(location.latitude, location.longitude);
+    if (snap) onWeatherChange(snap);
+  }, [location, fetchWeather, onWeatherChange]);
+
+  // void-wrapped, stable: NoteMetaPanel expects sync () => void callbacks.
+  const onRequestLocationClick = useCallback(() => { void handleRequestLocation(); }, [handleRequestLocation]);
+  const onFetchWeatherClick = useCallback(() => { void handleFetchWeatherForLocation(); }, [handleFetchWeatherForLocation]);
 
   // ── Barcode ───────────────────────────────────────────────────────────────
 
   const handleBarcodeScanned = useCallback(
     (value: string, format: string) => {
       const insert = `[Barcode ${format.replace(/_/g, ' ')}: ${value}]`;
-      onContentChange(content ? `${content}\n${insert}` : insert);
-      setIsBarcodeOpen(false);
+      onContentChange(appendPlainLine(content, contentFormat, insert), contentFormat);
+      setPanels((prev) => ({ ...prev, barcode: false }));
     },
-    [content, onContentChange]
+    [content, contentFormat, onContentChange]
   );
 
   // ── Derived ───────────────────────────────────────────────────────────────
+  // Memoized: blocks.flatMap + JSON.parse and stripHtml(content) are both
+  // non-trivial passes that were previously re-run on every single render
+  // (i.e. every keystroke, since content updates on every keystroke). Now
+  // they only recompute when their actual source data changes.
 
-  const checklistBlocks = blocks.filter((b) => b.type === 'checklist');
-  const allChecklistItems = checklistBlocks.flatMap((b) => {
-    try { return JSON.parse(b.content) as ChecklistItem[]; } catch { return []; }
-  });
-  const plainText = stripHtml(content);
-  const textureCls = textureClass(texture);
-  const fontCls = fontWeightClass(fontWeight);
+  // Hidden checklist blocks must be excluded here too — otherwise the
+  // progress bar at the bottom of the editor would still count items from a
+  // checklist the user just hid, making the "hide" action look broken (the
+  // block itself disappears from view, but its item count keeps showing
+  // elsewhere). isHidden defaults to false for legacy blocks with no flag.
+  const allChecklistItems = useMemo(() => {
+    return blocks
+      .filter((b) => b.type === 'checklist' && !(b.isHidden ?? false))
+      .flatMap((b) => {
+        try { return JSON.parse(b.content) as ChecklistItem[]; } catch { return []; }
+      });
+  }, [blocks]);
+
+  // plainText feeds NoteReadAloud, which is only rendered inside its own
+  // collapsed AnimatedPanel — but we still avoid recomputing it on every
+  // keystroke by memoizing on content.
+  const plainText = useMemo(() => stripHtml(content), [content]);
+
+  const textureCls = useMemo(() => textureClass(texture), [texture]);
+  const fontCls = useMemo(() => fontWeightClass(fontWeight), [fontWeight]);
 
   return (
     <div className={cn('flex flex-col h-full', className)}>
@@ -345,38 +481,38 @@ export function NoteEditor({
         onInsertChecklist={handleInsertChecklist}
         onInsertTable={onInsertTable}
         onInsertMath={onInsertMath}
-        onInsertUrlPreview={() => setShowUrlPrompt(true)}
-        onToggleMeta={() => setIsMetaOpen((v) => !v)}
+        onInsertUrlPreview={openUrlPrompt}
+        onToggleMeta={toggleMeta}
         isMetaOpen={isMetaOpen ?? false}
-        onToggleFont={() => setIsFontOpen((v) => !v)}
+        onToggleFont={toggleFontPanel}
         isFontOpen={isFontOpen ?? false}
-        onToggleTexture={() => setIsTextureOpen((v) => !v)}
+        onToggleTexture={toggleTexturePanel}
         isTextureOpen={isTextureOpen ?? false}
-        onToggleLinkedNotes={() => setIsLinkedNotesOpen((v) => !v)}
-        isLinkedNotesOpen={isLinkedNotesOpen ?? false}
-        onToggleBarcode={() => setIsBarcodeOpen((v) => !v)}
+        onToggleLinkedNotes={handleToggleLinkedNotesEntry}
+        isLinkedNotesOpen={isLinkedNotesPickerOpen || (linkedNoteIds.length > 0 && !isLinkedNotesHidden)}
+        onToggleBarcode={toggleBarcodePanel}
         isBarcodeOpen={isBarcodeOpen ?? false}
-        onToggleReadAloud={() => setIsReadAloudOpen((v) => !v)}
+        onToggleReadAloud={toggleReadAloudPanel}
         isReadAloudOpen={isReadAloudOpen ?? false}
-        onToggleTimeCapsule={() => setIsTimeCapsuleOpen((v) => !v)}
+        onToggleTimeCapsule={toggleTimeCapsulePanel}
         isTimeCapsuleOpen={isTimeCapsuleOpen ?? false}
         isTimeCapsuleActive={isTimeCapsule}
-        onToggleSecret={() => setIsSecretOpen((v) => !v)}
+        onToggleSecret={toggleSecretPanel}
         isSecretOpen={isSecretOpen ?? false}
         isSecretActive={isSecret}
-        onToggleVersionHistory={() => setIsVersionHistoryOpen((v) => !v)}
+        onToggleVersionHistory={toggleVersionHistoryPanel}
         isVersionHistoryOpen={isVersionHistoryOpen ?? false}
         // Phase 8
-        onToggleReaction={() => setIsReactionOpen((v) => !v)}
-        isReactionOpen={isReactionOpen ?? false}
+        onToggleReaction={handleToggleReactionEntry}
+        isReactionOpen={isReactionPanelOpen || (!!reaction && !isReactionHidden)}
         isReactionActive={!!reaction}
-        onToggleHighlight={() => setIsHighlightOpen((v) => !v)}
-        isHighlightOpen={isHighlightOpen ?? false}
+        onToggleHighlight={handleToggleHighlightEntry}
+        isHighlightOpen={isHighlightPanelOpen || (highlights.length > 0 && !isHighlightsHidden)}
         // Phase 9
-        {...(onScheduledChange ? { onToggleScheduled: () => setIsScheduledOpen((v) => !v) } : {})}
+        {...(onScheduledChange ? { onToggleScheduled: toggleScheduledPanel } : {})}
         isScheduledOpen={isScheduledOpen ?? false}
         isScheduledActive={isScheduled}
-        onShare={() => setIsShareOpen(true)}
+        onShare={openSharePanel}
       />
 
       {/* Scrollable editor body */}
@@ -400,135 +536,127 @@ export function NoteEditor({
           />
 
           {/* Font panel */}
-          {isFontOpen && (
+          <AnimatedPanel show={isFontOpen ?? false}>
             <section aria-label="Gaya font" className="rounded-xl border border-[var(--border)] bg-[var(--surface-subtle)] p-4 space-y-2">
               <p className="text-xs font-medium text-[var(--text-secondary)]">Gaya Font</p>
               <NoteFontPicker value={fontWeight} onChange={onFontChange} />
             </section>
-          )}
+          </AnimatedPanel>
 
           {/* Texture panel */}
-          {isTextureOpen && (
+          <AnimatedPanel show={isTextureOpen ?? false}>
             <section aria-label="Tekstur catatan" className="rounded-xl border border-[var(--border)] bg-[var(--surface-subtle)] p-4 space-y-2">
               <p className="text-xs font-medium text-[var(--text-secondary)]">Tekstur Catatan</p>
               <NoteTexturePicker value={texture} onChange={onTextureChange} />
             </section>
+          </AnimatedPanel>
+
+          {/* Meta panel — always visible when there is data (mood, tags,
+              weather, or location), following the same pattern as Linked
+              Notes / Reaction / Highlight. Previously hidden behind
+              AnimatedPanel show={isMetaOpen}, which froze its open/closed
+              state from the first (cache-only, often empty) onSnapshot
+              result — meaning if the server snapshot with real tags arrived
+              after mount, the panel stayed closed and tags appeared absent.
+              The toolbar "Mood & tag" button still opens the panel when all
+              fields are empty (isMetaOpen state), giving users access to
+              add their first mood/tag. */}
+          {(isMetaOpen || mood || tags.length > 0 || weather || location) && (
+            <NoteMetaPanel
+              mood={mood}
+              onMoodChange={onMoodChange}
+              tags={tags}
+              onTagsChange={onTagsChange}
+              tagSuggestions={suggestions}
+              onTagSearchChange={(q) => void searchSuggestions(q)}
+              weather={weather}
+              onWeatherChange={onWeatherChange}
+              location={location}
+              onLocationChange={onLocationChange}
+              onRequestLocation={onRequestLocationClick}
+              isRequestingLocation={isRequestingLocation}
+              isFetchingWeather={isFetchingWeather}
+              onFetchWeatherForLocation={onFetchWeatherClick}
+              language={language}
+              hiddenSections={hiddenSections}
+              onToggleSection={onToggleSectionVisibility ?? noop}
+            />
           )}
 
-          {/* Meta panel */}
-          {isMetaOpen && (
-            <section aria-label="Metadata catatan" className="rounded-xl border border-[var(--border)] bg-[var(--surface-subtle)] p-4 space-y-4">
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-[var(--text-secondary)]">Mood</p>
-                <NoteMoodPicker value={mood} onChange={onMoodChange} />
-              </div>
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-[var(--text-secondary)]">Tag</p>
-                <TagInput value={tags} onChange={onTagsChange} suggestions={suggestions} onSearchChange={(q) => void searchSuggestions(q)} />
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                {location ? (
-                  <div className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface-base)] px-2.5 py-1.5">
-                    <MapPin className="h-3.5 w-3.5 text-[var(--text-tertiary)] shrink-0" />
-                    <span className="text-xs text-[var(--text-secondary)] max-w-[160px] truncate">
-                      {location.placeName ?? `${location.latitude.toFixed(3)}, ${location.longitude.toFixed(3)}`}
-                    </span>
-                    <button type="button" onClick={() => { onLocationChange(null); onWeatherChange(null); }} aria-label="Hapus lokasi" className="ml-1 text-[var(--text-tertiary)] hover:text-[var(--error)] outline-none focus-visible:ring-1 rounded">
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                ) : (
-                  <Button variant="outline" size="sm" onClick={() => void handleRequestLocation()} disabled={isRequestingLocation || isFetchingWeather} className="h-7 text-xs gap-1.5">
-                    {isRequestingLocation || isFetchingWeather ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MapPin className="h-3.5 w-3.5" />}
-                    {isRequestingLocation ? 'Mencari lokasi…' : isFetchingWeather ? 'Mengambil cuaca…' : 'Tambah lokasi'}
-                  </Button>
-                )}
-                {weather && (
-                  <div className="flex items-center gap-1.5">
-                    <NoteWeatherBadge weather={weather} compact />
-                    <button type="button" onClick={() => onWeatherChange(null)} aria-label="Hapus cuaca" className="text-[var(--text-tertiary)] hover:text-[var(--error)] outline-none focus-visible:ring-1 rounded">
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                )}
-                {!weather && location && (
-                  <Button variant="ghost" size="sm" onClick={async () => { const snap = await fetchWeather(location.latitude, location.longitude); if (snap) onWeatherChange(snap); }} disabled={isFetchingWeather} className="h-7 text-xs gap-1.5">
-                    {isFetchingWeather ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CloudSun className="h-3.5 w-3.5" />}
-                    Tambah cuaca
-                  </Button>
-                )}
-              </div>
-              {language && (
-                <p className="text-xs text-[var(--text-tertiary)]">
-                  Bahasa terdeteksi: <span className="font-medium">{language.toUpperCase()}</span>
-                </p>
-              )}
-            </section>
-          )}
-
-          {/* Linked notes panel */}
-          {isLinkedNotesOpen && (
-            <section aria-label="Catatan terhubung" className="rounded-xl border border-[var(--border)] bg-[var(--surface-subtle)] p-4">
-              <NoteLinkedNotes
-                linkedNoteIds={linkedNoteIds}
-                currentNoteId={noteId}
-                availableNotes={allNotes}
-                isLoadingNotes={isLoadingNotes}
-                onChange={onLinkedNotesChange}
-              />
-            </section>
+          {/* Linked notes — always visible when there's data, not a toggle
+              panel, so it follows the same hide/unhide pattern as every
+              other data section (Mood, Tag, blocks) instead of requiring a
+              separate "open panel" step first. The picker for ADDING a link
+              still opens via its own internal "Tautkan" button inside
+              NoteLinkedNotes — that's a distinct action from hiding the
+              section's display. */}
+          {(linkedNoteIds.length > 0 || isLinkedNotesPickerOpen) && (
+            isLinkedNotesHidden ? (
+              <NoteHiddenCollapsedRow label="Catatan terhubung" onToggle={() => onToggleSectionVisibility?.('linkedNotes')} />
+            ) : (
+              <section aria-label="Catatan terhubung" className="rounded-xl border border-[var(--border)] bg-[var(--surface-subtle)] p-4 space-y-2">
+                <NoteSectionHeader label="Catatan terhubung" isHidden={false} onToggleVisibility={() => onToggleSectionVisibility?.('linkedNotes')} />
+                <NoteLinkedNotes
+                  linkedNoteIds={linkedNoteIds}
+                  currentNoteId={noteId}
+                  availableNotes={allNotes}
+                  isLoadingNotes={isLoadingNotes}
+                  onChange={onLinkedNotesChange}
+                />
+              </section>
+            )
           )}
 
           {/* Barcode scanner panel */}
-          {isBarcodeOpen && (
+          <AnimatedPanel show={isBarcodeOpen ?? false}>
             <section aria-label="Pemindai barcode">
               <NoteBarcodeScanner onScanned={handleBarcodeScanned} variant="inline" />
             </section>
-          )}
+          </AnimatedPanel>
 
           {/* Read aloud panel */}
-          {isReadAloudOpen && (
+          <AnimatedPanel show={isReadAloudOpen ?? false}>
             <section aria-label="Baca keras">
               <NoteReadAloud text={plainText} title={title} />
             </section>
-          )}
+          </AnimatedPanel>
 
           {/* ── Phase 6 panels ───────────────────────────────────────── */}
 
           {/* Time Capsule panel */}
-          {isTimeCapsuleOpen && (
+          <AnimatedPanel show={isTimeCapsuleOpen ?? false}>
             <section aria-label="Kapsul waktu" className="rounded-xl border border-[var(--border)] bg-[var(--surface-subtle)] p-4">
               <NoteTimeCapsuleLock
                 isTimeCapsule={isTimeCapsule}
                 timeCapsuleUnlockAt={timeCapsuleUnlockAt}
-                onTimeCapsuleChange={onTimeCapsuleChange ?? (() => {})}
+                onTimeCapsuleChange={onTimeCapsuleChange ?? noop}
               />
             </section>
-          )}
+          </AnimatedPanel>
 
           {/* Secret Note panel */}
-          {isSecretOpen && (
+          <AnimatedPanel show={isSecretOpen ?? false}>
             <section aria-label="Catatan rahasia" className="rounded-xl border border-[var(--border)] bg-[var(--surface-subtle)] p-4">
               <NoteSecretLock
                 noteId={noteId}
                 isSecret={isSecret}
                 isUnlocked={isSecretUnlocked}
-                onSecretChange={onSecretChange ?? (() => {})}
+                onSecretChange={onSecretChange ?? noop}
                 onUnlock={() => setIsSecretUnlocked(true)}
                 onLock={() => setIsSecretUnlocked(false)}
               />
             </section>
-          )}
+          </AnimatedPanel>
 
           {/* Version History panel */}
-          {isVersionHistoryOpen && (
+          <AnimatedPanel show={isVersionHistoryOpen ?? false}>
             <section aria-label="Riwayat versi" className="rounded-xl border border-[var(--border)] bg-[var(--surface-subtle)] p-4">
               <NoteVersionHistory
                 noteId={noteId}
                 currentContent={content}
               />
             </section>
-          )}
+          </AnimatedPanel>
 
           {/* ── Phase 7: Note Size Indicator ─────────────────────────── */}
           {sizeInfo && sizeInfo.label !== 'small' && (
@@ -542,123 +670,111 @@ export function NoteEditor({
             </div>
           )}
 
-          {/* ── Phase 8: Reaction Bar ────────────────────────────── */}
-          {isReactionOpen && (
-            <section aria-label="Reaksi catatan">
-              <NoteReactionBar
-                noteId={noteId}
-                reaction={reaction ?? null}
-                {...(onReactionChange ? { onReactionChange } : {})}
-              />
-            </section>
+          {/* ── Reaction — same pattern as Mood: a picker the user can always
+               reach via the toolbar's "Reaksi" entry, with its own
+               hide/unhide once a reaction exists or the panel was opened. */}
+          {(reaction || isReactionPanelOpen) && (
+            isReactionHidden ? (
+              <NoteHiddenCollapsedRow label="Reaksi" onToggle={() => onToggleSectionVisibility?.('reaction')} />
+            ) : (
+              <section aria-label="Reaksi catatan" className="space-y-2">
+                <NoteSectionHeader label="Reaksi" isHidden={false} onToggleVisibility={() => onToggleSectionVisibility?.('reaction')} />
+                <NoteReactionBar
+                  noteId={noteId}
+                  reaction={reaction ?? null}
+                  {...(onReactionChange ? { onReactionChange } : {})}
+                />
+              </section>
+            )
           )}
 
-          {/* ── Phase 8: Highlight Marker ────────────────────────── */}
-          {isHighlightOpen && content.trim() && (
-            <section aria-label="Highlight catatan">
-              <NoteHighlightMarker
-                noteId={noteId}
-                content={content}
-                highlights={highlights}
-                {...(onHighlightsChange ? { onHighlightsChange } : {})}
-              />
-            </section>
+          {/* ── Highlight — always visible once the note has highlights;
+               picker for ADDING new highlights opens via the toolbar. */}
+          {(highlights.length > 0 || isHighlightPanelOpen) && content.trim() && (
+            isHighlightsHidden ? (
+              <NoteHiddenCollapsedRow label="Highlight" onToggle={() => onToggleSectionVisibility?.('highlights')} />
+            ) : (
+              <section aria-label="Highlight catatan" className="space-y-2">
+                <NoteSectionHeader label="Highlight" isHidden={false} onToggleVisibility={() => onToggleSectionVisibility?.('highlights')} />
+                <NoteHighlightMarker
+                  noteId={noteId}
+                  content={contentFormat === 'html' ? stripHtml(content) : content}
+                  highlights={highlights}
+                  {...(onHighlightsChange ? { onHighlightsChange } : {})}
+                />
+              </section>
+            )
           )}
 
           {/* ── Phase 9: Scheduled Note ───────────────────────── */}
-          {isScheduledOpen && onScheduledChange && (
+          <AnimatedPanel show={Boolean(isScheduledOpen && onScheduledChange)}>
             <section aria-label="Jadwal catatan">
               <NoteScheduled
                 isScheduled={isScheduled}
                 scheduledAt={scheduledAt ?? null}
-                onChange={onScheduledChange}
+                onChange={onScheduledChange ?? noop}
               />
             </section>
-          )}
+          </AnimatedPanel>
 
           {/* Checklist progress */}
           {allChecklistItems.length > 0 && <NoteChecklistProgress items={allChecklistItems} />}
 
           {/* All blocks */}
-          {blocks.map((block) => {
-            if (block.type === 'checklist') {
-              let items: ChecklistItem[] = [];
-              try { items = JSON.parse(block.content) as ChecklistItem[]; } catch { /* skip */ }
-              return (
-                <div key={block.id} className="space-y-2">
-                  <NoteChecklist items={items} onChange={(updated) => handleChecklistChange(block.id, updated)} />
-                </div>
-              );
-            }
+          <NoteBlocksRenderer
+            blocks={blocks}
+            onChecklistChange={handleChecklistChange}
+            onTableChange={handleTableChange}
+            onMathChange={handleMathChange}
+            onUrlPreviewFetched={handleUrlPreviewFetched}
+            onRemoveBlock={handleRemoveBlock}
+            onToggleBlockVisibility={onToggleBlockVisibility ?? noop}
+          />
 
-            if (block.type === 'table') {
-              return (
-                <div key={block.id} className="space-y-1">
-                  <NoteTable data={deserializeTable(block.content)} onChange={(data) => handleTableChange(block.id, data)} />
-                  <button type="button" onClick={() => handleRemoveBlock(block.id)} aria-label="Hapus tabel" className="text-xs text-[var(--text-tertiary)] hover:text-[var(--error)] outline-none focus-visible:ring-1 rounded">
-                    Hapus tabel
-                  </button>
-                </div>
-              );
-            }
-
-            if (block.type === 'math') {
-              return (
-                <div key={block.id} className="space-y-1">
-                  <NoteMathBlock expression={block.content} onChange={(expr) => handleMathChange(block.id, expr)} />
-                  <button type="button" onClick={() => handleRemoveBlock(block.id)} aria-label="Hapus kalkulasi" className="text-xs text-[var(--text-tertiary)] hover:text-[var(--error)] outline-none focus-visible:ring-1 rounded">
-                    Hapus kalkulasi
-                  </button>
-                </div>
-              );
-            }
-
-            if (block.type === 'url-preview') {
-              let previewData: UrlPreviewData | null = null;
-              let rawUrl = '';
-              try {
-                const parsed = JSON.parse(block.content) as { url: string; meta: UrlPreviewData['meta']; cachedAt: string | null };
-                rawUrl = parsed.url;
-                if (parsed.meta) previewData = { url: parsed.url, meta: parsed.meta, cachedAt: parsed.cachedAt ?? new Date().toISOString() };
-              } catch { /* skip */ }
-              return (
-                <NoteUrlPreview
-                  key={block.id}
-                  previewData={previewData}
-                  rawUrl={rawUrl}
-                  onPreviewFetched={(data) => handleUrlPreviewFetched(block.id, data)}
-                  onRemove={() => handleRemoveBlock(block.id)}
-                />
-              );
-            }
-
-            return null;
-          })}
 
           {/* URL prompt */}
-          {showUrlPrompt && (
+          <AnimatedPanel show={showUrlPrompt}>
             <UrlPromptBar
               onSubmit={(url) => { onInsertUrlPreview(url); setShowUrlPrompt(false); }}
               onCancel={() => setShowUrlPrompt(false)}
             />
-          )}
+          </AnimatedPanel>
 
-          {/* Main content textarea */}
-          <textarea
-            ref={contentRef}
-            value={content}
-            onChange={(e) => { onContentChange(e.target.value); autoResize(e.target); }}
-            placeholder="Tulis pikiranmu di sini…"
-            aria-label="Konten catatan"
-            rows={10}
-            className={cn(
-              'w-full min-h-[240px] resize-none overflow-hidden bg-transparent',
-              'text-sm text-[var(--text-primary)] leading-relaxed',
-              'placeholder:text-[var(--text-tertiary)]',
-              'outline-none border-none focus:ring-0',
-              fontCls
-            )}
+          {/* Format toolbar — selalu terlihat; pada catatan 'plain' klik pertama akan upgrade ke mode kaya */}
+          <NoteFormatToolbar
+            contentFormat={contentFormat}
+            content={content}
+            editableRef={contentRef}
+            onContentChange={onContentChange}
+            className="mb-2"
           />
+
+          {/* Main content */}
+          {contentFormat === 'html' ? (
+            <NoteRichEditor
+              content={content}
+              onChange={(html) => onContentChange(html, 'html')}
+              editableRef={contentRef as RefObject<HTMLDivElement | null>}
+              placeholder="Tulis pikiranmu di sini…"
+              className={fontCls}
+            />
+          ) : (
+            <textarea
+              ref={contentRef as RefObject<HTMLTextAreaElement | null>}
+              value={content}
+              onChange={(e) => { onContentChange(e.target.value, 'plain'); autoResize(e.target); }}
+              placeholder="Tulis pikiranmu di sini…"
+              aria-label="Konten catatan"
+              rows={10}
+              className={cn(
+                'w-full min-h-[240px] resize-none overflow-hidden bg-transparent',
+                'text-sm text-[var(--text-primary)] leading-relaxed',
+                'placeholder:text-[var(--text-tertiary)]',
+                'outline-none border-none focus:ring-0',
+                fontCls
+              )}
+            />
+          )}
         </div>
       </div>
 
@@ -669,6 +785,7 @@ export function NoteEditor({
           userId: '',
           title,
           content,
+          contentFormat,
           blocks,
           mood,
           tags,
@@ -688,6 +805,7 @@ export function NoteEditor({
           reaction: null,
           linkedNoteIds: [],
           highlights: [],
+          hiddenSections,
           wordCount,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),

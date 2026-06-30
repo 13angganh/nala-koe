@@ -1,8 +1,11 @@
 'use client';
 
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import { SettingsShell } from '@/components/settings/settings-shell';
 import { useAuthStore } from '@/stores/auth.store';
+import { useSettingsStore } from '@/stores/settings.store';
+import { animation } from '@/tokens/animation';
 import { ROUTES } from '@/constants/routes';
 import { Button } from '@/components/ui/button';
 import { isOk } from '@/lib/normalizer';
@@ -35,6 +38,7 @@ const SETTINGS_CARDS = [
 export default function SettingsPage() {
   const user = useAuthStore((s) => s.user);
   const router = useRouter();
+  const animationsEnabled = useSettingsStore((s) => s.preferences.enableAnimations ?? true);
 
   const handleLogout = async () => {
     const result = await logout();
@@ -47,7 +51,16 @@ export default function SettingsPage() {
 
   return (
     <SettingsShell>
-      <div className="space-y-6">
+      <motion.div
+        className="space-y-6"
+        {...(animationsEnabled
+          ? {
+              initial: animation.variants.slideUp.initial,
+              animate: animation.variants.slideUp.animate,
+              transition: animation.variants.slideUp.transition,
+            }
+          : {})}
+      >
         {/* Profile card */}
         {user && (
           <section className="rounded-xl border border-[var(--border)] bg-[var(--surface-base)] p-4">
@@ -69,20 +82,21 @@ export default function SettingsPage() {
         <section>
           <div className="space-y-2">
             {SETTINGS_CARDS.map(({ href, label, description, icon: Icon }) => (
-              <Link
-                key={href}
-                href={href}
-                className="flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-base)] p-4 transition-colors hover:border-[var(--accent)]/40 hover:bg-[var(--surface-subtle)]"
-              >
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-muted)]">
-                  <Icon className="h-4 w-4 text-[var(--accent)]" aria-hidden />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-[var(--text-primary)]">{label}</p>
-                  <p className="text-sm text-[var(--text-tertiary)]">{description}</p>
-                </div>
-                <ChevronRight className="h-4 w-4 shrink-0 text-[var(--text-tertiary)]" aria-hidden />
-              </Link>
+              <motion.div key={href} {...(animationsEnabled ? { whileHover: { x: 2 }, whileTap: { scale: 0.99 } } : {})}>
+                <Link
+                  href={href}
+                  className="flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-base)] p-4 transition-colors hover:border-[var(--accent)]/40 hover:bg-[var(--surface-subtle)]"
+                >
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-muted)]">
+                    <Icon className="h-4 w-4 text-[var(--accent)]" aria-hidden />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-[var(--text-primary)]">{label}</p>
+                    <p className="text-sm text-[var(--text-tertiary)]">{description}</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-[var(--text-tertiary)]" aria-hidden />
+                </Link>
+              </motion.div>
             ))}
           </div>
         </section>
@@ -100,8 +114,8 @@ export default function SettingsPage() {
           </Button>
         </section>
 
-        <p className="text-center text-sm text-[var(--text-tertiary)]">NalaKoe · Versi 1.0.0</p>
-      </div>
+        <p className="text-center text-sm text-[var(--text-tertiary)]">NalaKoe · Versi {process.env.NEXT_PUBLIC_APP_VERSION}</p>
+      </motion.div>
     </SettingsShell>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { History, RotateCcw, Eye, EyeOff, ChevronRight, Loader2, Clock } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, stripHtml } from '@/lib/utils';
 import { useVersionHistory, formatVersionLabel, diffText } from '@/hooks/use-version-history';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import type { NoteVersion } from '@/types/note.types';
@@ -16,7 +16,7 @@ function DiffViewer({
   currentContent: string;
   version: NoteVersion;
 }) {
-  const diff = diffText(version.snapshot.content, currentContent);
+  const diff = diffText(stripHtml(version.snapshot.content ?? ''), stripHtml(currentContent));
 
   const hasChanges = diff.some((l) => l.type !== 'unchanged');
 

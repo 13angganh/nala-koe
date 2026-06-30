@@ -34,6 +34,14 @@ export function CommandPalette() {
   const { commandPaletteOpen, setCommandPaletteOpen } = useUiStore();
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState(0);
+  // Tracks the query value that `selected` was last reset for. When query
+  // changes, we adjust `selected` back to 0 directly during render (React's
+  // documented pattern for "adjusting state when a prop/input changes")
+  // rather than via a separate useEffect — that previous approach caused an
+  // extra render every time the user typed: one render with the stale
+  // `selected` index against the new `filtered` list, then a second render
+  // once the effect's setSelected(0) took effect.
+  const [lastQueryForSelection, setLastQueryForSelection] = useState(query);
 
   const filtered = query.trim()
     ? COMMANDS.filter((c) =>
@@ -41,6 +49,11 @@ export function CommandPalette() {
         (c.keywords ?? '').toLowerCase().includes(query.toLowerCase())
       )
     : COMMANDS;
+
+  if (query !== lastQueryForSelection) {
+    setLastQueryForSelection(query);
+    setSelected(0);
+  }
 
   const close = useCallback(() => {
     setCommandPaletteOpen(false);
@@ -75,9 +88,6 @@ export function CommandPalette() {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [commandPaletteOpen, filtered, selected, execute]);
-
-  // Reset selection on query change
-  useEffect(() => { setSelected(0); }, [query]);
 
   // Group filtered results
   const groups = filtered.reduce<Record<string, CommandItem[]>>((acc, item) => {

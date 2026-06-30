@@ -8,6 +8,18 @@ import type { Note, NoteContentBlock } from '@/types/note.types';
 import type { ExportFormat, ExportOptions } from '@/types/import-export.types';
 import { logger } from '@/lib/logger';
 import { MOOD_MAP } from '@/constants/moods';
+import { stripHtml } from '@/lib/utils';
+import { htmlToMarkdown } from '@/lib/rich-text';
+
+/** note.content as Markdown — converts our HTML formatting vocabulary, or passes plain text through unchanged. */
+function noteBodyAsMarkdown(note: Note): string {
+  return note.contentFormat === 'html' ? htmlToMarkdown(note.content) : note.content;
+}
+
+/** note.content as plain text — strips formatting entirely (TXT/PDF/DOCX bodies, CSV/XLSX cells). */
+function noteBodyAsPlainText(note: Note): string {
+  return note.contentFormat === 'html' ? stripHtml(note.content) : note.content;
+}
 
 // ─── Text Helpers ────────────────────────────────────────────────────────────
 
@@ -105,7 +117,7 @@ function noteToMarkdownString(note: Note, opts: ExportOptions): string {
   if (opts.includeMetadata || opts.includeMood || opts.includeTags) lines.push('');
 
   lines.push(blocksToMarkdown(note.blocks.length > 0 ? note.blocks : []));
-  if (note.blocks.length === 0 && note.content) lines.push(note.content);
+  if (note.blocks.length === 0 && note.content) lines.push(noteBodyAsMarkdown(note));
 
   return lines.join('\n');
 }
@@ -128,7 +140,7 @@ function noteToTxtString(note: Note, opts: ExportOptions): string {
   }
   lines.push('');
   lines.push(blocksToPlainText(note.blocks.length > 0 ? note.blocks : []));
-  if (note.blocks.length === 0 && note.content) lines.push(note.content);
+  if (note.blocks.length === 0 && note.content) lines.push(noteBodyAsPlainText(note));
 
   return lines.join('\n');
 }
@@ -185,7 +197,7 @@ export async function exportNotesAsXlsx(notes: Note[], opts: ExportOptions): Pro
     const row: Record<string, string | number> = {
       ID: n.id,
       Judul: n.title || 'Tanpa Judul',
-      Konten: n.blocks.length > 0 ? blocksToPlainText(n.blocks) : n.content,
+      Konten: n.blocks.length > 0 ? blocksToPlainText(n.blocks) : noteBodyAsPlainText(n),
     };
     if (opts.includeMood) {
       row['Mood'] = n.mood ? (MOOD_MAP[n.mood]?.label ?? n.mood) : '-';
@@ -285,7 +297,7 @@ export async function exportNotesAsPdf(notes: Note[], opts: ExportOptions): Prom
     // Content
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
-    const body = note.blocks.length > 0 ? blocksToPlainText(note.blocks) : note.content;
+    const body = note.blocks.length > 0 ? blocksToPlainText(note.blocks) : noteBodyAsPlainText(note);
     const contentLines = doc.splitTextToSize(body, maxW) as string[];
     contentLines.forEach((line: string) => {
       checkPage();
@@ -370,7 +382,7 @@ export async function exportNotesAsDocx(notes: Note[], opts: ExportOptions): Pro
     children.push(new Paragraph({ children: [] }));
 
     // Content paragraphs
-    const body = note.blocks.length > 0 ? blocksToPlainText(note.blocks) : note.content;
+    const body = note.blocks.length > 0 ? blocksToPlainText(note.blocks) : noteBodyAsPlainText(note);
     body.split('\n').forEach((line) => {
       children.push(
         new Paragraph({
@@ -450,7 +462,7 @@ export function buildExportFilename(
   };
   const date = new Date().toISOString().slice(0, 10);
   if (title && count === 1) {
-    const safe = title.replace(/[/\\:*?"<>|]/g, '-').slice(0, 50);
+    const safe = title.replace(/[/\\:*?"<>|]/g, '-').replace(/\s+/g, '-').slice(0, 50);
     return `nalakoe-${safe}-${date}.${ext[format]}`;
   }
   return `nalakoe-export-${count}notes-${date}.${ext[format]}`;
