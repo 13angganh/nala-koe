@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState, useSyncExternalStore } from 'react';
 import { logger } from '@/lib/logger';
 
 type BiometricState = 'idle' | 'prompting' | 'success' | 'failed' | 'unavailable';
@@ -86,22 +86,40 @@ async function verifyCredential(credentialId: string): Promise<boolean> {
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
+// WebAuthn browser support never changes during a session (it's a fixed
+// property of the browser/OS the page is running in), and is unavailable
+// during SSR (navigator/PublicKeyCredential don't exist server-side). That
+// combination — "differs between server and client, fixed once on the
+// client" — is exactly what useSyncExternalStore's server/client snapshot
+// split is for, same reasoning as useMounted (see that file for the fuller
+// explanation). No real store to subscribe to, so subscribe is a no-op.
+const subscribeToNothing = () => () => {};
+function detectWebAuthnSupport(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    'credentials' in navigator &&
+    typeof PublicKeyCredential !== 'undefined'
+  );
+}
+
 export function useBiometric(noteId: string): UseBiometricReturn {
   const storageKey = `${STORAGE_KEY}_${noteId}`;
 
-  const [isSupported, setIsSupported] = useState(false);
-  const [state, setState] = useState<BiometricState>('idle');
+  const isSupported = useSyncExternalStore(
+    subscribeToNothing,
+    detectWebAuthnSupport,
+    () => false // server snapshot: WebAuthn is never available during SSR
+  );
+  const [internalState, setState] = useState<BiometricState>('idle');
   const [isUnlocked, setIsUnlocked] = useState(false);
 
-  useEffect(() => {
-    const supported =
-      typeof window !== 'undefined' &&
-      'credentials' in navigator &&
-      typeof PublicKeyCredential !== 'undefined';
-    setIsSupported(supported);
-
-    if (!supported) setState('unavailable');
-  }, []);
+  // 'unavailable' is fully derived from isSupported — it's never something
+  // a user action transitions *into*, only a starting condition — so it's
+  // computed here during render instead of synced via an effect + setState.
+  // Every other transition ('prompting' / 'success' / 'failed') genuinely
+  // is the result of a user action (promptBiometric below) and stays as
+  // real state.
+  const state: BiometricState = !isSupported ? 'unavailable' : internalState;
 
   const promptBiometric = useCallback(async (): Promise<boolean> => {
     if (!isSupported) return false;

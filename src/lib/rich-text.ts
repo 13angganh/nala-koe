@@ -3,7 +3,7 @@ import DOMPurify from 'dompurify';
 /**
  * Rich text core helpers.
  *
- * Design constraints (see readme-nala-koe.md Sesi 15):
+ * Design constraints (see README.md, riwayat entry Sesi 15):
  * - We deliberately avoid `document.execCommand` for formatting actions (it's
  *   deprecated and produces inconsistent/unpredictable nested markup across
  *   browsers). All inline-mark toggling below is done by hand with the

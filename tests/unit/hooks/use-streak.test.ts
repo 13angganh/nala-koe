@@ -1,10 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
 // Extract pure logic from use-streak for testing
-function toDateStr(iso: string): string {
-  return iso.slice(0, 10);
-}
-
 function computeStreak(sortedDates: string[]): { current: number; longest: number } {
   if (sortedDates.length === 0) return { current: 0, longest: 0 };
 

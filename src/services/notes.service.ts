@@ -202,7 +202,7 @@ export async function getNoteById(
 export function subscribeToNote(
   noteId: string,
   userId: string,
-  onData: (note: Note) => void,
+  onData: (note: Note, hasPendingWrites: boolean) => void,
   onError: (message: string) => void
 ): Unsubscribe {
   const ref = doc(db, COLLECTION, noteId);
@@ -218,7 +218,23 @@ export function subscribeToNote(
         onError('Tidak diizinkan mengakses catatan ini');
         return;
       }
-      onData(normalizeNote(snap.id, data));
+      // Root cause of the intermittent "tag/field disappears" reports:
+      // with persistentLocalCache + persistentMultipleTabManager, onSnapshot
+      // fires with snap.metadata.hasPendingWrites === true for BOTH (a) this
+      // client's own optimistic write echoing back before the server has
+      // confirmed it, and (b) any other still-unsettled local write queued
+      // ahead of it. Previously every snapshot — settled or not — was
+      // treated as equally authoritative and pushed straight to
+      // setActiveNote(), so a pending-write snapshot that happened to race
+      // ahead of a field's own save could momentarily present stale data as
+      // if it were final. Firestore's own docs recommend checking this flag
+      // for exactly this reason: https://firebase.google.com/docs/firestore/query-data/listen#events-local-changes
+      // We still forward pending-write snapshots (the UI should reflect the
+      // user's own optimistic edits immediately — that's what makes typing
+      // feel instant), but we tag them so the caller (useNoteEditor) can
+      // decide whether it's safe to let this snapshot overwrite in-flight
+      // local state, instead of unconditionally trusting every callback.
+      onData(normalizeNote(snap.id, data), snap.metadata.hasPendingWrites);
     },
     (error) => {
       logger.error('notes.subscribe.failed', { error, noteId });
@@ -285,33 +301,69 @@ export async function updateNote(
 ): Promise<ApiResult<void>> {
   try {
     const ref = doc(db, COLLECTION, noteId);
-    const snap = await getDoc(ref);
 
-    if (!snap.exists() || snap.data().userId !== userId) {
-      return err('notes/not-found', 'Catatan tidak ditemukan');
-    }
-
-    // Save version snapshot only when content-bearing fields change — not on
-    // every metadata-only save (tags, mood, weather, etc.). Version history
-    // tracks writing changes; making a new snapshot every time someone adds
-    // a tag would be semantically meaningless AND means every tag/mood save
-    // pays the cost of an extra Firestore read+write (and surfaces an extra
-    // failure point if the versions subcollection's rules ever reject the
-    // write — that failure is non-fatal here, but better to not trigger it
-    // unnecessarily on saves that have nothing to do with content history).
+    // Root cause of tags/mood/etc. silently failing to save (reported: type
+    // a tag, navigate away, come back — tag is gone): this function used to
+    // start with an unconditional getDoc(ref) purely to check
+    // `snap.data().userId !== userId` before allowing the write. That
+    // getDoc() is a well-documented Firestore JS SDK trap
+    // (firebase-js-sdk#6739, already cited below for a DIFFERENT reason) —
+    // if another write for this same document was still settling when this
+    // getDoc() ran (a very normal thing on this note: title/content/tags/
+    // mood/weather are each their own independent scheduleAutoSave batch,
+    // so it's routine for more than one to be in flight close together),
+    // getDoc() can return a PARTIAL snapshot reflecting only that other
+    // write's fields — NOT the whole document. `userId` isn't part of a
+    // tags/mood/weather patch, so it was simply absent from that partial
+    // snapshot, `snap.data().userId !== userId` came out true, and this
+    // function returned 'notes/not-found' WITHOUT EVER CALLING updateDoc()
+    // — the tag was silently never sent to Firestore at all. Reproduced
+    // directly in tests/unit/services/repro-updatenote-getdoc.test.ts.
+    //
+    // The ownership check itself was always redundant with the server: see
+    // firestore.rules `match /notes/{noteId} { allow update: if ... &&
+    // resource.data.userId == request.auth.uid ... }` — Firestore itself
+    // rejects a write to someone else's note regardless of what this
+    // client-side check does. Removing the unconditional getDoc() doesn't
+    // weaken security; it removes a redundant, race-prone client-side copy
+    // of a check the server already enforces authoritatively. An
+    // unauthorized write attempt now surfaces as a generic
+    // 'notes/update-failed' from the catch block below (Firestore's
+    // permission-denied rejection) instead of the more specific
+    // 'notes/not-found' — an acceptable tradeoff for no longer dropping
+    // legitimate saves.
+    //
+    // getDoc() is still called, but ONLY when this save actually needs the
+    // existing document for saveVersion() below (title/content/blocks
+    // changes) — not on every tag/mood/weather/pin/etc. save.
     const touchesContent = input.title !== undefined || input.content !== undefined || input.blocks !== undefined;
     if (touchesContent) {
-      const existing = normalizeNote(snap.id, snap.data() as Record<string, unknown>);
-      await saveVersion(noteId, existing);
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        // Save version snapshot only when content-bearing fields change —
+        // not on every metadata-only save (tags, mood, weather, etc.).
+        // Version history tracks writing changes; making a new snapshot
+        // every time someone adds a tag would be semantically meaningless
+        // AND means every tag/mood save pays the cost of an extra
+        // Firestore read+write (and surfaces an extra failure point if the
+        // versions subcollection's rules ever reject the write — that
+        // failure is non-fatal here, but better to not trigger it
+        // unnecessarily on saves that have nothing to do with content
+        // history).
+        const existing = normalizeNote(snap.id, snap.data() as Record<string, unknown>);
+        await saveVersion(noteId, existing);
+      }
+      // If snap doesn't exist (or belongs to someone else), we deliberately
+      // don't short-circuit here either — same reasoning as above: let the
+      // updateDoc() below hit Firestore Rules directly rather than
+      // duplicating that check against a getDoc() result that can itself
+      // be stale/partial.
     }
 
     const updates: Record<string, unknown> = {
       ...input,
       updatedAt: serverTimestamp(),
     };
-
-    // eslint-disable-next-line no-console -- temporary debug instrumentation, see README Sesi 19
-    console.log('[DEBUG tags] updateNote() sending to Firestore updateDoc ->', JSON.stringify(input));
 
     if (input.content !== undefined) {
       const { wordCount } = analyzeContent(input.content);

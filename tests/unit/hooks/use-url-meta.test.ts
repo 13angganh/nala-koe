@@ -55,26 +55,26 @@ describe('useUrlMeta', () => {
 
   it('returns null and sets error for invalid URL', async () => {
     const { result } = renderHook(() => useUrlMeta());
-    let returned: Awaited<ReturnType<typeof result.current.fetchMeta>>;
+    let returned: Awaited<ReturnType<typeof result.current.fetchMeta>> = null;
 
     await act(async () => {
       returned = await result.current.fetchMeta('not-a-url');
     });
 
-    expect(returned!).toBeNull();
+    expect(returned).toBeNull();
     expect(result.current.error).toBeTruthy();
     expect(result.current.meta).toBeNull();
   });
 
   it('rejects non-http protocols', async () => {
     const { result } = renderHook(() => useUrlMeta());
-    let returned: Awaited<ReturnType<typeof result.current.fetchMeta>>;
+    let returned: Awaited<ReturnType<typeof result.current.fetchMeta>> = null;
 
     await act(async () => {
       returned = await result.current.fetchMeta('ftp://example.com');
     });
 
-    expect(returned!).toBeNull();
+    expect(returned).toBeNull();
     expect(result.current.error).toBeTruthy();
   });
 

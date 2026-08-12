@@ -38,7 +38,7 @@ describe('useSmartFolders', () => {
     const { result } = renderHook(() => useSmartFolders(notes));
     const pinned = result.current.find((f) => f.key === 'pinned');
     expect(pinned).toBeDefined();
-    expect(pinned!.count).toBe(1);
+    expect(pinned?.count).toBe(1);
   });
 
   it('includes today folder for notes updated today', () => {
@@ -46,7 +46,7 @@ describe('useSmartFolders', () => {
     const { result } = renderHook(() => useSmartFolders(notes));
     const today = result.current.find((f) => f.key === 'today');
     expect(today).toBeDefined();
-    expect(today!.count).toBe(1);
+    expect(today?.count).toBe(1);
   });
 
   it('includes long-notes folder for notes >= 300 words', () => {
@@ -54,7 +54,7 @@ describe('useSmartFolders', () => {
     const { result } = renderHook(() => useSmartFolders(notes));
     const longNotes = result.current.find((f) => f.key === 'long-notes');
     expect(longNotes).toBeDefined();
-    expect(longNotes!.count).toBe(1);
+    expect(longNotes?.count).toBe(1);
   });
 
   it('excludes folders with zero count', () => {
@@ -75,6 +75,6 @@ describe('useSmartFolders', () => {
     const { result } = renderHook(() => useSmartFolders(notes));
     const untagged = result.current.find((f) => f.key === 'untagged');
     expect(untagged).toBeDefined();
-    expect(untagged!.count).toBe(1);
+    expect(untagged?.count).toBe(1);
   });
 });

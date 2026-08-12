@@ -43,8 +43,20 @@ export function CanvasBoard({
   const boardRef = useRef<HTMLDivElement>(null);
   const { confirm } = useConfirmDialog();
 
-  // Sync stickies when board prop changes
+  // Sync stickies when board prop changes. This is the
+  // "Subscribe for updates from some external system, calling setState in
+  // a callback function when external state changes" case the rule's own
+  // description names as valid — `board` is a snapshot of Firestore state
+  // from the parent's onSnapshot subscription (see notes.service.ts /
+  // canvas.service.ts), an external system relative to this component.
+  // `stickies` can't be fully derived from `board.stickies` during render
+  // because it also carries local-only mutations from drag/add/delete
+  // below (setStickies at lines ~130-165) that happen optimistically
+  // before the corresponding server write resolves — collapsing it back
+  // to a pure derived value would mean every drag frame waits on a
+  // Firestore round-trip to be visible.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reason: see comment above; this is the rule's own documented "external system" exception
     setStickies(board.stickies);
   }, [board.stickies]);
 

@@ -33,9 +33,17 @@ export function useBarcodeScanner(): UseBarcodeScannerReturn {
   /**
    * BarcodeDetector is not available in all browsers.
    * We check at runtime to avoid SSR issues.
+   *
+   * Checking truthiness rather than `'BarcodeDetector' in window` for the
+   * same reason as isSupported in use-read-aloud.ts: `in` only confirms
+   * the property exists, not that it holds a usable value — a browser or
+   * a misbehaving polyfill that declares `window.BarcodeDetector =
+   * undefined` would otherwise still report supported.
    */
   const isSupported =
-    typeof window !== 'undefined' && 'BarcodeDetector' in window;
+    typeof window !== 'undefined' &&
+    // @ts-expect-error — BarcodeDetector is not in TS DOM lib yet
+    Boolean(window.BarcodeDetector);
 
   const stopScan = useCallback(() => {
     abortRef.current?.abort();

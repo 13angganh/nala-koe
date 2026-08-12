@@ -31,6 +31,18 @@ const config = [
     },
   },
   {
+    // scripts/**/*.mjs are standalone Node.js CLI tools run manually from
+    // the terminal (icon generation, service-worker version injection) —
+    // never bundled into the app itself. console.log here is the intended
+    // CLI progress output a person watches while the script runs, not
+    // debug noise left in browser-shipped code, so the app-wide
+    // warn/error-only restriction above doesn't apply to this directory.
+    files: ['scripts/**/*.mjs'],
+    rules: {
+      'no-console': 'off',
+    },
+  },
+  {
     ignores: ['node_modules/**', '.next/**', 'public/sw.js', 'coverage/**'],
   },
 ];

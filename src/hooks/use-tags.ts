@@ -66,8 +66,31 @@ export function useTags(): UseTagsReturn {
   );
 
   useEffect(() => {
-    void fetchTags();
-  }, [fetchTags]);
+    // Fetching logic is duplicated here (rather than reusing the fetchTags
+    // callback above) so this effect owns its own request instead of
+    // depending on a useCallback reference. The exported `fetchTags` above
+    // stays as the callback used for manual refreshes elsewhere (e.g.
+    // after creating a note with a new tag).
+    //
+    // The disable below: setIsLoading(true) here is the standard "mark
+    // loading before an async fetch starts" pattern (see e.g.
+    // https://www.robinwieruch.de/react-hooks-fetch-data/) — this is
+    // genuinely synchronizing local UI state with the start of an external
+    // request, not a value that could instead be derived during render.
+    // Wrapping it in an extra Promise.resolve().then() to satisfy this
+    // rule was tried and reverted: it added a microtask with no
+    // behavioral benefit purely to route the call through a callback,
+    // which is worse than an explained disable. See the open discussion
+    // on this rule's false positives: https://github.com/facebook/react/issues/34743
+    if (!user?.uid) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reason: see comment block above
+    setIsLoading(true);
+    getUserTags(user.uid)
+      .then((result) => {
+        if (result.data) setTags(result.data);
+      })
+      .finally(() => setIsLoading(false));
+  }, [user?.uid]);
 
   // Cleanup debounce on unmount
   useEffect(() => {

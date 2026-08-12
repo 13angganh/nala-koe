@@ -7,6 +7,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import { useNotesStore } from '@/stores/notes.store';
 import { subscribeToNote, updateNote } from '@/services/notes.service';
 import { isOk } from '@/lib/normalizer';
+import { logger } from '@/lib/logger';
 import { analyzeContent, estimateReadingTime } from '@/lib/reading-time';
 import { detectLanguage } from '@/lib/language-detector';
 import type { UpdateNoteInput, NoteLocation, NoteContentBlock, NoteReaction, NoteHighlight, NoteSectionKey } from '@/types/note.types';
@@ -30,6 +31,18 @@ export function useNoteEditor(noteId: string) {
   // e.g. a title edit followed by a content edit (both within 1.5s) are saved
   // together instead of the later call silently overwriting/dropping the earlier one.
   const pendingInputRef = useRef<UpdateNoteInput>({});
+  // Separate from pendingInputRef: this stays populated for the FULL duration
+  // of an in-flight saveMutation.mutate() call (from the moment the debounce
+  // timer fires until the mutation's promise actually settles), not just
+  // during the 1.5s debounce window. Root cause of the intermittent
+  // "tag/field disappears" reports — pendingInputRef used to get cleared the
+  // instant the timer fired, before the network write had a chance to
+  // reach Firestore. If a snapshot with hasPendingWrites=true (i.e. not yet
+  // server-confirmed — see subscribeToNote) arrived in that gap, there was
+  // nothing left to re-apply on top of it, so the snapshot's older data
+  // momentarily overwrote the field that was still being saved. Keeping
+  // this ref alive until the mutation settles closes that gap.
+  const inFlightSaveRef = useRef<UpdateNoteInput>({});
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -59,17 +72,34 @@ export function useNoteEditor(noteId: string) {
       noteId,
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: isEnabled guards both user?.uid and noteId
       user!.uid,
-      (note) => {
-        // Defensive guard: if a snapshot lands while the user has unsaved
-        // edits still sitting in the auto-save debounce window
-        // (pendingInputRef), re-apply those edits on top of the fresh
-        // server data so they're never silently discarded by an
-        // in-flight server round-trip for a DIFFERENT field.
-        const pending = pendingInputRef.current;
+      (note, hasPendingWrites) => {
+        // Defensive guard, now covering the FULL lifetime of an in-flight
+        // save (see inFlightSaveRef above), not just the debounce window:
+        // re-apply any field this client is still in the middle of saving
+        // on top of whatever this snapshot says, so an unsettled snapshot
+        // can never present stale data for a field mid-write as if it were
+        // final.
+        const stillInFlight = Object.keys(inFlightSaveRef.current);
+        const pending = { ...pendingInputRef.current, ...inFlightSaveRef.current };
         const merged = Object.keys(pending).length > 0 ? { ...note, ...pending } : note;
         setActiveNote(merged);
         setIsLoading(false);
         setIsError(false);
+
+        // hasPendingWrites === false means Firestore itself considers this
+        // snapshot server-confirmed. If inFlightSaveRef still thinks a field
+        // is mid-save at that exact moment, the mutation's onSettled (in
+        // scheduleAutoSave) should have already cleared it — the write
+        // either succeeded (onSuccess ran) or failed (onError ran and
+        // surfaced a toast), and either way onSettled always fires. Seeing
+        // both at once past a full auto-save cycle points at a genuine
+        // desync — e.g. this tab's mutation promise never settling because
+        // of an uncaught error path — worth a warn so it's visible in
+        // production logs instead of silently self-correcting on the next
+        // snapshot.
+        if (!hasPendingWrites && stillInFlight.length > 0) {
+          logger.warn('notes.editor.stale-in-flight-ref', { noteId, fields: stillInFlight });
+        }
       },
       (message) => {
         toast.error(message);
@@ -109,16 +139,33 @@ export function useNoteEditor(noteId: string) {
   const scheduleAutoSave = useCallback(
     (input: UpdateNoteInput) => {
       pendingInputRef.current = { ...pendingInputRef.current, ...input };
-      // eslint-disable-next-line no-console -- temporary debug instrumentation, see README Sesi 19
-      console.log('[DEBUG tags] scheduleAutoSave merged pending ->', JSON.stringify(pendingInputRef.current));
       if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
       autoSaveTimer.current = setTimeout(() => {
         const merged = pendingInputRef.current;
         pendingInputRef.current = {};
         autoSaveTimer.current = null;
-        // eslint-disable-next-line no-console -- temporary debug instrumentation, see README Sesi 19
-        console.log('[DEBUG tags] firing saveMutation.mutate with ->', JSON.stringify(merged));
-        saveMutation.mutate(merged);
+        // Mark these fields as in-flight for the mutation's full
+        // round-trip — not just for the debounce window that just ended.
+        // This is what the onSnapshot handler above checks (via
+        // inFlightSaveRef) to avoid letting an unsettled snapshot present
+        // stale data for a field that's still being written. See the
+        // inFlightSaveRef declaration for the full race condition this
+        // closes.
+        inFlightSaveRef.current = { ...inFlightSaveRef.current, ...merged };
+        const fieldsInThisBatch = Object.keys(merged);
+        saveMutation.mutate(merged, {
+          onSettled: () => {
+            // Only clear the fields THIS batch was responsible for — a
+            // second scheduleAutoSave() call can start (and finish) while
+            // this one is still in flight (e.g. tags saved, then mood
+            // changed and its own timer already fired), and that second
+            // batch's fields must stay protected until ITS OWN mutation
+            // settles, not get cleared as a side effect of this one.
+            const next = { ...inFlightSaveRef.current };
+            for (const key of fieldsInThisBatch) delete next[key as keyof UpdateNoteInput];
+            inFlightSaveRef.current = next;
+          },
+        });
       }, AUTO_SAVE_DELAY);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -215,8 +262,6 @@ export function useNoteEditor(noteId: string) {
 
   const handleTagsChange = useCallback(
     (tags: string[]) => {
-      // eslint-disable-next-line no-console -- temporary debug instrumentation, see README Sesi 19
-      console.log('[DEBUG tags] handleTagsChange called with:', tags);
       updateActiveNote({ tags });
       setIsDirty(true);
       scheduleAutoSave({ tags });

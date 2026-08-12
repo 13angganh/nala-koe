@@ -110,6 +110,26 @@ function mapFirebaseError(error: unknown): string {
     'auth/too-many-requests': 'Terlalu banyak percobaan. Coba beberapa saat lagi.',
     'auth/network-request-failed': 'Periksa koneksi internetmu.',
     'auth/invalid-credential': 'Email atau password salah.',
+    // Added — these are common Google/popup-based sign-in failures that
+    // were previously falling through to the generic "Terjadi kesalahan.
+    // Coba lagi." (reported bug: Google login shows a generic error with
+    // no way to tell what actually went wrong).
+    'auth/popup-blocked': 'Popup diblokir browser. Izinkan popup untuk situs ini, lalu coba lagi.',
+    'auth/cancelled-popup-request': 'Ada proses login lain yang sedang berjalan. Coba lagi.',
+    'auth/unauthorized-domain': 'Domain ini belum diizinkan untuk login Google. Hubungi admin.',
+    'auth/account-exists-with-different-credential':
+      'Email ini sudah terdaftar dengan metode login lain (misal password). Coba masuk dengan email & password.',
+    'auth/user-disabled': 'Akun ini telah dinonaktifkan.',
+    'auth/internal-error': 'Terjadi kesalahan internal Firebase. Coba lagi sebentar lagi.',
   };
-  return (code !== undefined && map[code] !== undefined ? map[code] : 'Terjadi kesalahan. Coba lagi.') as string;
+  if (code !== undefined && map[code] !== undefined) return map[code];
+  // Unmapped error codes used to all collapse into an identical, unhelpful
+  // "Terjadi kesalahan. Coba lagi." — impossible to tell apart from a
+  // toast alone (this is the reported "login Google muncul pesan terjadi
+  // kesalahan" bug: it's not that login always fails the same way, it's
+  // that every DIFFERENT failure reason displayed the same generic text).
+  // Including the raw code makes the actual cause visible to whoever sees
+  // the toast, and to `logger.error` calls elsewhere that already log this
+  // string as message context.
+  return code !== undefined ? `Terjadi kesalahan (${code}). Coba lagi.` : 'Terjadi kesalahan. Coba lagi.';
 }

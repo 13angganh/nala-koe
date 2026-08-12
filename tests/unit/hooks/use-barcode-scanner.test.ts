@@ -114,23 +114,50 @@ describe('useBarcodeScanner', () => {
     // Speed up: replace setTimeout to resolve instantly
     vi.useFakeTimers();
 
-    const { result } = renderHook(() => useBarcodeScanner());
-    let scanPromise: ReturnType<typeof result.current.startScan>;
+    try {
+      const { result } = renderHook(() => useBarcodeScanner());
+      let scanPromise: ReturnType<typeof result.current.startScan>;
 
-    act(() => {
-      scanPromise = result.current.startScan();
-    });
+      act(() => {
+        scanPromise = result.current.startScan();
+      });
 
-    // Advance through all 20 polling intervals (150ms each)
-    await act(async () => {
-      vi.advanceTimersByTime(20 * 150 + 100);
-      await scanPromise;
-    });
+      // The hook's polling loop alternates `await detector.detect(video)`
+      // (a resolved-promise microtask) with `await new Promise(res =>
+      // setTimeout(res, 150))` (a macrotask) on every one of its 20
+      // iterations. The synchronous vi.advanceTimersByTime only fast-
+      // forwards the fake clock — it does not drain the microtask queue
+      // in between each tick, so a chain that keeps handing control back
+      // and forth between promises and timers stalls partway through and
+      // the awaited scanPromise below never settles, which is what was
+      // timing out this test (and, by leaving fake timers active past
+      // the test's lifetime, corrupting the two tests that ran after it).
+      // advanceTimersByTimeAsync flushes microtasks between each timer
+      // tick, which is what this loop shape needs. Confirmed directly in
+      // Vitest's own docs, which use this same
+      // setInterval+Promise.resolve().then() shape as the canonical
+      // example for why the Async variant exists.
+      //
+      // Wrapped in act(): the hook's setError()/setResult() calls that
+      // happen as the loop finishes need to be flushed into a React
+      // render before we read result.current below — advanceTimersByTimeAsync
+      // resolves the timers/promises themselves, but act() is what tells
+      // React it's safe to commit the state updates that followed.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(20 * 150 + 100);
+        await scanPromise;
+      });
 
-    vi.useRealTimers();
-
-    expect(result.current.error).toBeTruthy();
-    expect(result.current.result).toBeNull();
+      expect(result.current.error).toBeTruthy();
+      expect(result.current.result).toBeNull();
+    } finally {
+      // try/finally (rather than a bare trailing call) so that if this
+      // test's assertions ever fail again in the future, useRealTimers()
+      // still runs — a failure here won't leave fake timers active and
+      // corrupt the tests that run after it, the way the un-guarded
+      // version did.
+      vi.useRealTimers();
+    }
   });
 
   // ── reset ────────────────────────────────────────────────────────────────────

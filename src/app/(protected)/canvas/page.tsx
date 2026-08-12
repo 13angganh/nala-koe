@@ -37,6 +37,12 @@ export default function CanvasPage() {
 
   useEffect(() => {
     if (!user) return;
+    // setIsLoading(true) here is the standard "mark loading before an
+    // async fetch starts" pattern — genuinely synchronizing local UI state
+    // with the start of an external request (also needed for the case
+    // this effect re-runs because `user` changed, e.g. switching accounts;
+    // the useState(true) initializer only covers the very first render).
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reason: see comment above; discussion: https://github.com/facebook/react/issues/34743
     setIsLoading(true);
     getOrCreateDefaultBoard(user.uid).then((result) => {
       if (isOk(result)) setBoard(result.data);

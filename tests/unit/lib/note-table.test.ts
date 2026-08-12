@@ -48,12 +48,11 @@ describe('serializeTable + deserializeTable roundtrip', () => {
 
   it('roundtrips a table with values', () => {
     const original = createEmptyTable(2, 2);
-    original.headers[0] = 'Nama';
-    original.headers[1] = 'Nilai';
-    original.rows[0]![0] = 'Alice';
-    original.rows[0]![1] = '90';
-    original.rows[1]![0] = 'Bob';
-    original.rows[1]![1] = '85';
+    original.headers = ['Nama', 'Nilai'];
+    original.rows = [
+      ['Alice', '90'],
+      ['Bob', '85'],
+    ];
 
     const json = serializeTable(original);
     const restored = deserializeTable(json);

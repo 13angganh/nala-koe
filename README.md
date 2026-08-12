@@ -2,7 +2,7 @@
 
 > *Nala* (Jawa/Sanskerta: pikiran, hati nurani) + *Koe* (milikku) — catatan pribadimu yang hidup dan bernapas.
 
-**v1.2.2** · Next.js 16 · React 19 · Firebase · PWA
+**v1.2.6** · Next.js 16.3 · React 19 · Firebase · PWA
 
 ---
 
@@ -16,7 +16,7 @@ NalaKoe adalah aplikasi jurnal/catatan personal mobile-first berbasis Next.js Ap
 
 | Layer | Teknologi |
 |---|---|
-| Framework | Next.js 16 (App Router, TypeScript strict) |
+| Framework | Next.js 16.3 (App Router, TypeScript strict) |
 | Auth + DB | Firebase Auth + Firestore |
 | State | Zustand (global) + TanStack Query (server) |
 | Styling | Tailwind CSS 3.4 + CSS Custom Properties |
@@ -218,7 +218,17 @@ NoteEditor (key={note.id})
 
 ## Environment Variables
 
-Lihat `.env.example` untuk semua variabel yang diperlukan. Jangan commit `.env.local`.
+Salin `.env.example` jadi `.env.local` untuk development lokal (jangan commit `.env.local` — sudah dikecualikan di `.gitignore`). Untuk Vercel: isi variabel yang sama di Project → Settings → Environment Variables.
+
+| Variabel | Wajib? | Keterangan |
+|---|---|---|
+| `NEXT_PUBLIC_APP_URL` | Opsional | Default `https://nala-koe.vercel.app` jika tidak diisi |
+| `FIREBASE_ADMIN_CLIENT_EMAIL` | **Wajib** | Dari file service account JSON (field `client_email`) |
+| `FIREBASE_ADMIN_PRIVATE_KEY` | **Wajib** | Dari file service account JSON (field `private_key`) — copy apa adanya, format `\n`-escaped di JSON sudah benar |
+
+> ⚠️ **Build/deploy akan GAGAL kalau `FIREBASE_ADMIN_CLIENT_EMAIL`/`FIREBASE_ADMIN_PRIVATE_KEY` belum diset** — `src/lib/env.ts` sengaja memvalidasi dengan tegas (fail loudly), bukan diam-diam jalan tanpa Admin SDK. Ini terverifikasi lewat build test: tanpa kedua variabel ini, `next build` berhenti di tahap "Collecting page data" dengan pesan error yang menyebutkan persis variabel mana yang hilang. **Pastikan sudah diisi di Vercel SEBELUM push ke `main`**, kalau tidak, deployment akan gagal.
+
+Firebase client config (`apiKey` dkk di `src/lib/firebase.ts`) TIDAK memakai env var dan itu memang benar — nilai itu publik by design menurut dokumentasi resmi Firebase (keamanan sebenarnya ada di Firestore Security Rules, `firestore.rules`, bukan di menyembunyikan `apiKey`).
 
 ---
 
@@ -246,7 +256,101 @@ RTDB **belum diaktifkan** — `src/lib/firebase.ts` mengekspor `rtdb` sebagai `n
 
 > **README.md adalah satu-satunya sumber kebenaran untuk dokumentasi project ini.** Tidak ada file `.md` lain di repo (CHANGES.md, readme-nala-koe.md, RTDB_ACTIVATION.md, dll. dari sesi-sesi sebelumnya sudah dihapus/digabung ke sini). Setiap perubahan, fix, patch, atau update — sekecil apa pun — dicatat sebagai entry baru di bagian ini, paling atas, dengan format `### vX.Y.Z — tanggal (Sesi N)`. Jangan membuat file dokumentasi terpisah lagi; tambahkan ke README.md ini saja.
 
-### v1.2.2 — 22 Jun 2026 (Sesi 23)
+### v1.2.6 — 07 Agu 2026 (Sesi 27)
+**3 bug auth dilaporkan Vina, semua ditemukan & diperbaiki dengan bukti test: auto-logout race condition, login macet (cookie race), pesan error Google login yang tidak informatif**
+
+Vina melaporkan tiga masalah terpisah saat login: (1) auto-logout tanpa batas waktu jelas — dan secara eksplisit tidak menghendaki fitur ini; (2) setelah auto-logout, login jadi macet — hanya muter, tetap di halaman login; (3) login Google menampilkan "terjadi kesalahan" tanpa detail.
+
+**Bug #1 — auto-logout: BUKAN fitur, murni race condition di `ProtectedLayout`'s `onAuthStateChanged` listener.** Firebase Auth secara resmi terdokumentasi memanggil callback listener ini **dua kali** saat halaman pertama dimuat: sekali segera dengan state yang belum pasti (`null`, sebelum SDK selesai membaca sesi tersimpan dari IndexedDB), lalu sekali lagi dengan user sesungguhnya begitu pembacaan itu selesai. Jeda antara dua panggilan ini **tidak tetap** — laporan dunia nyata yang dikutip menunjukkan rentang dari nyaris instan sampai 20-30+ detik tergantung kondisi device/koneksi, persis pola "tak tau batas waktunya kapan" yang dilaporkan. Kode sebelumnya memperlakukan **setiap** panggilan `null` — termasuk panggilan pertama yang belum pasti — sebagai sinyal logout definitif, langsung `router.replace(ROUTES.LOGIN)`. **Reproduksi dibuktikan lewat test SEBELUM kode diubah** (`tests/unit/app/repro-auto-logout.test.tsx`): simulasi persis urutan callback ini menghasilkan redirect ke `/login` meski user sebenarnya tetap login di akhir proses.
+
+**fix(auth): `ProtectedLayout` sekarang menunggu `auth.authStateReady()`** (API resmi Firebase untuk kasus ini) sebelum mempercayai callback `null` PERTAMA sebagai logout — hanya redirect kalau `auth.currentUser` benar-benar tetap `null` setelah proses pengecekan initial selesai. Callback `null` yang datang SETELAH user pernah terkonfirmasi valid (logout sungguhan, token direvoke, dsb) tetap langsung redirect seperti semula — tidak ada regresi untuk kasus logout yang memang asli. Diverifikasi lewat 3 skenario test: race resolved (tidak lagi salah redirect), visitor benar-benar belum login (tetap redirect dengan benar), dan logout genuine setelah sesi valid (tetap redirect segera).
+
+**Bug #2 — login macet: cookie race condition yang terdokumentasi luas di ekosistem Next.js App Router** ("the redirect ... happens before the cookie is fully set/available" — pola yang sama persis dilaporkan banyak developer independen). Di `login/page.tsx`, `router.replace(from)` dipanggil segera setelah `fetch POST /api/auth/session` resolve — tapi resolve-nya `fetch` hanya berarti response diterima, bukan jaminan browser sudah selesai mengomit `Set-Cookie` sebelum request navigasi berikutnya (yang dipicu `router.replace`) dikirim. Kalau request navigasi itu sampai ke middleware (`proxy.ts`) sebelum cookie ter-commit, middleware tidak menemukan session valid dan melempar balik ke `/login` — dari sudut pandang user: spinner jalan, lalu kembali ke login begitu saja, tanpa pesan error. Ditemukan juga: `setServerSession()` sebelumnya **tidak pernah** memeriksa `response.ok` — kalau POST session gagal karena sebab apa pun, navigasi tetap dijalankan buta.
+
+**fix(auth): `setServerSession()` sekarang mengembalikan status sukses eksplisit** (cek `response.ok`) — kalau gagal, tampilkan toast error alih-alih navigasi diam-diam. **`router.refresh()` dipanggil sebelum `router.replace()`** — pola mitigasi standar untuk cookie race condition ini, memberi App Router kesempatan mengevaluasi ulang middleware dengan cookie yang baru saja ter-commit sebelum benar-benar berpindah halaman. Diverifikasi lewat 2 test: session gagal → tidak ada navigasi diam-diam; session sukses → `router.refresh()` terbukti terpanggil sebelum `router.replace()`.
+
+**Bug #3 — pesan error Google login generik: `mapFirebaseError()` hanya mencakup 9 kode error**, semua yang tidak terdaftar (termasuk kode umum untuk login popup: `auth/popup-blocked`, `auth/cancelled-popup-request`, `auth/unauthorized-domain`, `auth/account-exists-with-different-credential`, dll) jatuh ke pesan generik "Terjadi kesalahan. Coba lagi." — tidak mungkin dibedakan penyebabnya dari toast semata. **fix: 6 kode error tambahan dipetakan** ke pesan spesifik dalam Bahasa Indonesia. Untuk kode yang masih belum terpetakan di masa depan, pesan sekarang menyertakan kode error asli (`Terjadi kesalahan (auth/xxx). Coba lagi.`) alih-alih generik total — memudahkan diagnosis penyebab pasti dari laporan pengguna berikutnya tanpa perlu akses log server.
+
+Full suite: 291/291 test lulus (naik dari 286 — 5 test baru), `tsc`/`eslint --max-warnings 0`/`next build` seluruhnya bersih pasca-perubahan.
+
+Files: `src/app/(protected)/layout.tsx`, `src/app/(auth)/login/page.tsx`, `src/services/auth.service.ts`, `tests/unit/app/repro-auto-logout.test.tsx` (baru), `tests/unit/app/login-page.test.tsx` (baru), `package.json`, `README.md`
+
+---
+
+### v1.2.5 — 07 Agu 2026 (Sesi 26)
+**⚠️ v1.2.3 TIDAK memperbaiki bug tag seperti diklaim — akar masalah SESUNGGUHNYA ditemukan dan diperbaiki di sesi ini, dengan bukti test yang mereproduksi bug dan memverifikasi fix-nya**
+
+Vina melaporkan bug tag masih terjadi persis seperti sebelumnya setelah v1.2.4 di-deploy: ketik tag → simpan → pindah ke menu lain → buka lagi note yang sama → tag kosong. Ini konfirmasi bahwa perbaikan `subscribeToNote`/`hasPendingWrites`/`inFlightSaveRef` di v1.2.3 (Sesi 24) — meski logic-nya sendiri valid — **tidak menyentuh akar masalah sesungguhnya**. Sesi ini dimulai dengan menulis test yang benar-benar mensimulasikan skenario "ketik tag → unmount komponen (pindah menu)" untuk memverifikasi ulang v1.2.3's fix — **ketiga test lulus**, membuktikan `use-note-editor.ts` sendiri sudah berperilaku benar. Ini mengonfirmasi masalahnya ada di tempat lain yang belum pernah diperiksa.
+
+**Akar masalah sesungguhnya ditemukan di `updateNote()` (`src/services/notes.service.ts`), bukan di hook editor.** Fungsi ini memanggil `getDoc(ref)` di awal — sebelum `updateDoc()` apa pun — semata untuk memvalidasi `snap.data().userId !== userId` sebagai pengecekan kepemilikan. Firestore JS SDK punya perilaku terdokumentasi resmi (issue `firebase-js-sdk#6739`, yang sebenarnya **sudah dikutip** di komentar kode ini untuk alasan lain): kalau `getDoc()` dipanggil saat ada write **lain** yang masih pending untuk dokumen yang sama, hasilnya bisa berupa snapshot **parsial** — hanya berisi field dari write yang sedang pending itu, bukan dokumen lengkap. Karena note punya banyak field independen yang masing-masing punya `scheduleAutoSave` batch sendiri (title, content, tags, mood, weather, dst — lihat v1.2.3's changelog), sangat wajar dua atau lebih di antaranya sedang "settling" berdekatan waktu. Kalau `getDoc()` untuk save tag kebetulan menangkap snapshot parsial dari write field LAIN yang sedang pending (misal mood), `userId` (yang tidak termasuk field yang di-patch write itu) hilang dari hasil `data()`, `snap.data().userId !== userId` salah bernilai `true`, dan fungsi **return early dengan error 'notes/not-found' — TANPA PERNAH memanggil `updateDoc()` sama sekali.** Tag yang baru diketik tidak pernah benar-benar terkirim ke Firestore, meski semua logic di atasnya (Zustand, debounce, mutation call) sudah benar.
+
+**Dibuktikan lewat test sebelum kode diubah** (`tests/unit/services/notes-service-update.test.ts`, mock primitif Firestore level rendah, bukan mock seluruh service): mensimulasikan persis kondisi ini (`getDoc()` mengembalikan `{ mood: 'senang' }` tanpa `userId`) menghasilkan `updateDoc` terpanggil **0 kali** dan error `notes/not-found` — reproduksi identik dengan laporan Vina.
+
+**fix(data-layer): `getDoc()` pre-check ownership dihapus untuk save yang tidak menyentuh `title`/`content`/`blocks`.** Diverifikasi aman secara keamanan: `firestore.rules` sudah memvalidasi ownership di level SERVER untuk setiap `update` (`resource.data.userId == request.auth.uid`), independen dari pengecekan client manapun — jadi `getDoc()` pre-check ini murni duplikat yang rawan race, bukan lapisan keamanan yang unik. `getDoc()` sekarang hanya dipanggil kalau save benar-benar menyentuh field konten (dibutuhkan untuk `saveVersion()`/version history) — bukan lagi untuk setiap save tag/mood/weather/pin/dsb. Kalau ada percobaan write ke note yang bukan miliknya, Firestore Rules sendiri yang menolak (`updateDoc()` akan reject, ter-`catch` sebagai `'notes/update-failed'` generik alih-alih `'notes/not-found'` spesifik — trade-off yang wajar, karena keamanan sungguhan tidak bergantung pada pesan errornya).
+
+**Verifikasi 4 skenario test** (semua di `notes-service-update.test.ts`): (1) save konten normal — `getDoc()` tetap terpanggil, `updateDoc()` sukses; (2) **save tag — `getDoc()` sekarang 0 kali terpanggil**, `updateDoc()` tetap sukses; (3) regression guard — snapshot parsial (persis bentuk bug asli) dikonfigurasi di mock tapi terbukti tidak lagi relevan karena `getDoc()` tidak pernah dipanggil di jalur ini; (4) regression guard — save konten (title/content/blocks) dipastikan **masih** memanggil `getDoc()` + `saveVersion()`/`addDoc()` seperti semula, memastikan fitur version history tidak ikut rusak oleh refactor ini.
+
+Full suite: 286/286 test lulus (naik dari 282 — 4 test baru), `tsc`/`eslint --max-warnings 0`/`next build` seluruhnya bersih pasca-perubahan.
+
+Files: `src/services/notes.service.ts`, `tests/unit/services/notes-service-update.test.ts` (baru), `package.json`, `README.md`
+
+---
+
+### v1.2.4 — 07 Agu 2026 (Sesi 25)
+**Kredensial Firebase Admin SDK dipindah dari hardcode ke environment variable · `.gitignore` dibuat (sebelumnya tidak ada sama sekali) · `.env.example` sungguhan dibuat**
+
+Tindak lanjut langsung dari temuan kritis di Sesi 24. Vina sudah melakukan bagian manualnya di Google Cloud Console: generate service account key baru, revoke key lama. Sesi ini menyelesaikan sisi kode:
+
+**fix(security): `src/lib/firebase-admin.ts` tidak lagi hardcode `clientEmail`/`privateKey`.** Dipindah ke dua environment variable baru: `FIREBASE_ADMIN_CLIENT_EMAIL`, `FIREBASE_ADMIN_PRIVATE_KEY`. `src/lib/env.ts` diperluas untuk memvalidasi keduanya sebagai **wajib** (bukan `safeParse` dengan silent-fallback seperti `NEXT_PUBLIC_APP_URL`) — kalau salah satu tidak ter-set, aplikasi `throw` dengan pesan jelas menyebutkan variabel mana yang hilang, alih-alih diam-diam jalan dengan Admin SDK yang rusak lalu crash membingungkan di request pertama. `firebase-admin.ts` memakai `get clientEmail()`/`get privateKey()` (getter, bukan assignment langsung) supaya env var dievaluasi tepat saat `cert()` dipanggil, bukan saat modul di-import — lebih mudah di-trace kalau ada masalah.
+
+**Konversi format private key ditangani eksplisit** (`getFirebaseAdminPrivateKey()` di `env.ts`): PEM key punya newline literal, sementara environment variable UI (Vercel dashboard) cuma single-line text — key harus dipaste dengan newline di-escape sebagai `\n` dua-karakter, dan kode mengonversinya balik ke newline sungguhan sebelum diserahkan ke `cert()`. Diverifikasi dengan RSA key PKCS8 valid yang di-generate khusus untuk testing (openssl, bukan credential asli) — build sukses end-to-end dengan format ini.
+
+**Diverifikasi lewat build test sungguhan, bukan asumsi:** dicoba build TANPA kedua env var → build gagal di tahap "Collecting page data" dengan pesan persis menyebut `FIREBASE_ADMIN_CLIENT_EMAIL — Required; FIREBASE_ADMIN_PRIVATE_KEY — Required` (route handler `/api/auth/session` dieksekusi Next.js saat build time untuk collect config, bukan cuma runtime — ini penting diketahui: **env var harus sudah terpasang di Vercel SEBELUM push**, kalau tidak deployment akan gagal). Dicoba lagi DENGAN env var (dummy key valid) → build sukses total, 21 route ter-generate.
+
+**Ditemukan saat proses ini: `.gitignore` tidak ada sama sekali di repo.** Ini temuan terpisah tapi terkait langsung — tanpa `.gitignore`, ada risiko `.env.local` (kalau pernah dibuat lokal) ikut ter-commit, plus `node_modules`/`.next` yang seharusnya tidak pernah masuk git. Dibuat `.gitignore` standar Next.js, eksplisit mengecualikan semua varian `.env*.local`.
+
+**`.env.example` dibuat sungguhan** — sebelumnya README merujuk ke file ini tapi filenya sendiri tidak pernah ada di repo (dikonfirmasi tidak ada di ZIP manapun sejak Sesi 24). Sekarang berisi kedua variabel wajib dengan instruksi jelas cara mendapatkan nilainya dari Firebase Console.
+
+Files: `src/lib/env.ts`, `src/lib/firebase-admin.ts`, `.env.example` (baru), `.gitignore` (baru), `package.json`, `README.md`
+
+---
+
+
+**Audit penuh: root cause bug tag di layer DATA (bukan UI) akhirnya ditemukan · 18 error ESLint → 0 · 16 unit test gagal → 0 (282/282 lulus) · 2 bug produksi tersembunyi ditemukan & diperbaiki · Kerentanan keamanan kritis ditemukan (private key ter-hardcode) · Update Next.js 16.2 → 16.3.0**
+
+Sesi ini dimulai dari audit penuh atas permintaan Anda, dengan cakupan lebih dalam dari sesi manapun sebelumnya: instalasi dependency dari nol, `tsc --noEmit`, `eslint --max-warnings 0`, `vitest run`, dan `next build` produksi sungguhan sebagai baseline objektif — bukan asumsi dari kode yang "terlihat benar".
+
+**🚨 Temuan kritis (keamanan, di luar scope awal tapi tidak bisa diabaikan): `src/lib/firebase-admin.ts` berisi RSA private key lengkap Firebase Admin service account ter-hardcode sebagai string di source code.** Karena repo GitHub bersifat publik, key ini berpotensi bisa diakses siapa pun yang membuka repo — dan key admin ini bisa bypass seluruh Firestore Security Rules (yang sebenarnya sendiri sudah ditulis dengan baik). Anda sudah dikonfirmasi memahami ini di awal sesi; rotasi key adalah langkah yang harus dilakukan manual oleh Anda di Google Cloud Console (di luar kendali Claude sepenuhnya) — **belum dieksekusi di sesi ini**, ditandai sebagai tindak lanjut wajib segera.
+
+**Root cause bug tag YANG SEBENARNYA — ditemukan di layer data, bukan UI.** v1.2.2 (Sesi 23) memperbaiki `isMetaOpen` menjadi derived value — itu benar dan tetap valid — tapi itu menambal gejala di UI, bukan akar masalah di data. Menelusuri ulang seluruh jalur dari `TagInput` → Firestore baris-per-baris, ditemukan: `subscribeToNote()` di `notes.service.ts` tidak pernah memeriksa `snap.metadata.hasPendingWrites` dari Firestore `onSnapshot`. Firestore dengan `persistentLocalCache` mengirim snapshot **sebelum** server benar-benar mengonfirmasi sebuah write (echo optimistic lokal) — snapshot ini diperlakukan sama otoritatifnya dengan snapshot yang sudah final. Ditambah, `pendingInputRef` di `use-note-editor.ts` dikosongkan **pada saat timer auto-save berbunyi**, bukan setelah `updateDoc()` benar-benar selesai ke server (mutation-nya `fire-and-forget`, tidak di-`await`) — membuka jendela waktu singkat di mana data yang sedang dikirim tidak lagi terlindungi kalau snapshot lama sempat masuk duluan.
+
+**fix(data-layer): `subscribeToNote()` sekarang meneruskan `snap.metadata.hasPendingWrites` ke pemanggil.** `use-note-editor.ts` menambah `inFlightSaveRef` yang tetap menjaga field yang sedang disimpan **sampai mutation-nya benar-benar settle** (sukses maupun gagal, via `onSettled` per-batch — bukan `onSuccess` global, supaya dua auto-save field berbeda yang tumpang tindih tidak saling menghapus proteksi satu sama lain). Ditambahkan logging (`logger.warn('notes.editor.stale-in-flight-ref', ...)`) untuk kasus janggal di masa depan (field masih dianggap in-flight padahal Firestore sudah bilang final) — supaya kalau ada masalah serupa lagi, ketahuan dari log, bukan menebak lagi.
+
+**18 error ESLint → 0** (naik dari 17 laporan awal karena satu perbaikan tag sempat menambah satu error baru, lalu diselesaikan juga). Lima kasus `react-hooks/set-state-in-effect`, ditangani berbeda sesuai konteks — bukan solusi generik:
+- `use-mounted.ts`, `use-biometric.ts` — direfactor pakai `useSyncExternalStore` (perbaikan struktural, bukan suppress; juga menghilangkan satu render tambahan yang sebelumnya perlu untuk mendeteksi kondisi client-only).
+- `use-biometric.ts` — status `'unavailable'` diubah dari `useState` + effect menjadi derived value murni dari `isSupported`.
+- `use-tags.ts`, `use-mood.ts`, `canvas/page.tsx` — pola "tandai loading sebelum fetch mulai" dipertahankan (pola standar, bukan bug), didokumentasikan dengan `eslint-disable` + alasan tertulis lengkap dengan referensi ke diskusi resmi soal false-positive rule ini (github.com/facebook/react/issues/34743).
+- `canvas-board.tsx` — sync `stickies` dari prop `board` dipertahankan sebagai effect (ini persis kasus "subscribe ke sistem eksternal" yang dokumentasi rule-nya sendiri akui valid — `board` adalah snapshot dari Firestore `onSnapshot` di parent), didokumentasikan alasannya.
+
+Sisanya: 6 baris `console.log('[DEBUG tags] ...')` yang tertinggal dari sesi lalu dihapus; 11 `@typescript-eslint/no-non-null-assertion` dan 1 unused var di test files diperbaiki tanpa mengubah maksud test; `scripts/*.mjs` (CLI tooling, bukan kode yang di-bundle ke app) dikecualikan dari rule `no-console` secara eksplisit di `eslint.config.mjs` — sebelumnya rule global diterapkan tanpa scoping ke situ juga.
+
+**16 unit test gagal → 0 (282/282 lulus)** — ternyata bukan satu masalah, tapi tiga kategori berbeda:
+- 13 test `use-read-aloud.test.ts`: jsdom tidak punya `SpeechSynthesisUtterance` sama sekali di `window`, sehingga `vi.spyOn` gagal duluan sebelum sempat menguji apa pun. Polyfill stub minimal ditambahkan di `tests/setup.ts`.
+- 3 test `use-barcode-scanner.test.ts`: `vi.advanceTimersByTime` (sinkron) tidak cukup untuk loop yang bolak-balik antara `await Promise` dan `setTimeout` (loop polling 20x di hook aslinya) — harus `vi.advanceTimersByTimeAsync` yang flush microtask di antara setiap tick. Ini bukan cuma bikin 1 test timeout, tapi meracuni 2 test lain sesudahnya di file yang sama karena `vi.useRealTimers()` tidak sempat terpanggil.
+- 1 file `tests/e2e/flows/note-journey.spec.ts` (Playwright) ter-scan oleh Vitest karena `vitest.config.ts` tidak punya `test.include` yang scoped — diperbaiki dengan `include: ['tests/unit/**/*.{test,spec}.{ts,tsx}']`.
+
+**2 bug produksi tersembunyi ditemukan & diperbaiki** — terungkap justru *karena* test environment diperbaiki (sebelumnya test-nya sendiri gagal duluan sebelum sempat sampai ke assersi sungguhan):
+- `use-read-aloud.ts` & `use-barcode-scanner.ts`: `isSupported` dihitung dengan `'x' in window`, yang mengembalikan `true` bahkan ketika `window.x` bernilai `undefined` (operator `in` mengecek keberadaan property, bukan nilai truthy-nya). Diganti jadi `Boolean(window.x)`. Dampak nyata: di browser yang benar-benar tidak mendukung Web Speech API atau BarcodeDetector, app bisa crash dengan `TypeError` alih-alih menampilkan pesan "fitur tidak didukung" yang seharusnya.
+
+**Konsolidasi dokumentasi:** dikonfirmasi tidak ada file `.md` lain tersisa di project selain README.md ini (konsolidasi ke satu-sumber-kebenaran sudah tuntas sejak Sesi sebelumnya). Satu komentar kode di `src/lib/rich-text.ts` yang masih merujuk ke `readme-nala-koe.md` (file yang sudah tidak ada) diperbaiki menunjuk ke README.md.
+
+**Update Next.js 16.2.9 → 16.3.0.** Next.js 16.3.0 stable (rilis resmi 3 Agu 2026) mencakup 9 patch keamanan (CVE) yang diumumkan 21 Jul 2026 — dikonfirmasi lewat commit `Cherry-pick ghsa commits to canary: #93614` di changelog resmi rilisnya. Diperiksa relevansi ke NalaKoe secara spesifik: project ini tidak memakai Server Actions (`'use server'`), tidak mengonfigurasi `i18n`, dan tidak memakai `rewrites()`/`redirects()` — sehingga tidak terpapar langsung ke 4 CVE High-severity yang diumumkan, tapi update tetap dilakukan sebagai praktik keamanan defense-in-depth. Manfaat non-security: memori dev server turun signifikan (disk caching + memory eviction Turbopack, default aktif di 16.3), build berulang bisa lebih cepat (baca artifact dari cache), SSR menangani lebih banyak request di bawah beban tinggi (native Node.js streams menggantikan web streams). Semua fitur baru 16.3 lainnya (Instant Navigations, root params, custom error boundaries) bersifat **opt-in** — tidak ada perubahan kode yang dipaksakan. `eslint-config-next` di-bump bersamaan ke `^16.3.0` untuk tetap selaras dengan versi compiler-nya. Diverifikasi: `npx next --version` → `16.3.0`, `tsc`/`eslint`/`vitest`/`next build` seluruhnya bersih pasca-upgrade, tanpa satu pun regresi.
+
+Files: `src/services/notes.service.ts`, `src/hooks/use-note-editor.ts`, `src/hooks/use-mounted.ts`, `src/hooks/use-biometric.ts`, `src/hooks/use-tags.ts`, `src/hooks/use-mood.ts`, `src/hooks/use-barcode-scanner.ts`, `src/hooks/use-read-aloud.ts`, `src/app/(protected)/canvas/page.tsx`, `src/components/canvas/canvas-board.tsx`, `src/components/tags/tag-input.tsx`, `src/lib/rich-text.ts`, `eslint.config.mjs`, `vitest.config.ts`, `tests/setup.ts`, `tests/unit/hooks/use-barcode-scanner.test.ts`, `tests/unit/hooks/use-smart-folder.test.ts`, `tests/unit/hooks/use-url-meta.test.ts`, `tests/unit/hooks/use-streak.test.ts`, `tests/unit/lib/note-table.test.ts`, `package.json`, `README.md`
+
+---
+
+
 **Root cause bug tag akhirnya benar-benar ditemukan dengan menelusuri kode baris-per-baris (bukan asumsi) · Mood & Tag sekarang konsisten dengan Catatan Terhubung/Reaksi/Highlight**
 
 Sesi ini saya tidak menebak — saya extract ulang ZIP yang benar-benar terkirim ke Anda dan menelusuri setiap baris dari `TagInput.onChange` sampai `Firestore`, termasuk menyimulasikan setiap skenario timing yang mungkin. Root cause-nya:

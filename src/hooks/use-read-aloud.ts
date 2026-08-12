@@ -40,8 +40,21 @@ export function useReadAloud(): UseReadAloudReturn {
   const totalCharsRef = useRef(0);
   const spokenCharsRef = useRef(0);
 
+  // `'speechSynthesis' in window` was the original check here, but `in`
+  // only tests whether the property is defined — it returns true even
+  // when window.speechSynthesis is explicitly undefined/null (e.g.
+  // Object.defineProperty(window, 'speechSynthesis', { value: undefined })
+  // in tests, or a real browser/WebView that declares the property but
+  // leaves it empty in some mode). That let isSupported report true in a
+  // browser that doesn't actually have Web Speech API support, which then
+  // crashed loadVoices() below on
+  // `window.speechSynthesis.getVoices()` — undefined has no getVoices
+  // method — this is what unit tests actually caught once the missing
+  // SpeechSynthesisUtterance jsdom global stopped masking it (see
+  // tests/setup.ts). Checking truthiness of the value itself, not just
+  // the property's existence, is the correct feature-detection here.
   const isSupported =
-    typeof window !== 'undefined' && 'speechSynthesis' in window;
+    typeof window !== 'undefined' && Boolean(window.speechSynthesis);
 
   // Load available voices
   useEffect(() => {

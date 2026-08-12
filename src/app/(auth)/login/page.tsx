@@ -29,23 +29,63 @@ export default function LoginPage() {
   /**
    * Set session cookie via server API route (httpOnly, secure).
    * Bukan document.cookie — session token nyata dari Firebase Admin.
+   *
+   * Returns whether the cookie was actually confirmed set. Previously this
+   * didn't check response.ok at all, so a failed session-cookie POST (500
+   * from a misconfigured Admin SDK, a network blip, etc.) was silently
+   * treated as success — the code would call router.replace(from) anyway,
+   * proxy.ts's middleware would find no valid session cookie for that next
+   * request, and redirect straight back to /login. From the user's
+   * perspective: click "Masuk", spinner runs, lands back on the login
+   * page as if nothing happened. This return value is what the fix below
+   * uses to stop that from happening silently.
    */
-  const setServerSession = async () => {
+  const setServerSession = async (): Promise<boolean> => {
     const currentUser = auth.currentUser;
-    if (!currentUser) return;
+    if (!currentUser) return false;
     const idToken = await getIdToken(currentUser);
-    await fetch('/api/auth/session', {
+    const response = await fetch('/api/auth/session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ idToken }),
     });
+    return response.ok;
+  };
+
+  /**
+   * Root cause of the reported "login macet — hanya muter, tetap di
+   * halaman login": this is the documented "cookie race condition" for
+   * Next.js App Router (well-established pattern — a fetch() response
+   * resolving does not guarantee the browser has finished committing its
+   * Set-Cookie header before the very next navigation's request goes out).
+   * router.replace(from) right after the session POST could reach
+   * proxy.ts's middleware before that cookie was actually attached to the
+   * request, so middleware saw no session, and bounced the user straight
+   * back to /login — with isSubmitting/isGoogleLoading already reset to
+   * false by the time the (re-mounted) login page rendered again, which
+   * is what read as "spinner just stops, still on login" rather than an
+   * error.
+   *
+   * router.refresh() forces the App Router to re-fetch server-rendered
+   * data (and, critically, re-evaluate middleware) for the current route
+   * using the cookie the browser has by that point — giving the
+   * just-committed cookie a chance to actually be picked up — before we
+   * navigate away. This is the standard fix for this exact class of bug.
+   */
+  const goToDestination = () => {
+    router.refresh();
+    router.replace(from);
   };
 
   const onSubmit = async (data: LoginInput) => {
     const result = await loginWithEmail(data.email, data.password);
     if (result.error === null) {
-      await setServerSession();
-      router.replace(from);
+      const sessionOk = await setServerSession();
+      if (!sessionOk) {
+        toast.error('Berhasil masuk, tapi gagal membuat sesi. Coba lagi.');
+        return;
+      }
+      goToDestination();
     } else {
       toast.error(result.error.message);
     }
@@ -54,11 +94,16 @@ export default function LoginPage() {
   const handleGoogle = async () => {
     setIsGoogleLoading(true);
     const result = await loginWithGoogle();
-    setIsGoogleLoading(false);
     if (result.error === null) {
-      await setServerSession();
-      router.replace(from);
+      const sessionOk = await setServerSession();
+      setIsGoogleLoading(false);
+      if (!sessionOk) {
+        toast.error('Berhasil masuk, tapi gagal membuat sesi. Coba lagi.');
+        return;
+      }
+      goToDestination();
     } else {
+      setIsGoogleLoading(false);
       toast.error(result.error.message);
     }
   };
