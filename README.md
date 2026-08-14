@@ -2,7 +2,7 @@
 
 > *Nala* (Jawa/Sanskerta: pikiran, hati nurani) + *Koe* (milikku) — catatan pribadimu yang hidup dan bernapas.
 
-**v1.2.6** · Next.js 16.3 · React 19 · Firebase · PWA
+**v1.2.7** · Next.js 16.3 · React 19 · Firebase · PWA
 
 ---
 
@@ -255,6 +255,39 @@ RTDB **belum diaktifkan** — `src/lib/firebase.ts` mengekspor `rtdb` sebagai `n
 ## Changelog
 
 > **README.md adalah satu-satunya sumber kebenaran untuk dokumentasi project ini.** Tidak ada file `.md` lain di repo (CHANGES.md, readme-nala-koe.md, RTDB_ACTIVATION.md, dll. dari sesi-sesi sebelumnya sudah dihapus/digabung ke sini). Setiap perubahan, fix, patch, atau update — sekecil apa pun — dicatat sebagai entry baru di bagian ini, paling atas, dengan format `### vX.Y.Z — tanggal (Sesi N)`. Jangan membuat file dokumentasi terpisah lagi; tambahkan ke README.md ini saja.
+
+### v1.2.7 — 14 Agu 2026 (Sesi 28)
+**Root cause KEDUA bug tag ditemukan (stale closure di TagInput, terpisah dari fix data-layer v1.2.5) · 2 bug logout race-condition tambahan (settings page) · Halaman "Lupa Password" dibuat dari nol (kodenya sudah ada, halamannya tidak) · Cookie-race-condition fix diterapkan juga ke Register · Canvas: hilang-nya perubahan drag/warna diperbaiki + write Firestore di-debounce · Graph: node position tidak lagi terjebak di ukuran layar awal**
+
+Vina melaporkan tag masih hilang meski v1.2.5 sudah terverifikasi lewat test. Diselidiki ulang dari nol dengan pertanyaan kunci ke Vina: field lain (judul/isi/mood) di catatan yang SAMA tersimpan normal, hanya tags yang gagal — ini menyingkirkan seluruh hipotesis data-layer (kalau ada masalah di `updateNote()`/Firestore Rules, semua field akan gagal bersamaan, bukan cuma satu).
+
+**Root cause sesungguhnya: stale closure di `TagInput` (`src/components/tags/tag-input.tsx`), sama sekali terpisah dari fix v1.2.5.** `addTag()`/`removeTag()` membaca `value` (array tags) langsung dari closure render komponen. `value` adalah controlled prop yang melewati `NoteMetaPanel` (dibungkus `React.memo`) — ada jeda nyata antara `onChange()` dipanggil dan komponen ini re-render dengan `value` yang sudah ter-update. Kalau user mengetik tag KEDUA dan menekan Enter lagi sebelum jeda itu selesai (mengetik beberapa tag berturut-turut — hal yang sangat wajar dilakukan, bukan edge case), `addTag()` yang kedua membangun array dari `value` yang STALE (belum mencerminkan tag pertama), sehingga tag pertama hilang tanpa error apa pun. Field non-array seperti `mood` tidak kena masalah ini karena tidak perlu "menggabungkan" dengan state lama — setiap set nilai baru independen dari yang lama.
+
+**Dibuktikan lewat test SEBELUM fix** (`tests/unit/components/tag-input.test.tsx`): merender `TagInput` sungguhan dan mensimulasikan pengetikan dua tag berturut tanpa menunggu re-render — tag pertama hilang, persis gejala yang dilaporkan.
+
+**fix(tags): `valueRef` ditambahkan untuk melacak array tags yang benar-benar terkini,** disinkronkan dari `value` prop lewat `useEffect([value])` — bukan ditulis langsung di badan render. Percobaan pertama fix ini (menulis `valueRef.current = value` unconditional di badan komponen) GAGAL sendiri di test regresi yang sama — assignment unconditional itu menimpa balik update lokal setiap kali komponen re-render karena alasan LAIN (mis. `setInputValue` saat mengetik), bukan cuma saat `value` prop benar-benar berubah dari luar. Ditangkap dan diperbaiki sebelum dikirim, bukan setelah — konsisten dengan komitmen tests-before-fix sejak v1.2.5/v1.2.6. Diverifikasi lewat 5 test: mengetik tunggal, menambah ke value existing, mengetik dua tag berturut cepat (kasus utama), remove tag beruntun, dan — penting — regression guard untuk arah SEBALIKNYA (pindah ke catatan lain, `value` benar-benar berubah dari luar, `valueRef` harus ikut update, bukan keras kepala pertahankan array lama).
+
+**Ditemukan saat proses ini: React Compiler project ini (`react-hooks/refs`, `react-hooks/immutability`) melarang TEGAS baca/tulis `ref.current` di badan render, tanpa pengecualian** — lebih ketat dari yang dikira sebelumnya. Solusi awal untuk canvas (lihat di bawah) sempat memakai pola yang sama seperti percobaan pertama TagInput dan gagal dengan alasan serupa; diperbaiki dengan `useEffect` di kedua tempat.
+
+**2 bug logout race-condition tambahan ditemukan: `settings/page.tsx`'s tombol Keluar** punya pola identik dengan yang diperbaiki di `header.tsx` (Sesi 27) — `router.push(ROUTES.LOGIN)` manual yang balapan dengan `ProtectedLayout`'s `onAuthStateChanged` listener. Terlewat sebelumnya karena hanya logout dari header dropdown yang dilaporkan saat itu. **fix: disamakan** — cukup panggil `logout()`, `ProtectedLayout` sebagai satu-satunya sumber kebenaran untuk redirect setelahnya.
+
+**Halaman "Lupa Password" ternyata memang tidak pernah dibangun** — dilaporkan sebagai "klik Lupa password tidak terjadi apa-apa". Ditemukan: `sendResetEmail()` (auth.service.ts) dan `forgotPasswordSchema` (auth.schema.ts) sudah lengkap dan siap dipakai, tapi tidak ada satu pun halaman yang menghubungkannya ke rute `/forgot-password` yang di-link dari login/page.tsx. **fix: halaman dibuat dari nol** (`src/app/(auth)/forgot-password/page.tsx`), konsisten dengan gaya login/register, memakai kedua piece yang sudah ada.
+
+**`register/page.tsx` ternyata belum menerima fix cookie-race-condition v1.2.6** (checking `response.ok`, `router.refresh()` sebelum `router.replace()`) — halaman ini punya jalur sesi yang identik dengan Login tapi terlewat karena waktu itu cuma Login yang dilaporkan. **fix: diterapkan sama persis.**
+
+**Fungsi Canvas — dua bug ditemukan:**
+1. **`handleUpdateSticky` di `canvas/page.tsx` tidak pernah memperbarui state `board` lokal** (berbeda dari `handleAddSticky`/`handleDeleteSticky` yang benar), sementara `CanvasBoard`'s `useEffect` menyinkronkan ulang `stickies` lokal dari `board.stickies` setiap referensinya berubah. Efeknya: drag/ubah warna sticky A, lalu tambah sticky baru B (yang MEMANG memicu `setBoard`) — `board.stickies` hasilnya dibangun dari state lama yang tidak tahu perubahan A, membatalkan diam-diam posisi/warna A begitu efek sync itu jalan. **fix: `handleUpdateSticky` sekarang ikut `setBoard` dengan merge yang benar.**
+2. **Setiap gerakan drag sticky memicu write Firestore langsung tanpa debounce** (bisa puluhan write per detik untuk satu gestur drag) — masalah performa nyata dan potensi biaya/kuota Firestore, bukan cuma soal kehalusan UI. **fix: write posisi di-debounce 150ms** (state lokal/visual tetap instan, cuma network call yang ditunda), dengan cleanup saat unmount supaya posisi terakhir sebelum pindah halaman tidak hilang (pola sama dengan fix auto-save notes).
+
+**Graph terlihat sempit — root cause ditemukan:** posisi setiap node dihitung SEKALI saat `ResizeObserver` pertama kali terpanggil, yang bisa terjadi saat container masih dalam ukuran transisi (mis. animasi sidebar 300ms belum selesai). Kanvas fisiknya resize dengan benar di observer berikutnya, tapi posisi node yang sudah di-cache tetap terkunci di ruang koordinat sempit awal itu. **fix: resize berikutnya menskalakan ulang posisi node yang sudah ada secara proporsional** (bukan membangun ulang total dari nol — itu akan mengacak ulang posisi lewat simulasi fisika baru, membuat node "meloncat", lebih buruk dari bug aslinya).
+
+**Garis panjang di halaman Settings — kemungkinan penyebab diperbaiki, belum terverifikasi visual langsung:** `manifest.json`'s `theme_color` (`#0ea5e9`, cyan) tidak konsisten dengan `background_color` (`#0f172a`, navy) dan dengan `viewport.themeColor` dark-mode di `layout.tsx` (juga `#0f172a`). Disamakan ke `#0f172a`. Catatan jujur: sandbox tidak punya browser untuk screenshot verifikasi visual langsung — kalau garis masih terlihat setelah update ini, perlu detail visual lebih lanjut dari Vina untuk diagnosis lebih dalam.
+
+Full suite: 296/296 test lulus (naik dari 291 — 5 test baru untuk TagInput), `tsc`/`eslint --max-warnings 0`/`next build` seluruhnya bersih pasca-perubahan.
+
+Files: `src/components/tags/tag-input.tsx`, `src/app/(protected)/settings/page.tsx`, `src/app/(auth)/forgot-password/page.tsx` (baru), `src/app/(auth)/register/page.tsx`, `src/app/(protected)/canvas/page.tsx`, `src/components/canvas/canvas-board.tsx`, `src/components/graph/graph-view.tsx`, `public/manifest.json`, `tests/unit/components/tag-input.test.tsx` (baru), `package.json`, `README.md`
+
+---
 
 ### v1.2.6 — 07 Agu 2026 (Sesi 27)
 **3 bug auth dilaporkan Vina, semua ditemukan & diperbaiki dengan bukti test: auto-logout race condition, login macet (cookie race), pesan error Google login yang tidak informatif**

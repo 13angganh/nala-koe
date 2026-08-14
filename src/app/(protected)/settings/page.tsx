@@ -10,7 +10,6 @@ import { ROUTES } from '@/constants/routes';
 import { Button } from '@/components/ui/button';
 import { isOk } from '@/lib/normalizer';
 import { logout } from '@/services/auth.service';
-import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Palette, Shield, Database, ChevronRight, LogOut } from 'lucide-react';
 
@@ -37,14 +36,21 @@ const SETTINGS_CARDS = [
 
 export default function SettingsPage() {
   const user = useAuthStore((s) => s.user);
-  const router = useRouter();
   const animationsEnabled = useSettingsStore((s) => s.preferences.enableAnimations ?? true);
 
   const handleLogout = async () => {
+    // Same fix as header.tsx's handleLogout (see that file for the full
+    // writeup): router.push(ROUTES.LOGIN) here used to race against
+    // ProtectedLayout's onAuthStateChanged listener, which independently
+    // redirects once logout()'s signOut() completes. This settings page
+    // logout button had the identical unguarded pattern — missed when
+    // header.tsx was fixed because only the header dropdown's logout was
+    // reported at the time, but this button goes through the same
+    // Firebase signOut() + ProtectedLayout race. logout() alone is
+    // sufficient; ProtectedLayout is the single source of truth for the
+    // post-logout cookie-clear + redirect sequence.
     const result = await logout();
-    if (isOk(result)) {
-      router.push(ROUTES.LOGIN);
-    } else {
+    if (!isOk(result)) {
       toast.error(result.error.message);
     }
   };

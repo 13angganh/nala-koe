@@ -23,8 +23,15 @@ function ProtectedLayoutInner({ children }: { children: React.ReactNode }) {
     { key: 'Escape', onKeyDown: () => { if (commandPaletteOpen) setCommandPaletteOpen(false); } },
   ]);
 
-  if (isLoading) return <PageLoader />;
-  if (!isAuthenticated) return null;
+  // Both isLoading (initial auth check) and the moment right after logout
+  // (isAuthenticated flips to false but the redirect to /login triggered by
+  // ProtectedLayout's onAuthStateChanged hasn't finished navigating away
+  // yet) show the loader instead of a bare `return null`. The blank
+  // `return null` was part of the reported "logout leads to /dashboard
+  // with a blank screen" — isAuthenticated going false and the actual
+  // navigation away from /dashboard completing are two separate moments,
+  // and this component still renders (something) in between them.
+  if (isLoading || !isAuthenticated) return <PageLoader />;
 
   return (
     <div className="min-h-dvh bg-[var(--surface-base)]">

@@ -131,6 +131,9 @@ export function GraphView({ notes }: GraphViewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const router = useRouter();
   const graphRef = useRef<GraphData | null>(null);
+  // Tracks the canvas dimensions graphRef's node positions were last
+  // computed for — see the resize observer below for why this exists.
+  const graphDimsRef = useRef<{ width: number; height: number } | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<{ x: number; y: number; title: string } | null>(null);
   const [legendOpen, setLegendOpen] = useState(false);
@@ -236,8 +239,47 @@ export function GraphView({ notes }: GraphViewProps) {
       if (!parent) return;
       canvas.width = parent.clientWidth;
       canvas.height = parent.clientHeight;
+
+      // Root cause of the reported "tampilan graph sempit": this used to
+      // only ever build the graph ONCE (`if (!graphRef.current)`), on
+      // whichever ResizeObserver callback fired first — which, during
+      // page load, can be a transient/incorrect width (e.g. mid-transition
+      // while the sidebar's 300ms width animation — see
+      // (protected)/layout.tsx's `transition-[padding-left] duration-300`
+      // — is still resolving, or before the layout has otherwise settled
+      // at its final size). buildGraph() computes every node's (x, y)
+      // position relative to that width/height via `centerX = width / 2`
+      // etc. Once graphRef.current was set from a too-narrow initial
+      // measurement, it was NEVER recomputed — the canvas element itself
+      // would resize correctly on subsequent observer callbacks, but the
+      // node positions cached in graphRef stayed locked into the
+      // coordinate space of that first, wrong measurement, visually
+      // compressing the whole graph into a narrow band.
+      //
+      // The fix doesn't rebuild the graph from scratch on every resize —
+      // buildGraph() re-randomizes every node's starting angle/radius and
+      // reruns a force simulation (SIM_STEPS iterations), so doing that on
+      // every resize would make nodes visibly jump to new positions each
+      // time, which is worse than the original bug. Instead, once a graph
+      // exists, later resizes SCALE the existing node positions
+      // proportionally to the new dimensions — preserving the force
+      // simulation's layout (which is the whole point of running it) while
+      // still correcting for whatever width the graph was first computed
+      // against.
       if (!graphRef.current) {
         graphRef.current = buildGraph(notes, canvas.width, canvas.height);
+        graphDimsRef.current = { width: canvas.width, height: canvas.height };
+      } else if (graphDimsRef.current) {
+        const { width: prevW, height: prevH } = graphDimsRef.current;
+        if (prevW > 0 && prevH > 0 && (prevW !== canvas.width || prevH !== canvas.height)) {
+          const scaleX = canvas.width / prevW;
+          const scaleY = canvas.height / prevH;
+          for (const node of graphRef.current.nodes) {
+            node.x *= scaleX;
+            node.y *= scaleY;
+          }
+          graphDimsRef.current = { width: canvas.width, height: canvas.height };
+        }
       }
       draw();
     });

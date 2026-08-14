@@ -31,12 +31,27 @@ export function Header() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const handleLogout = async () => {
+    // Root cause of the reported "logout leads to /dashboard with a blank
+    // screen": this used to ALSO call router.replace(ROUTES.LOGIN) directly
+    // here, racing against ProtectedLayout's onAuthStateChanged listener —
+    // which independently fires (and, since v1.2.6's authStateReady fix,
+    // ALSO calls router.replace(ROUTES.LOGIN)) the moment Firebase's
+    // signOut() below completes. Two navigations firing close together for
+    // the same destination is exactly the kind of race this codebase has
+    // hit before (see notes.service.ts's getDoc() writeup, and the
+    // ProtectedLayout fix itself) — here it could let
+    // ProtectedLayoutInner's `if (!isAuthenticated) return null` render
+    // (blank) before either router.replace() call had actually finished
+    // navigating away from /dashboard.
+    //
+    // Fix: logout() (Firebase signOut()) is the only thing triggered here.
+    // ProtectedLayout's onAuthStateChanged listener is ALREADY the single
+    // source of truth for "user became unauthenticated -> clear session
+    // cookie -> redirect to /login" (see that file) — letting it be the
+    // only place that runs that sequence removes the duplicate/racing
+    // navigation instead of coordinating two of them.
     const result = await logout();
-    if (result.error === null) {
-      // Hapus session cookie via server route (karena httpOnly tidak bisa dihapus client)
-      await fetch('/api/auth/session', { method: 'DELETE' });
-      router.replace(ROUTES.LOGIN);
-    } else {
+    if (result.error !== null) {
       toast.error('Gagal keluar. Coba lagi.');
     }
   };

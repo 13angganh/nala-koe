@@ -68,8 +68,33 @@ export default function CanvasPage() {
 
   const handleUpdateSticky = useCallback(
     async (id: string, updates: Partial<CanvasSticky>) => {
+      // Root cause of a canvas data-loss bug: this used to call
+      // updateSticky() (drag position, color, zIndex changes — every
+      // per-sticky update funnels through here from CanvasBoard) WITHOUT
+      // ever updating this component's `board` state, unlike
+      // handleAddSticky/handleDeleteSticky below which both correctly
+      // call setBoard(). Because CanvasBoard's useEffect re-syncs its
+      // local `stickies` state from `board.stickies` whenever THAT
+      // reference changes (see canvas-board.tsx), a `board` that never
+      // reflected drag/color/zIndex updates meant: drag sticky A, then
+      // add a NEW sticky (which DOES call setBoard) — the resulting
+      // board.stickies array was built from a stale `board` that never
+      // knew about A's move, silently reverting A back to its old
+      // position/color the moment CanvasBoard's sync effect fired for the
+      // new sticky. Keeping `board` current here closes that gap.
       const result = await updateSticky(id, updates);
-      if (!isOk(result)) toast.error(result.error.message);
+      if (isOk(result)) {
+        setBoard((prev) =>
+          prev
+            ? {
+                ...prev,
+                stickies: prev.stickies.map((s) => (s.id === id ? { ...s, ...updates } : s)),
+              }
+            : prev
+        );
+      } else {
+        toast.error(result.error.message);
+      }
     },
     []
   );

@@ -35,16 +35,63 @@ export function TagInput({
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Root cause of the reported "tag tetap hilang, di catatan lama maupun
+  // baru": addTag()/removeTag() used to read `value` directly from this
+  // component's render closure. `value` is a CONTROLLED prop coming from
+  // Zustand via several layers (NoteEditor -> NoteMetaPanel, which is
+  // wrapped in React.memo — see note-meta-panel.tsx) — there is a real
+  // gap between calling onChange() and this component actually
+  // re-rendering with the updated `value`. If the user types a second tag
+  // and hits Enter again inside that gap (typing two tags in quick
+  // succession — an entirely normal thing to do, not an edge case), the
+  // second addTag() call closes over the STALE pre-update `value`, so
+  // onChange([...staleValue, secondTag]) silently overwrites the first
+  // tag instead of keeping it. No error, no crash — just a note that ends
+  // up with only the last tag typed, or none at all if the user was fast
+  // enough for this to happen on the very first tag. Confirmed via a
+  // failing-until-fixed test in tests/unit/components/tag-input.test.tsx
+  // BEFORE this fix, following this project's standing tests-before-fix
+  // approach for bug reports (see README.md v1.2.5/v1.2.6 changelog).
+  //
+  // valueRef is the array addTag/removeTag build their next result from.
+  // It's kept in sync with the `value` prop via useEffect — deliberately
+  // NOT by assigning valueRef.current = value directly in the render
+  // body. React's own docs are explicit that refs shouldn't be written
+  // during rendering (https://react.dev/learn/referencing-values-with-refs)
+  // and this component demonstrates exactly why: an unconditional
+  // render-body assignment re-runs on EVERY render this component does
+  // for ANY reason — including the ones setInputValue('') triggers while
+  // the user is mid-keystroke on the NEXT tag — and each of those re-runs
+  // was re-adopting the ORIGINAL `value` prop (since the parent hadn't
+  // re-rendered with the updated array yet), silently discarding the tag
+  // valueRef was just updated to include. useEffect's dependency array
+  // ([value]) is what correctly limits the sync to only when `value`
+  // itself actually changes between renders — not every render.
+  const valueRef = useRef(value);
+  useEffect(() => {
+    valueRef.current = value;
+  }, [value]);
+
   const filteredSuggestions = suggestions.filter(
     (s) => !value.includes(s) && s.toLowerCase().includes(inputValue.toLowerCase())
   );
 
   function addTag(tag: string) {
     const clean = tag.trim().toLowerCase().replace(/\s+/g, '-');
-    if (!clean || value.includes(clean) || value.length >= maxTags) {
+    const current = valueRef.current;
+    if (!clean || current.includes(clean) || current.length >= maxTags) {
       return;
     }
-    onChange([...value, clean]);
+    const next = [...current, clean];
+    // Also updated directly here (not just via the useEffect above) so a
+    // SECOND addTag()/removeTag() call arriving before React commits a
+    // re-render from THIS call still builds from the up-to-date array.
+    // The useEffect handles the OTHER direction — value changing from
+    // outside (a different note opened, a live update arriving) — while
+    // this direct assignment handles our own calls staying correct
+    // against each other even when several fire faster than a render.
+    valueRef.current = next;
+    onChange(next);
     setInputValue('');
     setShowSuggestions(false);
     setHighlightedIdx(-1);
@@ -52,7 +99,9 @@ export function TagInput({
   }
 
   function removeTag(tag: string) {
-    onChange(value.filter((t) => t !== tag));
+    const next = valueRef.current.filter((t) => t !== tag);
+    valueRef.current = next;
+    onChange(next);
   }
 
   function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {

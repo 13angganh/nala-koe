@@ -41,7 +41,45 @@ export function CanvasBoard({
   const [stickies, setStickies] = useState<CanvasStickyType[]>(board.stickies);
   const panState = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
   const boardRef = useRef<HTMLDivElement>(null);
+  // Declared here (not down near handleStickyMove, where it's actually
+  // used) because the unmount-cleanup effect further down reads it —
+  // React Compiler's react-hooks/immutability rule requires a ref to be
+  // fully declared before any effect that reads it, and rejects
+  // modifying it later in a handler defined after that effect. See that
+  // effect below for the full explanation of what this is for.
+  const moveDebounceRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const { confirm } = useConfirmDialog();
+
+  // Root cause of the reported canvas issues, second part: handlePointerMove
+  // in canvas-sticky.tsx calls onMove() — which reaches this function —
+  // directly on every pointermove event during a drag, with zero
+  // debouncing anywhere in the chain. That's potentially dozens of
+  // Firestore writes per second for a single drag gesture (a real
+  // performance problem, and a real Firestore quota/cost concern, not
+  // just a UI smoothness one). Position updates are debounced here at
+  // 150ms — short enough that the saved position still feels immediate
+  // once dragging stops, long enough to collapse a fast drag's pointermove
+  // stream into a handful of writes instead of one per pixel. Local
+  // `stickies` state (the optimistic in-memory position used for
+  // rendering) is NOT debounced — that still updates every frame so the
+  // drag itself stays visually smooth; only the network write is delayed.
+  //
+  // Defined here (before the effects below, rather than grouped with the
+  // other sticky handlers further down) for the same react-hooks/immutability
+  // reason moveDebounceRef is declared up here — this is the one place
+  // that mutates it, and it must appear before the unmount-cleanup effect
+  // that reads it.
+  function handleStickyMove(id: string, x: number, y: number) {
+    setStickies((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, x, y } : s))
+    );
+    const existing = moveDebounceRef.current[id];
+    if (existing) clearTimeout(existing);
+    moveDebounceRef.current[id] = setTimeout(() => {
+      onUpdateSticky(id, { x, y });
+      delete moveDebounceRef.current[id];
+    }, 150);
+  }
 
   // Sync stickies when board prop changes. This is the
   // "Subscribe for updates from some external system, calling setState in
@@ -67,6 +105,50 @@ export function CanvasBoard({
     }, 800);
     return () => clearTimeout(t);
   }, [viewport, onViewportChange]);
+
+  // Flush any still-pending sticky-position debounce timers on unmount
+  // (e.g. user navigates away right after finishing a drag, before the
+  // 150ms debounce above fired) — without this, a position from the very
+  // end of a drag gesture could be silently lost instead of saved, the
+  // same class of "last edit before navigating away doesn't make it to
+  // the server" bug already fixed for notes (see use-note-editor.ts's
+  // unmount cleanup and its cited README changelog entries).
+  //
+  // stickiesRef/onUpdateStickyRef exist so the unmount cleanup below
+  // (registered once, via the empty dependency array) reads the CURRENT
+  // stickies/onUpdateSticky at the moment it actually runs — not whatever
+  // they were on first render. An empty-deps effect's closure only ever
+  // sees its first render's values otherwise (the same stale-closure
+  // class of bug already fixed once in this codebase for TagInput's
+  // addTag/removeTag — see tag-input.tsx and its cited tests).
+  //
+  // Synced via useEffect, NOT by writing ref.current directly in the
+  // render body — React's own eslint-plugin-react-hooks `refs` rule (and
+  // this project's React Compiler config) rejects reading OR writing
+  // ref.current during render outright, no exceptions
+  // (https://react.dev/reference/eslint-plugin-react-hooks/lints/refs).
+  // useEffect's dependency array is what correctly limits the sync to
+  // "after this render's commit", which is what the rule requires.
+  const stickiesRef = useRef(stickies);
+  useEffect(() => {
+    stickiesRef.current = stickies;
+  }, [stickies]);
+  const onUpdateStickyRef = useRef(onUpdateSticky);
+  useEffect(() => {
+    onUpdateStickyRef.current = onUpdateSticky;
+  }, [onUpdateSticky]);
+
+  useEffect(() => {
+    return () => {
+      const pending = moveDebounceRef.current;
+      for (const id of Object.keys(pending)) {
+        clearTimeout(pending[id]);
+        const sticky = stickiesRef.current.find((s) => s.id === id);
+        if (sticky) onUpdateStickyRef.current(id, { x: sticky.x, y: sticky.y });
+      }
+      moveDebounceRef.current = {};
+    };
+  }, []);
 
   // ─── Pan ──────────────────────────────────────────────────────────────────
 
@@ -136,13 +218,9 @@ export function CanvasBoard({
   }
 
   // ─── Sticky handlers ─────────────────────────────────────────────────────
-
-  function handleStickyMove(id: string, x: number, y: number) {
-    setStickies((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, x, y } : s))
-    );
-    onUpdateSticky(id, { x, y });
-  }
+  // (handleStickyMove is defined near the top of this component, alongside
+  // moveDebounceRef — see the comment there for why, and for its own
+  // documentation of the debounce fix it implements.)
 
   function handleStickyContent(id: string, content: string) {
     setStickies((prev) =>

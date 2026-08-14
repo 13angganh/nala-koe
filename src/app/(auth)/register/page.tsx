@@ -27,24 +27,45 @@ export default function RegisterPage() {
   /**
    * Set session cookie via server API route (httpOnly, secure).
    * Bukan document.cookie — session token nyata dari Firebase Admin.
+   *
+   * Same fix as login/page.tsx (v1.2.6): returns whether the cookie POST
+   * was actually confirmed (response.ok), instead of navigating regardless.
+   * This file had the same unguarded pattern login/page.tsx used to have —
+   * missed in the earlier fix because only the login flow was reported at
+   * the time, but register goes through the identical session-cookie +
+   * navigate sequence and is exposed to the same cookie race condition.
    */
-  const setServerSession = async () => {
+  const setServerSession = async (): Promise<boolean> => {
     const currentUser = auth.currentUser;
-    if (!currentUser) return;
+    if (!currentUser) return false;
     const idToken = await getIdToken(currentUser);
-    await fetch('/api/auth/session', {
+    const response = await fetch('/api/auth/session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ idToken }),
     });
+    return response.ok;
+  };
+
+  // See login/page.tsx's goToDestination for the full writeup — router.refresh()
+  // before router.replace() is the fix for the App Router cookie race
+  // condition (redirect can otherwise reach middleware before the just-set
+  // session cookie is committed by the browser).
+  const goToDestination = () => {
+    router.refresh();
+    router.replace(ROUTES.DASHBOARD);
   };
 
   const onSubmit = async (data: RegisterInput) => {
     const result = await registerWithEmail(data.email, data.password, data.displayName);
     if (result.error === null) {
-      await setServerSession();
+      const sessionOk = await setServerSession();
+      if (!sessionOk) {
+        toast.error('Akun dibuat, tapi gagal membuat sesi. Coba masuk lagi.');
+        return;
+      }
       toast.success('Akun berhasil dibuat!');
-      router.replace(ROUTES.DASHBOARD);
+      goToDestination();
     } else {
       toast.error(result.error.message);
     }
@@ -53,11 +74,16 @@ export default function RegisterPage() {
   const handleGoogle = async () => {
     setIsGoogleLoading(true);
     const result = await loginWithGoogle();
-    setIsGoogleLoading(false);
     if (result.error === null) {
-      await setServerSession();
-      router.replace(ROUTES.DASHBOARD);
+      const sessionOk = await setServerSession();
+      setIsGoogleLoading(false);
+      if (!sessionOk) {
+        toast.error('Berhasil masuk, tapi gagal membuat sesi. Coba lagi.');
+        return;
+      }
+      goToDestination();
     } else {
+      setIsGoogleLoading(false);
       toast.error(result.error.message);
     }
   };
