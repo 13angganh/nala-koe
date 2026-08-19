@@ -4,10 +4,11 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/constants/routes';
-import { Palette, Shield, Database, Settings } from 'lucide-react';
+import { Palette, Shield, Database, Settings, UserCircle } from 'lucide-react';
 
 const SETTINGS_NAV = [
   { href: ROUTES.SETTINGS, label: 'Umum', icon: Settings, exact: true },
+  { href: ROUTES.SETTINGS_ACCOUNT, label: 'Akun', icon: UserCircle, exact: false },
   { href: ROUTES.SETTINGS_APPEARANCE, label: 'Tampilan', icon: Palette, exact: false },
   { href: ROUTES.SETTINGS_SECURITY, label: 'Keamanan', icon: Shield, exact: false },
   { href: ROUTES.SETTINGS_DATA, label: 'Data', icon: Database, exact: false },

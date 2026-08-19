@@ -43,7 +43,48 @@ function ProtectedLayoutInner({ children }: { children: React.ReactNode }) {
           sidebarOpen ? 'lg:pl-56' : 'lg:pl-0'
         )}
       >
-        <div className="min-h-[calc(100dvh-3.5rem)]">{children}</div>
+        {/* Root cause of the reported "Canvas/Graph feels broken — tombolnya
+            tak muncul, kotaknya sempit": this wrapper used to be
+            `min-h-[calc(100dvh-3.5rem)]`. A child that asks for `h-full`
+            (height: 100%) can ONLY resolve that percentage against an
+            ancestor with an explicit `height` — never against
+            `min-height`, even when the ancestor's rendered height ends up
+            satisfying that minimum. This isn't a browser quirk; it's
+            specified behavior (CSS 2.1 §10.5) and is consistent across
+            every browser: https://www.w3.org/TR/CSS21/visudet.html#the-height-property
+            — "If the height of the containing block is not specified
+            explicitly [...] the [percentage] value computes to auto."
+            `min-height` never counts as "specified explicitly" for this
+            purpose, confirmed identically by every major browser (see also
+            https://www.joshwcomeau.com/css/height-enigma/).
+            CanvasPage and GraphPage both render a root `<div
+            className="h-full">` expecting to fill this wrapper — with
+            `min-h-`, that resolved to `auto`, i.e. just tall enough for
+            their own header block, which is exactly the "kotak sempit"
+            visible in the reported screenshots. Downstream, GraphView
+            reads `canvas.parentElement.clientHeight` to size its actual
+            <canvas> element (graph-view.tsx) and CanvasBoard's drag/pan/
+            zoom surface depends on the same real pixel area — both
+            silently collapsed to whatever their header's height happened
+            to be.
+            Fixed by making this wrapper's height explicit
+            (`h-[calc(100dvh-3.5rem)]`) instead of a minimum, so
+            `h-full` children now have something real to resolve against.
+            Pages whose content is naturally taller than the viewport
+            (Dashboard, Catatan, Pengaturan) still work exactly as before:
+            none of them set an explicit height on their own root element,
+            so they simply keep growing past this wrapper's box — and
+            `overflow-y-auto` added here (replacing what used to be
+            implicit document-level scroll — verified before this change
+            that nothing in the codebase reads window/document/body-level
+            scroll position; the one existing document.body usage in
+            export.service.ts is an unrelated file-download anchor
+            technique) means the page still scrolls exactly as before, just
+            via this wrapper instead of the whole document. Header and
+            Sidebar are both `position: fixed` (see their own files), so
+            neither is affected by this wrapper's height or overflow at
+            all. */}
+        <div className="h-[calc(100dvh-3.5rem)] overflow-y-auto">{children}</div>
       </main>
       <CommandPalette />
     </div>

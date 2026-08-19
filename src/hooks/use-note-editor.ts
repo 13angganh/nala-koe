@@ -80,7 +80,27 @@ export function useNoteEditor(noteId: string) {
         // can never present stale data for a field mid-write as if it were
         // final.
         const stillInFlight = Object.keys(inFlightSaveRef.current);
-        const pending = { ...pendingInputRef.current, ...inFlightSaveRef.current };
+        // Root cause of the tag bug STILL happening in production after
+        // v1.2.3 and v1.2.5 (both individually correct, but not enough —
+        // reported again by Vina, reproduced in
+        // tests/unit/hooks/use-note-editor-tags.test.tsx): this spread
+        // order put inFlightSaveRef LAST, so it always won over
+        // pendingInputRef for any field present in both. That's backwards.
+        // inFlightSaveRef holds a batch that was ALREADY SENT to Firestore
+        // — frozen at the moment its debounce timer fired. pendingInputRef
+        // holds whatever the user has typed MORE RECENTLY, still
+        // accumulating toward its own not-yet-fired timer. When both
+        // contain the same field — completely normal: add a tag, then add
+        // a second tag before the first save round-trips — the newer,
+        // not-yet-sent pendingInputRef value is the one that should win;
+        // the in-flight value is already stale the moment something newer
+        // exists. Swapping the spread order fixes this: pendingInputRef
+        // now goes LAST, so a field present in both takes the fresher
+        // value. Fields that exist in only one of the two are unaffected
+        // either way — this only changes behavior for a field that both
+        // refs happen to be tracking at once, which is exactly the
+        // overlapping-save case this bug lived in.
+        const pending = { ...inFlightSaveRef.current, ...pendingInputRef.current };
         const merged = Object.keys(pending).length > 0 ? { ...note, ...pending } : note;
         setActiveNote(merged);
         setIsLoading(false);

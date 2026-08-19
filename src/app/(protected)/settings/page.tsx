@@ -11,9 +11,15 @@ import { Button } from '@/components/ui/button';
 import { isOk } from '@/lib/normalizer';
 import { logout } from '@/services/auth.service';
 import { toast } from 'sonner';
-import { Palette, Shield, Database, ChevronRight, LogOut } from 'lucide-react';
+import { Palette, Shield, Database, ChevronRight, LogOut, UserCircle } from 'lucide-react';
 
 const SETTINGS_CARDS = [
+  {
+    href: ROUTES.SETTINGS_ACCOUNT,
+    label: 'Akun',
+    description: 'Info akun, reset password',
+    icon: UserCircle,
+  },
   {
     href: ROUTES.SETTINGS_APPEARANCE,
     label: 'Tampilan',
@@ -67,25 +73,39 @@ export default function SettingsPage() {
             }
           : {})}
       >
-        {/* Profile card */}
+        {/* Profile card — links to the new Akun page instead of
+            duplicating account info inline here */}
         {user && (
-          <section className="rounded-xl border border-[var(--border)] bg-[var(--surface-base)] p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-white text-sm font-semibold">
-                {(user.displayName ?? user.email ?? '?').charAt(0).toUpperCase()}
+          <Link href={ROUTES.SETTINGS_ACCOUNT}>
+            <motion.section
+              className="rounded-xl border border-[var(--border)] bg-[var(--surface-base)] p-4 transition-colors hover:border-[var(--accent)]/40 hover:bg-[var(--surface-subtle)]"
+              {...(animationsEnabled ? { whileHover: { x: 2 }, whileTap: { scale: 0.99 } } : {})}
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-white text-sm font-semibold">
+                  {(user.displayName ?? user.email ?? '?').charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-[var(--text-primary)]">
+                    {user.displayName ?? 'Pengguna NalaKoe'}
+                  </p>
+                  <p className="truncate text-sm text-[var(--text-tertiary)] lowercase">{user.email}</p>
+                </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-[var(--text-tertiary)]" aria-hidden />
               </div>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-[var(--text-primary)]">
-                  {user.displayName ?? 'Pengguna NalaKoe'}
-                </p>
-                <p className="truncate text-sm text-[var(--text-tertiary)] lowercase">{user.email}</p>
-              </div>
-            </div>
-          </section>
+            </motion.section>
+          </Link>
         )}
 
-        {/* Settings nav cards */}
-        <section>
+        {/* Settings nav cards — mobile only. SettingsShell already renders
+            this same navigation as a proper side-nav on desktop (sm:flex);
+            showing both at once on desktop was the reported "duplikat
+            menu, mubazir banget". On mobile, SettingsShell's own nav is a
+            small horizontal pill row (sm:hidden in settings-shell.tsx) —
+            these larger cards remain the primary way to navigate there,
+            so they're kept, just scoped to the same breakpoint the pill
+            row uses. */}
+        <section className="sm:hidden">
           <div className="space-y-2">
             {SETTINGS_CARDS.map(({ href, label, description, icon: Icon }) => (
               <motion.div key={href} {...(animationsEnabled ? { whileHover: { x: 2 }, whileTap: { scale: 0.99 } } : {})}>

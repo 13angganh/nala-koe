@@ -23,6 +23,7 @@ export const ROUTES = {
 
   // Settings
   SETTINGS: '/settings',
+  SETTINGS_ACCOUNT: '/settings/account',
   SETTINGS_APPEARANCE: '/settings/appearance',
   SETTINGS_SECURITY: '/settings/security',
   SETTINGS_DATA: '/settings/data',
