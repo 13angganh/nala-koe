@@ -80,26 +80,6 @@ export function useNoteEditor(noteId: string) {
         // can never present stale data for a field mid-write as if it were
         // final.
         const stillInFlight = Object.keys(inFlightSaveRef.current);
-        // Root cause of the tag bug STILL happening in production after
-        // v1.2.3 and v1.2.5 (both individually correct, but not enough —
-        // reported again by Vina, reproduced in
-        // tests/unit/hooks/use-note-editor-tags.test.tsx): this spread
-        // order put inFlightSaveRef LAST, so it always won over
-        // pendingInputRef for any field present in both. That's backwards.
-        // inFlightSaveRef holds a batch that was ALREADY SENT to Firestore
-        // — frozen at the moment its debounce timer fired. pendingInputRef
-        // holds whatever the user has typed MORE RECENTLY, still
-        // accumulating toward its own not-yet-fired timer. When both
-        // contain the same field — completely normal: add a tag, then add
-        // a second tag before the first save round-trips — the newer,
-        // not-yet-sent pendingInputRef value is the one that should win;
-        // the in-flight value is already stale the moment something newer
-        // exists. Swapping the spread order fixes this: pendingInputRef
-        // now goes LAST, so a field present in both takes the fresher
-        // value. Fields that exist in only one of the two are unaffected
-        // either way — this only changes behavior for a field that both
-        // refs happen to be tracking at once, which is exactly the
-        // overlapping-save case this bug lived in.
         const pending = { ...inFlightSaveRef.current, ...pendingInputRef.current };
         const merged = Object.keys(pending).length > 0 ? { ...note, ...pending } : note;
         setActiveNote(merged);
@@ -132,10 +112,53 @@ export function useNoteEditor(noteId: string) {
   }, [noteId, user?.uid, isEnabled]);
 
   // Save mutation
+  //
+  // Root cause of the reported "tag masih belum kelar masih tetap tak
+  // tersimpan": mutationFn used to close over `noteId` — the plain
+  // function parameter of useNoteEditor(noteId), read fresh on every
+  // render, NOT a ref. Next.js App Router does not guarantee a full
+  // unmount/remount when navigating between two pages that resolve to the
+  // same dynamic route (e.g. /notes/A -> /notes/B both render
+  // notes/[id]/page.tsx) — it can just re-render the SAME component
+  // instance with a new `params.id`
+  // (https://github.com/vercel/next.js/issues/49553; documented directly:
+  // "the client component itself doesn't unmount and remount [...] React
+  // doesn't unmount and remount that component. Instead, it re-renders
+  // it"). When that happens, this hook's useRef()s (pendingInputRef,
+  // inFlightSaveRef, autoSaveTimer, and this mutationFn's own `noteId`
+  // closure) are NOT reset by React just because a dependency-array
+  // effect re-ran — only actual unmount/remount resets refs.
+  //
+  // Concretely: user types a tag on note-1 (scheduleAutoSave schedules a
+  // setTimeout 1500ms out, closing over `saveMutation.mutate`, which is a
+  // STABLE function reference from TanStack Query — but the mutationFn
+  // that reference invokes is whichever one was defined on the LATEST
+  // render). User clicks note-2 from the list before that timer fires —
+  // NotePage re-renders with noteId='note-2', mutationFn is redefined
+  // with `noteId` now closing over 'note-2'. The still-pending timer from
+  // note-1 then fires and calls the (stable) saveMutation.mutate(), which
+  // invokes the LATEST mutationFn — the one that resolves updateNote()
+  // against noteId='note-2'. The tag typed on note-1 is silently written
+  // to note-2 instead — confirmed directly via debug instrumentation
+  // during this investigation (mutationFn logged
+  // `noteId closure = note-2` for a save that was scheduled while editing
+  // note-1), and reproduced in
+  // tests/unit/hooks/use-note-editor-tags.test.tsx ("BUG: user ketik tag
+  // di Catatan A, sebelum auto-save 1500ms selesai user PINDAH ke Catatan
+  // B TANPA full page unmount").
+  //
+  // Fixed by never reading `noteId` from this closure inside mutationFn
+  // at all — the noteId to save against is now part of the mutate()
+  // payload itself, locked in by the CALLER at the moment each batch is
+  // scheduled or flushed (scheduleAutoSave uses noteIdRef.current;
+  // the flush-on-note-change cleanup effect below uses its own closure
+  // `noteId` directly — see each site's own comment for why they differ).
+  // A batch scheduled while note-1 was open always saves to note-1, no
+  // matter which note is open by the time its timer actually fires.
   const saveMutation = useMutation({
-    mutationFn: async (input: UpdateNoteInput) => {
+    mutationFn: async ({ targetNoteId, ...input }: UpdateNoteInput & { targetNoteId: string }) => {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- reason: safe: mutationFn only reachable when user is authenticated (ProtectedLayout)
-      const result = await updateNote(noteId, user!.uid, input);
+      const result = await updateNote(targetNoteId, user!.uid, input);
       if (!isOk(result)) throw new Error(result.error.message);
     },
     onMutate: () => setSaving(true),
@@ -156,10 +179,39 @@ export function useNoteEditor(noteId: string) {
     },
   });
 
+  // Tracks whichever noteId this hook is CURRENTLY subscribed to — synced
+  // via useEffect ([noteId]), same valueRef-sync pattern already used for
+  // TagInput's valueRef (see tag-input.tsx) and for the identical class of
+  // bug already fixed once in canvas-board.tsx's stickiesRef/
+  // onUpdateStickyRef. NOT written directly in the render body — this
+  // project's React Compiler config (react-hooks/refs) forbids that
+  // outright; useEffect's dependency array is what correctly limits the
+  // sync to "after this render's commit".
+  //
+  // This ref exists specifically so scheduleAutoSave (and the manual-save/
+  // toggle-style handlers below, whose own useCallback dependency arrays
+  // don't include noteId) can read "what note is open RIGHT NOW, at the
+  // exact instant a batch is being locked in or a handler fires" — as
+  // opposed to `noteId`, the function parameter, which is fine for effects
+  // whose OWN dependency array already includes it (the subscription
+  // effect above, and the flush-on-note-change cleanup effect below,
+  // which reads `noteId` directly rather than this ref — see that
+  // effect's own comment for why) but was the actual bug source
+  // everywhere a setTimeout/useCallback closed over it without noteId in
+  // its own deps.
+  const noteIdRef = useRef(noteId);
+  useEffect(() => {
+    noteIdRef.current = noteId;
+  }, [noteId]);
+
   const scheduleAutoSave = useCallback(
     (input: UpdateNoteInput) => {
       pendingInputRef.current = { ...pendingInputRef.current, ...input };
       if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+      // Locked in NOW, at schedule time — this batch always saves against
+      // whatever note was open when the user typed, regardless of what's
+      // open by the time the timer actually fires.
+      const targetNoteId = noteIdRef.current;
       autoSaveTimer.current = setTimeout(() => {
         const merged = pendingInputRef.current;
         pendingInputRef.current = {};
@@ -173,19 +225,22 @@ export function useNoteEditor(noteId: string) {
         // closes.
         inFlightSaveRef.current = { ...inFlightSaveRef.current, ...merged };
         const fieldsInThisBatch = Object.keys(merged);
-        saveMutation.mutate(merged, {
-          onSettled: () => {
-            // Only clear the fields THIS batch was responsible for — a
-            // second scheduleAutoSave() call can start (and finish) while
-            // this one is still in flight (e.g. tags saved, then mood
-            // changed and its own timer already fired), and that second
-            // batch's fields must stay protected until ITS OWN mutation
-            // settles, not get cleared as a side effect of this one.
-            const next = { ...inFlightSaveRef.current };
-            for (const key of fieldsInThisBatch) delete next[key as keyof UpdateNoteInput];
-            inFlightSaveRef.current = next;
-          },
-        });
+        saveMutation.mutate(
+          { ...merged, targetNoteId },
+          {
+            onSettled: () => {
+              // Only clear the fields THIS batch was responsible for — a
+              // second scheduleAutoSave() call can start (and finish) while
+              // this one is still in flight (e.g. tags saved, then mood
+              // changed and its own timer already fired), and that second
+              // batch's fields must stay protected until ITS OWN mutation
+              // settles, not get cleared as a side effect of this one.
+              const next = { ...inFlightSaveRef.current };
+              for (const key of fieldsInThisBatch) delete next[key as keyof UpdateNoteInput];
+              inFlightSaveRef.current = next;
+            },
+          }
+        );
       }, AUTO_SAVE_DELAY);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -259,6 +314,7 @@ export function useNoteEditor(noteId: string) {
       texture: activeNote.texture,
       linkedNoteIds: activeNote.linkedNoteIds,
       isPinned: activeNote.isPinned,
+      targetNoteId: noteIdRef.current,
     });
   }, [activeNote, saveMutation]);
 
@@ -266,7 +322,7 @@ export function useNoteEditor(noteId: string) {
     if (!activeNote) return;
     const isPinned = !activeNote.isPinned;
     updateActiveNote({ isPinned });
-    saveMutation.mutate({ isPinned });
+    saveMutation.mutate({ isPinned, targetNoteId: noteIdRef.current });
   }, [activeNote, updateActiveNote, saveMutation]);
 
   // ── Phase 3: Mood, Tags, Weather, Location ───────────────────────────────
@@ -390,7 +446,7 @@ export function useNoteEditor(noteId: string) {
   const handleTimeCapsuleChange = useCallback(
     (isTimeCapsule: boolean, timeCapsuleUnlockAt: string | null) => {
       updateActiveNote({ isTimeCapsule, timeCapsuleUnlockAt });
-      saveMutation.mutate({ isTimeCapsule, timeCapsuleUnlockAt });
+      saveMutation.mutate({ isTimeCapsule, timeCapsuleUnlockAt, targetNoteId: noteIdRef.current });
     },
     [updateActiveNote, saveMutation]
   );
@@ -398,13 +454,30 @@ export function useNoteEditor(noteId: string) {
   const handleSecretChange = useCallback(
     (isSecret: boolean) => {
       updateActiveNote({ isSecret });
-      saveMutation.mutate({ isSecret });
+      saveMutation.mutate({ isSecret, targetNoteId: noteIdRef.current });
     },
     [updateActiveNote, saveMutation]
   );
 
   // ── Cleanup ───────────────────────────────────────────────────────────────
-
+  //
+  // Runs on true unmount AND whenever noteId changes — the latter closes
+  // the exact "switch notes before the debounce fires" gap the
+  // targetNoteId fix above addresses at the schedule end; this flushes any
+  // remaining pending patch immediately at the switch point too, instead
+  // of leaving it to wait out whatever's left of the old note's timer.
+  //
+  // Deliberately reads `noteId` here — the plain closure parameter, NOT
+  // noteIdRef.current. This cleanup closure is recreated every time this
+  // effect's OWN dependency ([noteId]) changes, and React guarantees each
+  // recreation closes over that render's props — that's a documented
+  // guarantee (effects/cleanups see the render they were set up in). Using
+  // noteIdRef.current here instead would depend on this effect's cleanup
+  // running before noteIdRef's OWN sync effect updates it on the same
+  // commit — relative ordering between separate useEffect calls is
+  // observed-in-practice (matches declaration order) but is NOT part of
+  // React's documented public API contract, so this cleanup avoids relying
+  // on it entirely by not touching noteIdRef at all.
   useEffect(() => {
     return () => {
       if (autoSaveTimer.current) {
@@ -421,11 +494,11 @@ export function useNoteEditor(noteId: string) {
         // Fire-and-forget: the mutation runs against the query client, which
         // outlives this component, so the patch still reaches Firestore even
         // though we're navigating away right now.
-        saveMutation.mutate(pending);
+        saveMutation.mutate({ ...pending, targetNoteId: noteId });
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- reason: intentionally only runs on mount/unmount; saveMutation.mutate is stable
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reason: intentionally re-runs (flushing) on noteId change in addition to true unmount; saveMutation.mutate is stable
+  }, [noteId]);
 
   // wordCount/readingTimeMinutes are sourced from activeNote.wordCount, which
   // is updated by the debounced analysis in handleContentChange (settles
@@ -490,7 +563,7 @@ export function useNoteEditor(noteId: string) {
   const handleScheduledChange = useCallback(
     (isScheduled: boolean, scheduledAt: string | null) => {
       updateActiveNote({ isScheduled, scheduledAt });
-      saveMutation.mutate({ isScheduled, scheduledAt });
+      saveMutation.mutate({ isScheduled, scheduledAt, targetNoteId: noteIdRef.current });
     },
     [updateActiveNote, saveMutation]
   );

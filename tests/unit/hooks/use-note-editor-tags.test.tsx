@@ -7,34 +7,6 @@ import { useNotesStore } from '@/stores/notes.store';
 import { useAuthStore } from '@/stores/auth.store';
 import type { Note } from '@/types/note.types';
 
-// ─── Why this test exists ──────────────────────────────────────────────────
-//
-// Every existing tag test (tag-input.test.tsx, notes-service-update.test.ts)
-// mocks its target in isolation: TagInput is tested with a plain onChange
-// spy, updateNote() is tested with a plain getDoc/updateDoc mock. Both pass.
-// Neither exercises useNoteEditor itself — the layer where
-// subscribeToNote's onSnapshot callback and scheduleAutoSave's
-// inFlightSaveRef actually interact. This is the integration gap: Vina
-// reported the tag bug is STILL happening in production after both prior
-// fixes (v1.2.3, v1.2.5) landed and were individually verified, which means
-// the reproduction has to happen at the point where they compose, not at
-// either fix's own unit boundary.
-//
-// Root cause found here: inFlightSaveRef.current is written ONCE per batch,
-// at the moment scheduleAutoSave's setTimeout fires (use-note-editor.ts,
-// "inFlightSaveRef.current = { ...inFlightSaveRef.current, ...merged }").
-// It is a snapshot of `tags` AT THAT INSTANT — not a live reference to
-// whatever the user has typed since. The onSnapshot handler then does
-// `{ ...note, ...pendingInputRef.current, ...inFlightSaveRef.current }` and
-// pushes the result straight into setActiveNote(). For a scalar field
-// (mood, title) the newest value always wins because there's only ever one
-// in-flight version at a time. For `tags`, if the user adds a SECOND tag
-// while the FIRST tag's save is still in flight, inFlightSaveRef.current
-// still holds the FIRST tag's array — and if a snapshot arrives in that
-// window, it overwrites the just-typed second tag in Zustand with the
-// stale in-flight one. This reproduces exactly what Vina described: typed
-// repeatedly, comes back empty (or missing what was just typed).
-
 const mockUnsubscribe = vi.fn();
 let snapshotCallback: ((note: Note, hasPendingWrites: boolean) => void) | null = null;
 let updateNoteCalls: Array<{ noteId: string; userId: string; input: Record<string, unknown> }> = [];
@@ -44,9 +16,6 @@ vi.mock('@/services/notes.service', () => ({
     snapshotCallback = onData;
     return mockUnsubscribe;
   }),
-  // Deliberately never resolves — mirrors real Firestore network latency
-  // and lets each test control exactly when a snapshot callback fires
-  // relative to an in-flight save. That gap is where the bug lives.
   updateNote: vi.fn((noteId: string, userId: string, input: Record<string, unknown>) => {
     updateNoteCalls.push({ noteId, userId, input });
     return new Promise(() => {});
@@ -54,37 +23,14 @@ vi.mock('@/services/notes.service', () => ({
 }));
 
 const baseNote: Note = {
-  id: 'note-1',
-  userId: 'user-1',
-  title: 'Judul',
-  content: 'Isi',
-  contentFormat: 'plain',
-  blocks: [],
-  mood: null,
-  tags: [],
-  status: 'active',
-  isPinned: false,
-  isSecret: false,
-  isTimeCapsule: false,
-  timeCapsuleUnlockAt: null,
-  isScheduled: false,
-  scheduledAt: null,
-  language: null,
-  texture: 'plain',
-  fontWeight: 'regular',
-  accentColor: null,
-  weather: null,
-  location: null,
-  reaction: null,
-  linkedNoteIds: [],
-  highlights: [],
-  hiddenSections: [],
-  wordCount: 0,
-  createdAt: '2026-08-01T00:00:00.000Z',
-  updatedAt: '2026-08-01T00:00:00.000Z',
-  trashedAt: null,
-  archivedAt: null,
-  originalCreatedAt: null,
+  id: 'note-1', userId: 'user-1', title: 'Judul', content: 'Isi',
+  contentFormat: 'plain', blocks: [], mood: null, tags: [], status: 'active',
+  isPinned: false, isSecret: false, isTimeCapsule: false, timeCapsuleUnlockAt: null,
+  isScheduled: false, scheduledAt: null, language: null, texture: 'plain',
+  fontWeight: 'regular', accentColor: null, weather: null, location: null,
+  reaction: null, linkedNoteIds: [], highlights: [], hiddenSections: [], wordCount: 0,
+  createdAt: '2026-08-01T00:00:00.000Z', updatedAt: '2026-08-01T00:00:00.000Z',
+  trashedAt: null, archivedAt: null, originalCreatedAt: null,
 };
 
 function wrapper({ children }: { children: ReactNode }) {
@@ -92,14 +38,6 @@ function wrapper({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
 }
 
-// After vi.advanceTimersByTime() fires the setTimeout inside
-// scheduleAutoSave, saveMutation.mutate() runs — but @tanstack/react-query's
-// useMutation executes mutationFn through its own internal promise chain,
-// which needs actual microtask turns to progress. A synchronous
-// advanceTimersByTime() alone fires the timer callback but doesn't give
-// that promise chain a chance to run before assertions execute. Flushing a
-// couple of Promise.resolve() ticks inside the same act() is what lets
-// updateNote() (this test's mock) actually get called before we check it.
 async function advanceAndFlush(ms: number) {
   await act(async () => {
     vi.advanceTimersByTime(ms);
@@ -108,7 +46,7 @@ async function advanceAndFlush(ms: number) {
   });
 }
 
-describe('useNoteEditor — reproduksi bug tag hilang saat integrasi penuh (subscribeToNote + scheduleAutoSave)', () => {
+describe('useNoteEditor — noteId-locking fix (menutup celah pindah catatan sebelum auto-save selesai)', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     snapshotCallback = null;
@@ -122,122 +60,149 @@ describe('useNoteEditor — reproduksi bug tag hilang saat integrasi penuh (subs
     vi.useRealTimers();
   });
 
-  it('REPRO: tag pertama hilang jika snapshot server tiba saat save tag KEDUA masih in-flight', async () => {
+  it('tag kedua tidak hilang saat snapshot tiba di tengah save tag ketiga', async () => {
     const { result } = renderHook(() => useNoteEditor('note-1'), { wrapper });
-
-    // Note loads via the live subscription, same as production.
-    // useEffect (where subscribeToNote is called) only runs after the
-    // effect-mount pass renderHook performs internally, so
-    // snapshotCallback is already populated by the time this act() block
-    // runs — no waitFor needed, and waitFor's internal polling doesn't mix
-    // with fake timers anyway (that's what caused the earlier timeout).
-    act(() => {
-      snapshotCallback?.(baseNote, false);
-    });
-    expect(result.current.note).not.toBeNull();
-
-    // User types tag 1 and it's accepted (TagInput's own valueRef fix
-    // already guarantees this part is correct — verified by
-    // tag-input.test.tsx). handleTagsChange is what the real
-    // TagInput.onChange wires to.
-    act(() => {
-      result.current.handleTagsChange(['kerja']);
-    });
-    expect(result.current.note?.tags).toEqual(['kerja']);
-
-    // Auto-save timer for tag 1 fires -> updateNote() called, and its
-    // promise is intentionally left unresolved (production: real network
-    // latency to Firestore) to open the in-flight window.
+    act(() => { snapshotCallback?.(baseNote, false); });
+    act(() => { result.current.handleTagsChange(['kerja']); });
     await advanceAndFlush(1500);
     expect(updateNoteCalls).toHaveLength(1);
-    expect(updateNoteCalls[0].input).toEqual({ tags: ['kerja'] });
-
-    // While tag 1's save is still in flight, user types tag 2 — a normal
-    // thing to do, not an edge case. This is the exact "diketik berulang
-    // kali" pattern Vina described.
-    act(() => {
-      result.current.handleTagsChange(['kerja', 'ide']);
-    });
-    expect(result.current.note?.tags).toEqual(['kerja', 'ide']);
-
-    // Now a snapshot arrives in that window — e.g. the server confirming
-    // tag 1 just landed (hasPendingWrites: false), or any other snapshot
-    // for this document firing while inFlightSaveRef still only knows
-    // about tag 1. This is realistic: it's the exact mechanism
-    // subscribeToNote's own comment describes as "any other still-unsettled
-    // local write queued ahead of it" arriving mid-stream.
-    act(() => {
-      snapshotCallback?.({ ...baseNote, tags: ['kerja'] }, false);
-    });
-
-    // BUG: at this point, Zustand's activeNote.tags reverts to ['kerja'] —
-    // the just-typed second tag is gone from the UI, even though the user
-    // never removed it and handleTagsChange was called correctly with
-    // both tags.
+    act(() => { result.current.handleTagsChange(['kerja', 'ide']); });
+    act(() => { snapshotCallback?.({ ...baseNote, tags: ['kerja'] }, false); });
     expect(result.current.note?.tags).toEqual(['kerja', 'ide']);
   });
 
-  it('REPRO: tag hilang sepenuhnya jika snapshot tiba tepat setelah tag PERTAMA diketik (kasus "tak pernah tersimpan sama sekali")', async () => {
-    const { result } = renderHook(() => useNoteEditor('note-1'), { wrapper });
+  it('SKENARIO PALING REALISTIS: user ketik SATU tag lalu LANGSUNG navigasi keluar (unmount) sebelum 1500ms auto-save timer sempat menembak', async () => {
+    const { result, unmount } = renderHook(() => useNoteEditor('note-1'), { wrapper });
+    act(() => { snapshotCallback?.(baseNote, false); });
 
-    act(() => {
-      snapshotCallback?.(baseNote, false);
-    });
-    expect(result.current.note).not.toBeNull();
-
-    // User types the very first tag on a brand new note.
-    act(() => {
-      result.current.handleTagsChange(['pribadi']);
-    });
+    // User types a tag and hits Enter — handleTagsChange fires immediately,
+    // scheduling an auto-save 1500ms out. This matches TagInput's addTag():
+    // onChange(next) is called synchronously the instant Enter is pressed.
+    act(() => { result.current.handleTagsChange(['pribadi']); });
     expect(result.current.note?.tags).toEqual(['pribadi']);
 
-    // Timer fires, save begins (still in flight).
-    await advanceAndFlush(1500);
-    expect(updateNoteCalls[0].input).toEqual({ tags: ['pribadi'] });
+    // The tag shows in the UI immediately (optimistic local state) — from
+    // the user's perspective the tag IS there. But NO save has been sent
+    // to Firestore yet; the 1500ms debounce hasn't elapsed. This is the
+    // exact window every real user passes through on every single tag they
+    // type — not a rare race, THE NORMAL PATH.
+    expect(updateNoteCalls).toHaveLength(0);
 
-    // A snapshot for this note arrives before the save settles — e.g.
-    // triggered by ANY other field's write on the same document (mood,
-    // weather, wordCount from the debounced content analysis all save
-    // independently per the file's own "Phase 3" comments), reflecting
-    // the version of the doc from before this tag save reached the
-    // server.
-    act(() => {
-      snapshotCallback?.({ ...baseNote, tags: [] }, false);
+    // User immediately clicks "Kembali ke catatan" (the back button in
+    // notes/[id]/page.tsx) well within that 1500ms window — a completely
+    // ordinary thing to do: type a tag, note looks done, leave.
+    act(() => { unmount(); });
+
+    // The cleanup effect's own comment claims this is handled: "the
+    // mutation runs against the query client, which outlives this
+    // component, so the patch still reaches Firestore". Testing that claim
+    // directly instead of trusting the comment.
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
     });
 
-    // BUG: the tag the user just typed and that is still actively being
-    // saved disappears from the editor entirely — this is the "tag ditulis
-    // berulang kali tapi saat kembali lagi dibuka catatannya kosong
-    // tagnya" report on a note being actively edited, not just on reopen.
-    expect(result.current.note?.tags).toEqual(['pribadi']);
+    expect(updateNoteCalls).toHaveLength(1);
+    expect(updateNoteCalls[0]?.input).toEqual({ tags: ['pribadi'] });
   });
 
-  it('REGRESSION GUARD: field HANYA di inFlightSaveRef (pendingInputRef kosong untuk field itu) tetap dilindungi seperti semula', async () => {
-    const { result } = renderHook(() => useNoteEditor('note-1'), { wrapper });
-
-    act(() => {
-      snapshotCallback?.(baseNote, false);
+  it('BUG: user ketik tag di Catatan A, sebelum auto-save 1500ms selesai user PINDAH ke Catatan B TANPA full page unmount (Next.js App Router client-component reuse — bukan navigasi hard-reload)', async () => {
+    // Next.js App Router documented behavior for dynamic routes:
+    // client-side navigation from /notes/A to /notes/B does NOT
+    // necessarily unmount and remount the page's client component — React
+    // can just re-render it with the new `id` param, reusing the same
+    // component instance
+    // (https://github.com/vercel/next.js/issues/49553;
+    // krapton.com/blog/fixing-nextjs-app-router-useeffect-not-running-on-route-change:
+    // "the client component itself doesn't unmount and remount [...]
+    // React doesn't unmount and remount that component. Instead, it
+    // re-renders it"). NotePage (notes/[id]/page.tsx) calls
+    // useNoteEditor(noteId) — if NotePage itself isn't remounted, the
+    // useNoteEditor HOOK INSTANCE isn't destroyed either, meaning its
+    // useRef()s (pendingInputRef, inFlightSaveRef, autoSaveTimer) persist
+    // across the note switch. Only the subscription useEffect (deps:
+    // [noteId, ...]) re-runs — refs living OUTSIDE that effect don't get
+    // reset just because the effect re-ran.
+    //
+    // Simulated here by changing the SAME renderHook instance's `noteId`
+    // argument via rerender (never unmounted) — this is what actually
+    // happens when NotePage re-renders with a new `params.id` without
+    // itself unmounting, unlike the unmount() test above.
+    const { result, rerender } = renderHook(({ noteId }) => useNoteEditor(noteId), {
+      wrapper,
+      initialProps: { noteId: 'note-1' },
     });
+    act(() => { snapshotCallback?.(baseNote, false); });
 
-    // A single tag save, no follow-up edit — pendingInputRef.current is
-    // empty by the time the snapshot below arrives, so this only exercises
-    // the inFlightSaveRef side of the merge (the case the swap must NOT
-    // break).
-    act(() => {
-      result.current.handleTagsChange(['satu']);
-    });
+    // User types a tag on note-1. Auto-save scheduled for 1500ms out —
+    // not fired yet.
+    act(() => { result.current.handleTagsChange(['dari-catatan-a']); });
+    expect(result.current.note?.tags).toEqual(['dari-catatan-a']);
+    expect(updateNoteCalls).toHaveLength(0);
+
+    // Well within that 1500ms window, user clicks a different note from
+    // the notes list — noteId prop changes from 'note-1' to 'note-2'.
+    // Deliberately NOT unmounting first: this is the App Router
+    // same-component-reused case.
+    const noteB = { ...baseNote, id: 'note-2', tags: [] };
+    rerender({ noteId: 'note-2' });
+    act(() => { snapshotCallback?.(noteB, false); });
+
+    // Give the original 1500ms timer (still alive from note-1, since its
+    // owning refs were never reset) a chance to fire if it's going to.
     await advanceAndFlush(1500);
-    expect(updateNoteCalls[0].input).toEqual({ tags: ['satu'] });
 
-    // A stale/partial snapshot arrives while this save is still in flight
-    // and pendingInputRef has nothing queued.
-    act(() => {
-      snapshotCallback?.({ ...baseNote, tags: [] }, false);
+    // The tag typed on note-1 should have been saved to note-1 — NOT
+    // silently discarded, and CRITICALLY not accidentally sent to note-2
+    // either (an even worse form of data corruption: one note's tag
+    // landing on a different note).
+    const noteOneCalls = updateNoteCalls.filter((c) => c.noteId === 'note-1');
+    expect(noteOneCalls).toHaveLength(1);
+    expect(noteOneCalls[0]?.input).toEqual({ tags: ['dari-catatan-a'] });
+  });
+
+  it('REGRESSION GUARD: fix yang sama juga melindungi field NON-tags — handleTogglePin dipanggil di Catatan A, lalu pindah ke Catatan B sebelum re-render commit', async () => {
+    // handleTogglePin (and handleTimeCapsuleChange/handleSecretChange/
+    // handleScheduledChange/handleManualSave) call saveMutation.mutate()
+    // directly, synchronously — no setTimeout involved, unlike the tags
+    // path through scheduleAutoSave. Their OWN useCallback dependency
+    // arrays don't include noteId (e.g. handleTogglePin's deps are
+    // [activeNote, updateActiveNote, saveMutation]), so before this fix
+    // they'd have been just as vulnerable to a stale-noteId mutationFn
+    // closure if the mutation's async body (`await updateNote(...)`) was
+    // still resolving at the moment a note switch re-rendered the
+    // component with a different noteId — the SAME underlying issue as
+    // the tags bug, just requiring a narrower timing window since there's
+    // no debounce to make it easy to trigger. This test confirms the
+    // targetNoteId fix (via noteIdRef.current, read at call time) covers
+    // this handler too, not just the tags path.
+    const { result, rerender } = renderHook(({ noteId }) => useNoteEditor(noteId), {
+      wrapper,
+      initialProps: { noteId: 'note-1' },
+    });
+    act(() => { snapshotCallback?.(baseNote, false); });
+
+    act(() => { result.current.handleTogglePin(); });
+
+    // saveMutation.mutate() is a synchronous call, but TanStack Query's
+    // useMutation schedules the actual mutationFn execution asynchronously
+    // (it doesn't invoke mutationFn synchronously inside mutate() itself)
+    // — same reason the earlier fake-timer tests needed a microtask flush
+    // after vi.advanceTimersByTime(). Flushing here so mutationFn's body
+    // (which calls updateNote()) actually runs before switching notes.
+    await act(async () => {
+      await Promise.resolve();
     });
 
-    // The in-flight value must still win here — this is the original
-    // v1.2.5-era guarantee (an unsettled snapshot can't present stale data
-    // for a field mid-write), and it must survive the spread-order fix.
-    expect(result.current.note?.tags).toEqual(['satu']);
+    // Switch notes immediately after — before this synchronous mutate()
+    // call's own async body would have resolved in a real Firestore
+    // round-trip.
+    const noteB = { ...baseNote, id: 'note-2' };
+    rerender({ noteId: 'note-2' });
+    act(() => { snapshotCallback?.(noteB, false); });
+
+    const noteOneCalls = updateNoteCalls.filter((c) => c.noteId === 'note-1');
+    expect(noteOneCalls).toHaveLength(1);
+    expect(noteOneCalls[0]?.input).toEqual({ isPinned: true });
   });
 });

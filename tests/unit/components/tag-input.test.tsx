@@ -109,4 +109,58 @@ describe('TagInput — verifikasi apa yang sebenarnya dikirim ke onChange saat u
     // Must build from note B's tags, not note A's stale array.
     expect(onChange).toHaveBeenCalledWith(['note-b-tag', 'baru']);
   });
+
+  it('FIX: Backspace untuk hapus tag terakhir pakai valueRef, bukan `value` prop langsung — stale closure yang sama seperti addTag/removeTag, sempat terlewat dari fix sebelumnya', async () => {
+    // addTag() and removeTag() were fixed to read valueRef.current instead
+    // of the `value` prop directly (see the two FIX tests above). But
+    // handleKeyDown's own Backspace-to-delete-last-tag branch —
+    // `else if (e.key === 'Backspace' && !inputValue && value.length > 0)
+    // { onChange(value.slice(0, -1)); }` — was never touched by that fix
+    // and still reads `value` straight from this render's closure. Same
+    // class of bug, same component, just a different code path than the
+    // one the prior fix covered.
+    //
+    // Reproducing the exact gap the addTag fix targets: type a tag (this
+    // component's own value prop is still the OLD array — deliberately
+    // not rerendering, simulating the parent not having committed the
+    // update yet), then immediately hit Backspace on an now-empty input
+    // to delete that same tag. If Backspace reads the stale `value` prop
+    // (which is `[]`, from before the tag was even added), `value.length
+    // > 0` is false and the whole branch is skipped — Backspace silently
+    // does nothing, which is at least safe. The more concerning case is
+    // the one below: an existing tag already present in `value`, so
+    // `value.length > 0` legitimately passes, but `value` itself may not
+    // be the same array valueRef.current has already moved on from if
+    // OTHER interactions (a suggestion click via addTag, for example)
+    // updated valueRef.current in between without a re-render landing
+    // yet — Backspace would then delete from the wrong (stale) array,
+    // silently resurrecting or dropping the wrong tag.
+    const onChange = vi.fn();
+    render(<TagInput value={['kerja', 'penting']} onChange={onChange} />);
+
+    const user = userEvent.setup();
+    const input = screen.getByLabelText('Ketik tag baru');
+
+    // Add a third tag via addTag (correctly uses valueRef.current, so
+    // valueRef.current is now ['kerja', 'penting', 'urgent']) — but this
+    // component's `value` PROP is still ['kerja', 'penting'], since we
+    // deliberately don't rerender to simulate the parent not having
+    // committed yet (identical setup to the "FIX: parent re-render
+    // lambat" test above).
+    await user.type(input, 'urgent');
+    await user.keyboard('{Enter}');
+    expect(onChange).toHaveBeenNthCalledWith(1, ['kerja', 'penting', 'urgent']);
+
+    // Now Backspace on the empty input to delete the "last" tag. A
+    // correct implementation deletes from the TRUE current array
+    // (valueRef.current = ['kerja', 'penting', 'urgent']) → 'urgent' is
+    // removed → ['kerja', 'penting']. Reading the stale `value` prop
+    // instead builds from ['kerja', 'penting'] (what this render's
+    // closure still thinks is current) → 'penting' is removed instead →
+    // ['kerja'] — wrong tag deleted, and 'urgent' silently vanishes from
+    // what's sent to onChange even though the user never asked to remove
+    // it.
+    await user.keyboard('{Backspace}');
+    expect(onChange).toHaveBeenNthCalledWith(2, ['kerja', 'penting']);
+  });
 });
