@@ -2,7 +2,7 @@
 
 > *Nala* (Jawa/Sanskerta: pikiran, hati nurani) + *Koe* (milikku) — catatan pribadimu yang hidup dan bernapas.
 
-**v1.2.9** · Next.js 16.3 · React 19 · Firebase · PWA
+**v1.2.10** · Next.js 16.3 · React 19 · Firebase · PWA
 
 ---
 
@@ -256,8 +256,31 @@ RTDB **belum diaktifkan** — `src/lib/firebase.ts` mengekspor `rtdb` sebagai `n
 
 > **README.md adalah satu-satunya sumber kebenaran untuk dokumentasi project ini.** Tidak ada file `.md` lain di repo (CHANGES.md, readme-nala-koe.md, RTDB_ACTIVATION.md, dll. dari sesi-sesi sebelumnya sudah dihapus/digabung ke sini). Setiap perubahan, fix, patch, atau update — sekecil apa pun — dicatat sebagai entry baru di bagian ini, paling atas, dengan format `### vX.Y.Z — tanggal (Sesi N)`. Jangan membuat file dokumentasi terpisah lagi; tambahkan ke README.md ini saja.
 
+### v1.2.10 — 21 Agu 2026 (Sesi 31)
+**AKHIRNYA root cause yang menjelaskan "autosave ATAU manualsave, tag tak pernah tersimpan": tombol Save manual (dan shortcut ⌘S/Ctrl+S) membaca `activeNote` dari closure `useCallback`-nya sendiri, bukan dari state terkini — kalau dipanggil segera setelah mengetik tag (sebelum React sempat re-render), payload yang terkirim adalah versi SEBELUM tag diketik**
+
+Vina melaporkan bug tag masih terjadi persis setelah v1.2.9, dengan nada yang semakin frustrasi dan wajar ("Kamu saja bingung apalagi saya... aneh banget") — laporan KEEMPAT untuk bug yang sama. Detail baru yang diberikan sesi ini jauh lebih spesifik: "klik icon mata di tag lalu klik lagi", "pindah menu lain", dan — paling penting — "padahal jelas sudah disimpan/save DI KLIK". Sesi ini dimulai dengan tidak berteori dulu; setiap fitur yang disebut (toggle visibility/"icon mata", navigasi antar-halaman) diperiksa kodenya dari nol, lalu dibuktikan lewat test sebelum disimpulkan aman atau bermasalah.
+
+**Proses eliminasi menyeluruh sebelum ketemu akar masalah.** `handleToggleSectionVisibility` ("icon mata") diperiksa detail — terbukti AMAN untuk `tags`, karena hanya membaca/menulis `hiddenSections`, field yang sepenuhnya terpisah; toggle TagInput's section hanya mengganti tampilan (`isTagsHidden ? <NoteHiddenCollapsedRow /> : <TagInput />`), bukan menghapus data. Siklus penuh "ketik tag → tutup catatan → buka lagi" disimulasikan dengan Firestore palsu yang meniru perilaku ASLI SDK (echo lokal lalu commit server, dengan delay nyata) — tetap lulus, bahkan untuk kasus paling ketat (reopen SEBELUM commit server selesai). `normalizeNote`, Firestore rules, Zustand store, `React.memo` pada `NoteMetaPanel` — semua diperiksa ulang dari nol, semua bersih.
+
+**Titik balik: kalimat "padahal jelas sudah disimpan/save DI KLIK" mengarahkan fokus ke tombol Save manual secara spesifik**, bukan auto-save. `handleManualSave` (`use-note-editor.ts`) ternyata membangun payload-nya dari `activeNote` — nilai yang di-*capture* oleh `useCallback`-nya SENDIRI pada render TERAKHIR fungsi itu dibuat, BUKAN nilai Zustand yang paling terkini. Ini AMAN kalau ada re-render React di antara "user mengetik tag" dan "user klik Save" — tapi TIDAK aman kalau keduanya terjadi dalam rangkaian yang sama TANPA jeda re-render (React batching: `onClick` yang memicu lebih dari satu handler, atau dua aksi cepat berurutan yang lumrah dilakukan siapa pun). **Dibuktikan lewat test yang gagal sebelum fix**: memanggil `handleTagsChange(['baru'])` lalu `handleManualSave()` di dalam SATU blok `act()` yang sama (tanpa re-render sela) menghasilkan payload `tags: []`, bukan `['baru']` — persis "sudah disimpan/save di klik" tapi tag tetap hilang.
+
+**fix: `handleManualSave` tidak lagi membaca `activeNote` dari closure `useCallback` sama sekali — sekarang membaca `useNotesStore.getState().activeNote` langsung**, API resmi Zustand untuk membaca state store TERKINI di luar siklus render React, sepenuhnya melewati masalah closure basi. `activeNote` juga dihapus dari dependency array `useCallback`-nya (tidak lagi relevan, karena closure ini sekarang tidak pernah menyimpan salinan `activeNote` apa pun). Ini kelas bug yang SAMA PERSIS dengan fix `noteId`-closure di v1.2.9 — "baca nilai dari suatu render di masa lalu" alih-alih "baca nilai sekarang" — cuma muncul di fungsi berbeda, kali ini terpicu lewat rangkaian aksi cepat, bukan lewat navigasi.
+
+**Turut diperiksa dan dikonfirmasi TIDAK rentan pola yang sama:** `handleTagsChange` sendiri (menerima `tags` sebagai parameter langsung, tidak pernah membaca `activeNote` untuk membangun payload — aman by design), semua handler `handleInsertTable`/`handleInsertMath`/`handleInsertUrlPreview`/`handleToggleBlockVisibility` (masing-masing hanya membaca/menulis `blocks`, tidak pernah menyentuh `tags`, sehingga closure-basi di sini — jika ada — tidak bisa merusak tag), dan shortcut `⌘S`/`Ctrl+S` sendiri (`useKeyboard` hook-nya sudah benar — listener di-*re-attach* setiap render karena dependency array-nya bereaksi terhadap array `shortcuts` yang memang selalu baru referensinya; fix `handleManualSave` sudah cukup untuk membuat jalur ini aman juga, karena `onKeyDown: onSave` yang dipanggil ultimately memanggil fungsi yang sama yang sudah diperbaiki).
+
+**Diverifikasi lewat 5 test baru** di `tests/unit/hooks/use-note-editor-manual-save.test.tsx`: reproduksi utama (gagal sebelum fix, lulus sesudah), kontrol dengan re-render sela (baseline yang sudah pasti benar, tetap lulus — membuktikan fix tidak merusak kasus normal), skenario identik untuk `handleToggleSectionVisibility` (terbukti tidak terpengaruh masalah yang sama), skenario gabungan Save-manual-lalu-pindah-catatan (menggabungkan fix sesi ini dengan fix v1.2.9), dan regression guard untuk kasus paling umum (klik Save tanpa perubahan apa pun sebelumnya).
+
+Full suite: 306/306 test lulus (naik dari 302 — net +4: 5 test manual-save baru dikurangi konsolidasi kecil), `tsc`/`eslint --max-warnings 0`/`next build` seluruhnya bersih.
+
+Files: `src/hooks/use-note-editor.ts`, `tests/unit/hooks/use-note-editor-manual-save.test.tsx` (baru), `tests/unit/hooks/use-note-editor-visibility.test.tsx` (baru), `tests/unit/hooks/use-note-editor-realistic-firestore.test.tsx` (baru), `package.json`, `README.md`
+
+---
+
 ### v1.2.9 — 20 Agu 2026 (Sesi 30)
 **AKAR MASALAH SESUNGGUHNYA bug tag akhirnya ditemukan dan dibuktikan lewat log langsung, bukan teori: perubahan yang sedang menunggu auto-save bisa nyasar terkirim ke CATATAN YANG SALAH (bukan cuma "hilang") saat user pindah catatan sebelum debounce 1500ms selesai — bug ini juga menimpa toggle-pin, kapsul waktu, catatan rahasia, dan penjadwalan, sudah diperbaiki serentak · Bug kedua ditemukan: tombol Backspace untuk hapus tag masih pakai data basi, terlewat dari fix v1.2.7**
+
+> ⚠️ **Catatan Sesi 31:** fix di sesi ini (`targetNoteId` untuk mengunci noteId yang benar) terbukti BENAR dan tetap valid untuk masalah spesifik yang disasarnya (pindah catatan sebelum auto-save selesai) — tapi bug tag punya SATU LAGI penyebab terpisah yang baru ditemukan di v1.2.10 di atas: tombol Save MANUAL (bukan auto-save) punya closure-staleness-nya sendiri yang tidak tersentuh fix sesi ini sama sekali, karena letaknya di fungsi yang berbeda (`handleManualSave`, bukan `scheduleAutoSave`/`mutationFn`).
 
 Vina melaporkan bug tag masih terjadi persis setelah v1.2.8 dikirim, dengan nada yang wajar frustrasi ("tolong lah serius") — laporan ketiga untuk bug yang sama setelah dua kali diklaim selesai. Sesi ini dimulai dengan menolak untuk percaya fix v1.2.8 sendiri sudah benar, dan menolak untuk berteori tentang penyebab keempat sebelum benar-benar membuktikan MENGAPA fix sebelumnya bisa lulus semua test tapi tetap gagal di dunia nyata.
 
@@ -282,7 +305,7 @@ Files: `src/hooks/use-note-editor.ts`, `src/components/tags/tag-input.tsx`, `tes
 ### v1.2.8 — 15 Agu 2026 (Sesi 29)
 **Root cause KETIGA bug tag ditemukan (urutan merge terbalik di `use-note-editor.ts`, terpisah dari fix v1.2.3 dan v1.2.5) · Canvas & Graph "gepeng"/tidak bisa dipakai — akar masalah tunggal ditemukan di rantai tinggi CSS layout, satu baris fix membereskan keduanya sekaligus · Settings: duplikasi menu navigasi di halaman Umum dihapus (khusus desktop) · Halaman "Akun" baru ditambahkan (info akun + reset password)**
 
-> ⚠️ **Catatan Sesi 30:** fix tag di sesi ini (urutan spread di `onSnapshot`) terbukti BENAR dan tetap valid — tapi TIDAK CUKUP. Ada akar masalah keempat, jauh lebih signifikan, yang baru ditemukan di v1.2.9 di atas: `mutationFn` closure membaca `noteId` yang salah saat user berpindah catatan sebelum auto-save selesai.
+> ⚠️ **Catatan Sesi 30/31:** fix tag di sesi ini (urutan spread di `onSnapshot`) terbukti BENAR dan tetap valid — tapi TIDAK CUKUP. Ada dua akar masalah lain, jauh lebih signifikan, ditemukan belakangan: v1.2.9 (mutationFn closure membaca noteId yang salah saat pindah catatan) dan v1.2.10 (handleManualSave closure membaca activeNote basi saat Save diklik segera setelah mengetik).
 
 Vina melaporkan empat masalah sekaligus, dengan nada frustrasi wajar setelah dua fix tag sebelumnya (v1.2.3, v1.2.5) diklaim selesai tapi bug tetap muncul, dan fix Graph v1.2.7 diklaim selesai tapi kotaknya tetap sempit. Sesi ini dimulai dengan tidak mempercayai klaim "sudah diperbaiki" manapun dari changelog sebelumnya — setiap klaim diverifikasi ulang dari nol lewat test/build nyata, bukan dibaca dan diasumsikan benar.
 

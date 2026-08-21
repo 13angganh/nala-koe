@@ -121,11 +121,6 @@ export function TagInput({
         addTag(inputValue);
       }
     } else if (e.key === 'Backspace' && !inputValue && valueRef.current.length > 0) {
-      // Same valueRef.current pattern as addTag/removeTag above (was
-      // reading the `value` prop directly here before — a stale closure
-      // this project already fixed for addTag/removeTag but this branch
-      // was missed at the time; confirmed by a failing-before-fix test in
-      // tests/unit/components/tag-input.test.tsx).
       const next = valueRef.current.slice(0, -1);
       valueRef.current = next;
       onChange(next);
